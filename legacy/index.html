@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f5f5f2;min-height:100vh;color:#1a1a1a}
+.screen{display:none;min-height:100vh;padding:2rem 1rem}
+.screen.active{display:flex;flex-direction:column;align-items:center;justify-content:center}
+#s-dashboard{justify-content:flex-start;padding:1.5rem 1rem 3rem}
+.brand{font-size:13px;font-weight:500;letter-spacing:.05em;color:#888;text-transform:uppercase;margin-bottom:2.5rem;text-align:center}
+.hero-title{font-size:28px;font-weight:500;text-align:center;max-width:460px;line-height:1.35;margin-bottom:.75rem}
+.hero-sub{font-size:15px;color:#888;text-align:center;margin-bottom:2.5rem}
+.drop-zone{width:100%;max-width:480px;border:1.5px dashed #ccc;border-radius:16px;padding:3rem 2rem;text-align:center;cursor:pointer;background:#fff;transition:border-color .2s,background .2s}
+.drop-zone:hover,.drop-zone.drag-over{border-color:#378ADD;background:#e6f1fb}
+.drop-icon svg{width:40px;height:40px;stroke:#888;display:block;margin:0 auto 1rem}
+.drop-label{font-size:15px;font-weight:500;margin-bottom:.4rem}
+.drop-sub{font-size:13px;color:#888;margin-bottom:1.25rem}
+.formats{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.fmt-badge{background:#f5f5f2;border:0.5px solid #ddd;border-radius:6px;padding:3px 10px;font-size:12px;color:#888}
+.divider{display:flex;align-items:center;gap:12px;width:100%;max-width:480px;margin:1.25rem 0;color:#888;font-size:13px}
+.divider::before,.divider::after{content:'';flex:1;height:.5px;background:#ddd}
+.demo-btn{width:100%;max-width:480px;padding:.75rem;border-radius:10px;border:0.5px solid #ccc;background:#fff;font-size:14px;font-weight:500;cursor:pointer;color:#1a1a1a}
+.demo-btn:hover{background:#f5f5f2}
+#file-input{display:none}
+.privacy-note{font-size:12px;color:#888;text-align:center;margin-top:1.5rem;max-width:380px;line-height:1.6}
+.analysis-card{background:#fff;border:0.5px solid #ddd;border-radius:16px;padding:2.5rem 2rem;width:100%;max-width:440px}
+.analysis-title{font-size:18px;font-weight:500;margin-bottom:.4rem;text-align:center}
+.analysis-sub{font-size:14px;color:#888;margin-bottom:2rem;text-align:center}
+.step-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:0.5px solid #eee;font-size:14px}
+.step-item:last-child{border-bottom:none}
+.step-dot{width:20px;height:20px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:background .3s}
+.step-dot.wait{background:#f5f5f2;border:1.5px solid #ccc}
+.step-dot.active{background:#378ADD}
+.step-dot.done{background:#1D9E75}
+.step-dot svg{width:11px;height:11px;stroke:#fff;stroke-width:2.5}
+.step-dot.spin::after{content:'';width:12px;height:12px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;display:block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.progress-bar-wrap{height:6px;background:#f5f5f2;border-radius:3px;overflow:hidden;margin-top:1.5rem}
+.progress-bar{height:100%;background:#378ADD;width:0%;transition:width .5s ease;border-radius:3px}
+.error-msg{background:#fef2f2;border:0.5px solid #fca5a5;border-radius:10px;padding:1rem 1.25rem;font-size:13px;color:#dc2626;margin-top:1rem;display:none}
+.dash-header{width:100%;max-width:900px;display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:12px}
+.dash-title{font-size:20px;font-weight:500}
+.period-badge{background:#fff;border:0.5px solid #ccc;border-radius:8px;padding:5px 14px;font-size:13px;color:#888}
+.reset-btn{background:transparent;border:0.5px solid #ccc;border-radius:8px;padding:5px 14px;font-size:13px;cursor:pointer;color:#888}
+.reset-btn:hover{background:#f5f5f2}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;width:100%;max-width:900px;margin-bottom:1.5rem}
+.kpi-card{background:#fff;border:0.5px solid #ddd;border-radius:12px;padding:1rem 1.25rem}
+.kpi-label{font-size:12px;color:#888;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em}
+.kpi-value{font-size:24px;font-weight:500}
+.kpi-value.pos{color:#1D9E75}.kpi-value.neg{color:#E24B4A}
+.kpi-sub{font-size:12px;color:#888;margin-top:4px}
+.section-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:100%;max-width:900px;margin-bottom:1.5rem}
+@media(max-width:640px){.section-row{grid-template-columns:1fr}}
+.chart-card,.insights-card,.table-card{background:#fff;border:0.5px solid #ddd;border-radius:12px;padding:1.25rem}
+.insights-card,.table-card{width:100%;max-width:900px;margin-bottom:1.5rem}
+.card-title{font-size:14px;font-weight:500;margin-bottom:1rem}
+.insight-item{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:0.5px solid #eee;font-size:14px}
+.insight-item:last-child{border-bottom:none}
+.ins-icon{width:32px;height:32px;border-radius:8px;background:#f5f5f2;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px}
+.ins-text strong{font-weight:500}
+.ins-text span{color:#888;font-size:13px;display:block}
+.table-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px}
+.search-input{border:0.5px solid #ccc;border-radius:8px;padding:6px 12px;font-size:13px;background:#f5f5f2;color:#1a1a1a;width:200px}
+.tx-table{width:100%;border-collapse:collapse;font-size:13px}
+.tx-table th{text-align:left;padding:8px 10px;color:#888;font-weight:500;border-bottom:0.5px solid #eee}
+.tx-table td{padding:9px 10px;border-bottom:0.5px solid #eee;vertical-align:middle}
+.tx-table tr:last-child td{border-bottom:none}
+.tx-table tr:hover td{background:#f9f9f9}
+.amount-pos{color:#1D9E75;font-weight:500}
+.legend-row{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;font-size:12px}
+.legend-dot{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:4px}
+.ai-badge{display:inline-flex;align-items:center;gap:5px;background:#e6f1fb;color:#185FA5;font-size:11px;padding:3px 10px;border-radius:20px;margin-left:8px;font-weight:500}
+</style>
+</head>
+<body>
+<div class="screen active" id="s-upload">
+  <div class="brand">Scanner Financier</div>
+  <h1 class="hero-title">Dépose ton relevé et découvre où part ton argent</h1>
+  <p class="hero-sub">Analyse IA instantanée · 100% privé · Aucune connexion bancaire</p>
+  <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+    <div class="drop-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12M8 8l4-4 4 4"/></svg></div>
+    <p class="drop-label">Glisse ton relevé ici</p>
+    <p class="drop-sub">ou clique pour sélectionner un fichier</p>
+    <div class="formats"><span class="fmt-badge">CSV</span><span class="fmt-badge">XLS</span><span class="fmt-badge">XLSX</span><span class="fmt-badge">PDF</span></div>
+    <p style="font-size:12px;color:#888;margin-top:1rem">Crédit Agricole · BNP · SG · LCL · et tous formats CSV</p>
+  </div>
+  <input type="file" id="file-input" accept=".csv,.xls,.xlsx,.pdf,.txt">
+  <div class="divider">ou</div>
+  <button class="demo-btn" id="demo-btn">Tester avec des données de démonstration</button>
+  <p class="privacy-note">Tes données ne quittent jamais ton navigateur pour être stockées. L'analyse IA est effectuée via l'API Claude de manière éphémère.</p>
+</div>
+<div class="screen" id="s-analysis">
+  <div class="analysis-card">
+    <div class="analysis-title">Analyse en cours…</div>
+    <p class="analysis-sub" id="analysis-filename">Lecture du fichier</p>
+    <div id="steps-list">
+      <div class="step-item"><div class="step-dot wait" id="dot-0"></div><span>Lecture et décodage du fichier</span></div>
+      <div class="step-item"><div class="step-dot wait" id="dot-1"></div><span>Extraction des transactions brutes</span></div>
+      <div class="step-item"><div class="step-dot wait" id="dot-2"></div><span>Catégorisation IA (Claude)</span></div>
+      <div class="step-item"><div class="step-dot wait" id="dot-3"></div><span>Génération des insights</span></div>
+    </div>
+    <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar"></div></div>
+    <div class="error-msg" id="error-msg"></div>
+  </div>
+</div>
+<div class="screen" id="s-dashboard">
+  <div class="dash-header">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="dash-title">Tableau de bord</div>
+      <span class="ai-badge">Analysé par IA</span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span class="period-badge" id="period-badge"></span>
+      <button class="reset-btn" id="reset-btn">Nouveau relevé</button>
+    </div>
+  </div>
+  <div class="kpi-grid">
+    <div class="kpi-card"><div class="kpi-label">Revenus</div><div class="kpi-value pos" id="kpi-rev">—</div><div class="kpi-sub" id="kpi-rev-sub"></div></div>
+    <div class="kpi-card"><div class="kpi-label">Dépenses</div><div class="kpi-value" id="kpi-dep">—</div><div class="kpi-sub" id="kpi-dep-sub"></div></div>
+    <div class="kpi-card"><div class="kpi-label">Cashflow</div><div class="kpi-value" id="kpi-cf">—</div><div class="kpi-sub" id="kpi-cf-sub"></div></div>
+    <div class="kpi-card"><div class="kpi-label">Taux d'épargne</div><div class="kpi-value" id="kpi-sav">—</div><div class="kpi-sub" id="kpi-sav-sub"></div></div>
+  </div>
+  <div class="section-row">
+    <div class="chart-card">
+      <div class="card-title">Dépenses par catégorie</div>
+      <div id="donut-legend" class="legend-row"></div>
+      <div style="position:relative;height:220px"><canvas id="donut-chart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="card-title">Évolution mensuelle</div>
+      <div style="position:relative;height:252px"><canvas id="bar-chart"></canvas></div>
+    </div>
+  </div>
+  <div class="insights-card">
+    <div class="card-title">Insights automatiques</div>
+    <div id="insights-list"></div>
+  </div>
+  <div class="table-card">
+    <div class="table-header">
+      <div class="card-title" style="margin:0">Transactions <span style="color:#888;font-weight:400" id="tx-count"></span></div>
+      <input class="search-input" type="text" placeholder="Rechercher…" id="tx-search">
+    </div>
+    <div style="overflow-x:auto">
+      <table class="tx-table">
+        <thead><tr><th>Date</th><th>Libellé</th><th>Catégorie</th><th style="text-align:right">Montant</th></tr></thead>
+        <tbody id="tx-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const CATS=['alimentation','logement','transport','loisirs','abonnements','salaire','frais bancaires','santé','investissement','épargne','impôts','autres'];
+const CAT_COLORS={'alimentation':'#EF9F27','logement':'#378ADD','transport':'#1D9E75','loisirs':'#D4537E','abonnements':'#7F77DD','salaire':'#639922','frais bancaires':'#E24B4A','santé':'#5DCAA5','investissement':'#0C447C','épargne':'#27500A','impôts':'#633806','autres':'#888780'};
+const CAT_ICONS={'alimentation':'🛒','logement':'🏠','transport':'🚗','loisirs':'🎬','abonnements':'📱','salaire':'💶','frais bancaires':'🏦','santé':'❤️','autres':'📦'};
+let allTx=[],donutChart,barChart;
+function fmt(n,sign=false){const s=Math.abs(n).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2});return(sign&&n>0?'+':n<0?'-':'')+s+' €';}
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function delay(ms){return new Promise(r=>setTimeout(r,ms));}
+const checkSVG=`<svg viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><polyline points="2,6 5,9 10,3"/></svg>`;
+function setStep(i,state){const d=document.getElementById('dot-'+i);d.className='step-dot '+state;d.innerHTML=state==='done'?checkSVG:'';if(state==='active')d.classList.add('spin');document.getElementById('progress-bar').style.width=({0:15,1:35,2:70,3:95}[i]||0)+'%';}
+function finishSteps(){document.getElementById('progress-bar').style.width='100%';}
+async function analyzeWithClaude(rawText){
+  const resp=await fetch('/api/analyze',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({text:rawText.slice(0,12000)})
+  });
+  if(!resp.ok)throw new Error('Erreur serveur: '+resp.status);
+  const data=await resp.json();
+  if(data.error)throw new Error(data.error);
+  return data.transactions||[];
+}
+async function runAnalysis(rawText,filename){
+  showScreen('s-analysis');
+  document.getElementById('analysis-filename').textContent=filename;
+  document.getElementById('error-msg').style.display='none';
+  try{
+    setStep(0,'active');await delay(500);
+    setStep(0,'done');setStep(1,'active');await delay(400);
+    setStep(1,'done');setStep(2,'active');
+    const txs=await analyzeWithClaude(rawText);
+    if(!txs.length)throw new Error('Aucune transaction trouvée.');
+    setStep(2,'done');setStep(3,'active');await delay(300);
+    setStep(3,'done');buildDashboard(txs);
+  }catch(e){const el=document.getElementById('error-msg');el.textContent='Erreur : '+e.message;el.style.display='block';}
+}
+async function handleFile(file){
+  const ext=file.name.split('.').pop().toLowerCase();
+  if(['pdf','xls','xlsx'].includes(ext)){
+    showScreen('s-analysis');document.getElementById('analysis-filename').textContent=file.name;document.getElementById('error-msg').style.display='none';setStep(0,'active');
+    try{const formData=new FormData();formData.append('file',file);setStep(0,'done');setStep(1,'active');const resp=await fetch('/api/parse',{method:'POST',body:formData});if(!resp.ok)throw new Error('Erreur serveur: '+resp.status);const data=await resp.json();if(data.error)throw new Error(data.error);setStep(1,'done');setStep(2,'active');await delay(400);setStep(2,'done');setStep(3,'active');await delay(300);setStep(3,'done');buildDashboard(data.transactions);}
+    catch(e){const el=document.getElementById('error-msg');el.textContent='Erreur : '+e.message;el.style.display='block';}
+    return;
+  }
+  const reader=new FileReader();
+  reader.onload=e=>runAnalysis(e.target.result,file.name);
+  reader.onerror=()=>{const r2=new FileReader();r2.onload=e=>runAnalysis(e.target.result,file.name);r2.readAsText(file,'UTF-8');};
+  reader.readAsText(file,'ISO-8859-1');
+}
+function updateCatAndRefresh(sel){
+  const idx=parseInt(sel.dataset.idx);
+  const newCat=sel.value;
+  const changedLabel=allTx[idx].label.toLowerCase();
+  const skipWords=['paiement','par','carte','virement','en','votre','faveur','de','du','le','la','les','un','une','au','prelevement','web','inst'];
+  const keywords=changedLabel.split(/\s+/).filter(w=>w.length>3&&!skipWords.includes(w));
+  let count=0;
+  allTx.forEach((t,i)=>{
+    const tLabel=t.label.toLowerCase();
+    const sameLabel=tLabel===changedLabel;
+    const shareKeyword=keywords.some(kw=>tLabel.includes(kw));
+    if(sameLabel||shareKeyword){allTx[i].category=newCat;count++;}
+  });
+  const notif=document.createElement('div');
+  notif.style.cssText='position:fixed;bottom:24px;right:24px;background:#1a1a1a;color:#fff;padding:12px 18px;border-radius:8px;font-size:13px;z-index:999;transition:opacity 0.5s';
+  notif.textContent=count>1?`✓ ${count} transactions mises à jour`:'✓ Catégorie mise à jour';
+  document.body.appendChild(notif);
+  setTimeout(()=>{notif.style.opacity='0';setTimeout(()=>notif.remove(),500);},2500);const c=CAT_COLORS[sel.value]||'#888';sel.style.borderColor=c;sel.style.background=c+'22';sel.style.color=c;refreshKPIsAndCharts();}
+function refreshKPIsAndCharts(){
+  const rev=allTx.filter(t=>t.amount>0).reduce((s,t)=>s+t.amount,0);
+  const dep=allTx.filter(t=>t.amount<0).reduce((s,t)=>s+t.amount,0);
+  const cf=rev+dep;const sav=rev>0?cf/rev*100:0;
+  document.getElementById('kpi-rev').textContent=fmt(rev);document.getElementById('kpi-rev-sub').textContent=allTx.filter(t=>t.amount>0).length+' entrées';
+  document.getElementById('kpi-dep').textContent=fmt(dep);document.getElementById('kpi-dep-sub').textContent=allTx.filter(t=>t.amount<0).length+' sorties';
+  const cfEl=document.getElementById('kpi-cf');cfEl.textContent=fmt(cf,true);cfEl.className='kpi-value '+(cf>=0?'pos':'neg');document.getElementById('kpi-cf-sub').textContent=cf>=0?'Solde positif':'Attention';
+  document.getElementById('kpi-sav').textContent=Math.max(0,Math.round(sav))+'%';
+  const catTotals={};allTx.filter(t=>t.amount<0).forEach(t=>{catTotals[t.category]=(catTotals[t.category]||0)+Math.abs(t.amount)});
+  const sorted=Object.entries(catTotals).sort((a,b)=>b[1]-a[1]);
+  const dL=sorted.map(([c])=>c),dD=sorted.map(([,v])=>v),dC=dL.map(c=>CAT_COLORS[c]||'#888');
+  donutChart.data.labels=dL;donutChart.data.datasets[0].data=dD;donutChart.data.datasets[0].backgroundColor=dC;donutChart.update();
+  document.getElementById('donut-legend').innerHTML=dL.map((c,i)=>`<span style="display:flex;align-items:center;gap:4px"><span class="legend-dot" style="background:${dC[i]}"></span><span style="color:#888">${c}</span></span>`).join('');
+  const totalDep=Math.abs(dep);const nbMonths=Math.max(1,new Set(allTx.map(t=>t.date.slice(0,7))).size);
+  const aboTotal=allTx.filter(t=>t.amount<0&&t.category==='abonnements').reduce((s,t)=>s+Math.abs(t.amount),0);
+  const restoTotal=allTx.filter(t=>t.amount<0&&t.category==='loisirs').reduce((s,t)=>s+Math.abs(t.amount),0);
+  const topCat=sorted[0];const insights=[];
+  if(aboTotal>0)insights.push({icon:'📱',text:`Tes abonnements coûtent <strong>${fmt(aboTotal/nbMonths)}/mois</strong>`,sub:`${fmt(aboTotal)} sur la période`});
+  if(restoTotal>0&&totalDep>0)insights.push({icon:'🍽️',text:`<strong>${Math.round(restoTotal/totalDep*100)} %</strong> de ton budget part en restaurants & loisirs`,sub:fmt(restoTotal)+' au total'});
+  if(topCat)insights.push({icon:CAT_ICONS[topCat[0]]||'📦',text:`Ton poste principal : <strong>${topCat[0]}</strong>`,sub:fmt(topCat[1])+' — '+Math.round(topCat[1]/totalDep*100)+'% des dépenses'});
+  if(cf>=0)insights.push({icon:'💰',text:`Cashflow positif de <strong>${fmt(cf)}</strong>`,sub:'Bonne gestion sur la période'});
+  else insights.push({icon:'⚠️',text:`Dépenses supérieures aux revenus de <strong>${fmt(Math.abs(cf))}</strong>`,sub:'Attention à ton solde'});
+  document.getElementById('insights-list').innerHTML=insights.map(i=>`<div class="insight-item"><div class="ins-icon">${i.icon}</div><div class="ins-text"><p>${i.text}</p><span>${i.sub}</span></div></div>`).join('');
+}
+function buildDashboard(txs){
+  allTx=txs.filter(t=>t.date&&!isNaN(t.amount));
+  const rev=allTx.filter(t=>t.amount>0).reduce((s,t)=>s+t.amount,0);
+  const dep=allTx.filter(t=>t.amount<0).reduce((s,t)=>s+t.amount,0);
+  const cf=rev+dep;const sav=rev>0?cf/rev*100:0;
+  document.getElementById('kpi-rev').textContent=fmt(rev);document.getElementById('kpi-rev-sub').textContent=allTx.filter(t=>t.amount>0).length+' entrées';
+  document.getElementById('kpi-dep').textContent=fmt(dep);document.getElementById('kpi-dep-sub').textContent=allTx.filter(t=>t.amount<0).length+' sorties';
+  const cfEl=document.getElementById('kpi-cf');cfEl.textContent=fmt(cf,true);cfEl.className='kpi-value '+(cf>=0?'pos':'neg');document.getElementById('kpi-cf-sub').textContent=cf>=0?'Solde positif':'Attention';
+  document.getElementById('kpi-sav').textContent=Math.max(0,Math.round(sav))+'%';document.getElementById('kpi-sav-sub').textContent='du revenu conservé';
+  const dates=allTx.map(t=>t.date).sort();
+  const fmtD=d=>{try{const[y,m]=d.split('-');return new Date(y,m-1).toLocaleDateString('fr-FR',{month:'long',year:'numeric'})}catch{return d}};
+  document.getElementById('period-badge').textContent=dates.length?fmtD(dates[0])+(dates[0].slice(0,7)!==dates[dates.length-1].slice(0,7)?' — '+fmtD(dates[dates.length-1]):''):'';
+  const catTotals={};allTx.filter(t=>t.amount<0).forEach(t=>{catTotals[t.category]=(catTotals[t.category]||0)+Math.abs(t.amount)});
+  const sorted=Object.entries(catTotals).sort((a,b)=>b[1]-a[1]);
+  const dL=sorted.map(([c])=>c),dD=sorted.map(([,v])=>v),dC=dL.map(c=>CAT_COLORS[c]||'#888');
+  document.getElementById('donut-legend').innerHTML=dL.map((c,i)=>`<span style="display:flex;align-items:center;gap:4px"><span class="legend-dot" style="background:${dC[i]}"></span><span style="color:#888">${c}</span></span>`).join('');
+  if(donutChart)donutChart.destroy();
+  donutChart=new Chart(document.getElementById('donut-chart'),{type:'doughnut',data:{labels:dL,datasets:[{data:dD,backgroundColor:dC,borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+ctx.label+': '+fmt(ctx.raw)}}},cutout:'65%'}});
+  const months={};allTx.forEach(t=>{const m=t.date.slice(0,7);if(!months[m])months[m]={rev:0,dep:0};if(t.amount>0)months[m].rev+=t.amount;else months[m].dep+=Math.abs(t.amount)});
+  const mKeys=Object.keys(months).sort();
+  const mLabels=mKeys.map(k=>{try{const[y,m]=k.split('-');return new Date(y,m-1).toLocaleDateString('fr-FR',{month:'short'})}catch{return k}});
+  if(barChart)barChart.destroy();
+  barChart=new Chart(document.getElementById('bar-chart'),{type:'bar',data:{labels:mLabels,datasets:[{label:'Revenus',data:mKeys.map(k=>Math.round(months[k].rev)),backgroundColor:'#1D9E75'},{label:'Dépenses',data:mKeys.map(k=>Math.round(months[k].dep)),backgroundColor:'#E24B4A'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{color:'rgba(0,0,0,.06)'}}},borderRadius:4}});
+  const totalDep=Math.abs(dep);const nbMonths=Math.max(1,mKeys.length);
+  const aboTotal=allTx.filter(t=>t.amount<0&&t.category==='abonnements').reduce((s,t)=>s+Math.abs(t.amount),0);
+  const restoTotal=allTx.filter(t=>t.amount<0&&t.category==='loisirs').reduce((s,t)=>s+Math.abs(t.amount),0);
+  const topCat=sorted[0];const insights=[];
+  if(aboTotal>0)insights.push({icon:'📱',text:`Tes abonnements coûtent <strong>${fmt(aboTotal/nbMonths)}/mois</strong>`,sub:`${fmt(aboTotal)} sur la période`});
+  if(restoTotal>0&&totalDep>0)insights.push({icon:'🍽️',text:`<strong>${Math.round(restoTotal/totalDep*100)} %</strong> de ton budget part en restaurants & loisirs`,sub:fmt(restoTotal)+' au total'});
+  if(topCat)insights.push({icon:CAT_ICONS[topCat[0]]||'📦',text:`Ton poste principal : <strong>${topCat[0]}</strong>`,sub:fmt(topCat[1])+' — '+Math.round(topCat[1]/totalDep*100)+'% des dépenses'});
+  if(cf>=0)insights.push({icon:'💰',text:`Cashflow positif de <strong>${fmt(cf)}</strong>`,sub:'Bonne gestion sur la période'});
+  else insights.push({icon:'⚠️',text:`Dépenses supérieures aux revenus de <strong>${fmt(Math.abs(cf))}</strong>`,sub:'Attention à ton solde'});
+  document.getElementById('insights-list').innerHTML=insights.map(i=>`<div class="insight-item"><div class="ins-icon">${i.icon}</div><div class="ins-text"><p>${i.text}</p><span>${i.sub}</span></div></div>`).join('');
+  document.getElementById('tx-count').textContent='('+allTx.length+')';
+  renderTable(allTx);finishSteps();setTimeout(()=>showScreen('s-dashboard'),400);
+}
+function renderTable(txs){
+  document.getElementById('tx-tbody').innerHTML=txs.slice(0,150).map(t=>{
+    const color=CAT_COLORS[t.category]||'#888';
+    const dateStr=t.date?new Date(t.date+'T00:00:00').toLocaleDateString('fr-FR'):t.date;
+    const realIdx=allTx.indexOf(t);
+    return `<tr><td style="color:#888;white-space:nowrap">${dateStr}</td><td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${t.label}">${t.label}</td><td><select data-idx="${realIdx}" onchange="updateCatAndRefresh(this)" style="border:0.5px solid ${color};border-radius:6px;padding:3px 8px;font-size:12px;background:${color}22;color:${color};cursor:pointer;font-family:inherit">${CATS.map(c=>`<option value="${c}"${c===t.category?' selected':''}>${c}</option>`).join('')}</select></td><td style="text-align:right" class="${t.amount>0?'amount-pos':''}">${fmt(t.amount,true)}</td></tr>`;
+  }).join('');
+}
+document.getElementById('tx-search').addEventListener('input',function(){const q=this.value.toLowerCase();renderTable(q?allTx.filter(t=>(t.label||'').toLowerCase().includes(q)||(t.category||'').includes(q)):allTx);});
+const DEMO_TX=[
+  {date:'2024-01-02',label:'Virement employeur SARL TECHCORP',amount:2450,category:'salaire'},
+  {date:'2024-01-03',label:'Loyer janvier',amount:-850,category:'logement'},
+  {date:'2024-01-04',label:'Carrefour City',amount:-67.40,category:'alimentation'},
+  {date:'2024-01-06',label:'Netflix',amount:-15.99,category:'abonnements'},
+  {date:'2024-01-07',label:'Spotify',amount:-9.99,category:'abonnements'},
+  {date:'2024-01-08',label:'SNCF',amount:-42.00,category:'transport'},
+  {date:'2024-01-09',label:'Restaurant Le Bistro',amount:-38.50,category:'loisirs'},
+  {date:'2024-01-10',label:'Pharmacie du Marais',amount:-24.90,category:'santé'},
+  {date:'2024-01-11',label:'Amazon Prime',amount:-6.99,category:'abonnements'},
+  {date:'2024-01-12',label:'Uber',amount:-14.20,category:'transport'},
+  {date:'2024-01-14',label:'Aldi',amount:-55.30,category:'alimentation'},
+  {date:'2024-01-15',label:'EDF',amount:-89.00,category:'logement'},
+  {date:'2024-01-16',label:'Disney+',amount:-8.99,category:'abonnements'},
+  {date:'2024-01-17',label:"McDonald's",amount:-12.80,category:'loisirs'},
+  {date:'2024-01-18',label:'Total Station',amount:-68.00,category:'transport'},
+  {date:'2024-01-20',label:'Boulangerie Paul',amount:-18.60,category:'alimentation'},
+  {date:'2024-01-22',label:'Frais tenue de compte',amount:-3.00,category:'frais bancaires'},
+  {date:'2024-01-24',label:'Monoprix',amount:-43.20,category:'alimentation'},
+  {date:'2024-02-01',label:'Virement employeur SARL TECHCORP',amount:2450,category:'salaire'},
+  {date:'2024-02-02',label:'Loyer février',amount:-850,category:'logement'},
+  {date:'2024-02-03',label:'Lidl',amount:-61.80,category:'alimentation'},
+  {date:'2024-02-05',label:'Netflix',amount:-15.99,category:'abonnements'},
+  {date:'2024-02-07',label:'RATP Navigo',amount:-86.40,category:'transport'},
+  {date:'2024-02-10',label:'Pizza Hut',amount:-27.50,category:'loisirs'},
+  {date:'2024-02-12',label:'Apple Services',amount:-12.99,category:'abonnements'},
+  {date:'2024-02-13',label:'Intermarché',amount:-71.10,category:'alimentation'},
+  {date:'2024-02-14',label:'Restaurant Le Zinc',amount:-56.00,category:'loisirs'},
+  {date:'2024-02-15',label:'EDF',amount:-89.00,category:'logement'},
+  {date:'2024-02-16',label:'Uber',amount:-22.60,category:'transport'},
+  {date:'2024-02-24',label:'Fnac',amount:-49.90,category:'loisirs'},
+  {date:'2024-02-26',label:'Agios découverts',amount:-15.00,category:'frais bancaires'},
+  {date:'2024-03-01',label:'Virement employeur SARL TECHCORP',amount:2450,category:'salaire'},
+  {date:'2024-03-02',label:'Loyer mars',amount:-850,category:'logement'},
+  {date:'2024-03-04',label:'Carrefour Market',amount:-82.30,category:'alimentation'},
+  {date:'2024-03-05',label:'Netflix',amount:-15.99,category:'abonnements'},
+  {date:'2024-03-06',label:'Spotify',amount:-9.99,category:'abonnements'},
+  {date:'2024-03-08',label:'SNCF TGV Lyon',amount:-72.00,category:'transport'},
+  {date:'2024-03-11',label:'Starbucks Opéra',amount:-8.40,category:'loisirs'},
+  {date:'2024-03-12',label:'Aldi',amount:-58.70,category:'alimentation'},
+  {date:'2024-03-14',label:'Uber',amount:-18.30,category:'transport'},
+  {date:'2024-03-15',label:'EDF',amount:-89.00,category:'logement'},
+  {date:'2024-03-18',label:'Brasserie du coin',amount:-44.00,category:'loisirs'},
+  {date:'2024-03-20',label:'Apple Services',amount:-12.99,category:'abonnements'},
+  {date:'2024-03-24',label:'Pharmacie République',amount:-19.80,category:'santé'},
+  {date:'2024-03-28',label:'Frais virement',amount:-1.00,category:'frais bancaires'},
+];
+document.getElementById('demo-btn').addEventListener('click',()=>{
+  showScreen('s-analysis');document.getElementById('analysis-filename').textContent='démonstration';setStep(0,'active');
+  delay(400).then(()=>{setStep(0,'done');setStep(1,'active');return delay(400)}).then(()=>{setStep(1,'done');setStep(2,'active');return delay(600)}).then(()=>{setStep(2,'done');setStep(3,'active');return delay(400)}).then(()=>{setStep(3,'done');buildDashboard(DEMO_TX)});
+});
+document.getElementById('reset-btn').addEventListener('click',()=>{
+  [0,1,2,3].forEach(i=>{const d=document.getElementById('dot-'+i);d.className='step-dot wait';d.innerHTML='';});
+  document.getElementById('progress-bar').style.width='0%';document.getElementById('progress-bar').style.background='#378ADD';showScreen('s-upload');
+});
+const dz=document.getElementById('drop-zone');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag-over')});
+dz.addEventListener('dragleave',()=>dz.classList.remove('drag-over'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag-over');if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0])});
+document.getElementById('file-input').addEventListener('change',e=>{if(e.target.files[0])handleFile(e.target.files[0])});
+</script>
+</body>
+</html>
