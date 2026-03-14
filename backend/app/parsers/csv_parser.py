@@ -38,7 +38,7 @@ def _normalize_col(name: str) -> str:
         .replace("ô", "o").replace("ù", "u").replace("û", "u")
         .replace("î", "i").replace("ï", "i")
         .replace("ç", "c")
-        .replace("'", " ").replace("'", " ").replace("-", " ")
+        .replace("'", " ").replace("\u2019", " ").replace("-", " ")
         .replace("  ", " ")
     )
 
@@ -64,7 +64,6 @@ def _parse_amount(value: Any) -> float:
     s = str(value).strip()
     s = s.replace("\xa0", "").replace("\u202f", "").replace(" ", "").replace("€", "")
     s = s.replace(",", ".")
-    # Supprimer les points de milliers (ex: 1.234,56 → 1234.56)
     if s.count(".") > 1:
         s = s.replace(".", "", s.count(".") - 1)
     try:
@@ -82,19 +81,21 @@ def _find_header_row(text: str, sep: str) -> int:
     all_candidates = DATE_COLUMNS + LABEL_COLUMNS + AMOUNT_COLUMNS + DEBIT_COLUMNS + CREDIT_COLUMNS
     lines = text.splitlines()
 
-    for i, line in enumerate(lines[:20]):  # On cherche dans les 20 premières lignes max
+    for i, line in enumerate(lines[:20]):
         parts = [p.strip().strip('"') for p in line.split(sep)]
         normalized_parts = [_normalize_col(p) for p in parts]
-        # Si au moins 2 tokens de cette ligne ressemblent à des noms de colonnes connus
+        # Compter uniquement les tokens non-vides (len >= 3) qui ressemblent à des noms de colonnes
         matches = sum(
             1 for norm_part in normalized_parts
-            if any(_normalize_col(c) in norm_part or norm_part in _normalize_col(c)
-                   for c in all_candidates if len(_normalize_col(c)) >= 4)
+            if len(norm_part) >= 3 and any(
+                _normalize_col(c) in norm_part or norm_part in _normalize_col(c)
+                for c in all_candidates if len(_normalize_col(c)) >= 4
+            )
         )
         if matches >= 2:
             return i
 
-    return 0  # Par défaut, première ligne
+    return 0
 
 
 def parse_csv(content: bytes) -> List[Dict[str, Any]]:
@@ -115,10 +116,8 @@ def parse_csv(content: bytes) -> List[Dict[str, Any]]:
 
     # Essayer différents séparateurs
     df = None
-    best_sep = ";"
     for sep in [";", ",", "\t", "|"]:
         try:
-            # D'abord trouver la vraie ligne de header
             header_row = _find_header_row(text, sep)
             candidate_df = pd.read_csv(
                 io.StringIO(text),
@@ -128,30 +127,24 @@ def parse_csv(content: bytes) -> List[Dict[str, Any]]:
                 on_bad_lines="skip",
                 dtype=str,
             )
-            # Un bon résultat a au moins 2 colonnes et une colonne date/libellé détectable
             if len(candidate_df.columns) >= 2:
                 date_col = _find_column(candidate_df, DATE_COLUMNS)
                 label_col = _find_column(candidate_df, LABEL_COLUMNS)
                 if date_col and label_col:
                     df = candidate_df
-                    best_sep = sep
                     break
                 elif df is None and len(candidate_df.columns) >= 2:
-                    # Garder comme fallback même si colonnes non identifiées
                     df = candidate_df
-                    best_sep = sep
         except Exception:
             continue
 
     if df is None:
         raise ValueError("Impossible de lire le CSV : format non reconnu")
 
-    # Trouver les colonnes
     date_col = _find_column(df, DATE_COLUMNS)
     label_col = _find_column(df, LABEL_COLUMNS)
 
     if not date_col or not label_col:
-        # Tentative désespérée : prendre les 2 premières colonnes non-vides
         non_empty_cols = [c for c in df.columns if not c.startswith("Unnamed") and df[c].notna().sum() > 0]
         if len(non_empty_cols) >= 2:
             date_col = non_empty_cols[0]
@@ -162,7 +155,6 @@ def parse_csv(content: bytes) -> List[Dict[str, Any]]:
                 f"Formats supportés : colonnes nommées 'Date', 'Libellé', 'Montant' (ou équivalents)."
             )
 
-    # Gestion des montants : peut être une colonne unique, ou débit/crédit séparés
     debit_col = _find_column(df, DEBIT_COLUMNS)
     credit_col = _find_column(df, CREDIT_COLUMNS)
     amount_col = _find_column(df, AMOUNT_COLUMNS)
@@ -172,13 +164,11 @@ def parse_csv(content: bytes) -> List[Dict[str, Any]]:
         date_val = str(row[date_col]).strip()
         label_val = str(row[label_col]).strip()
 
-        # Ignorer les lignes vides, NaN ou d'en-tête répétés
         if not date_val or date_val.lower() in ("nan", "date", "date opération", "date operation", ""):
             continue
         if not label_val or label_val.lower() in ("nan", "libelle", "libellé", ""):
             continue
 
-        # Calculer le montant
         if debit_col and credit_col:
             debit = _parse_amount(row.get(debit_col, 0))
             credit = _parse_amount(row.get(credit_col, 0))
@@ -186,7 +176,6 @@ def parse_csv(content: bytes) -> List[Dict[str, Any]]:
         elif amount_col:
             amount = _parse_amount(row.get(amount_col, 0))
         else:
-            # Essayer toutes les colonnes restantes pour trouver un nombre
             amount = 0.0
             for col in df.columns:
                 if col not in (date_col, label_col):
