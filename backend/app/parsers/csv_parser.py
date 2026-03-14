@@ -84,10 +84,13 @@ def _find_header_row(text: str, sep: str) -> int:
     for i, line in enumerate(lines[:20]):
         parts = [p.strip().strip('"') for p in line.split(sep)]
         normalized_parts = [_normalize_col(p) for p in parts]
+        # Compter uniquement les tokens non-vides (len >= 3) qui ressemblent à des noms de colonnes
         matches = sum(
             1 for norm_part in normalized_parts
-            if any(_normalize_col(c) in norm_part or norm_part in _normalize_col(c)
-                   for c in all_candidates if len(_normalize_col(c)) >= 4)
+            if len(norm_part) >= 3 and any(
+                _normalize_col(c) in norm_part or norm_part in _normalize_col(c)
+                for c in all_candidates if len(_normalize_col(c)) >= 4
+            )
         )
         if matches >= 2:
             return i
@@ -100,6 +103,7 @@ def parse_csv(content: bytes) -> List[Dict[str, Any]]:
     Parse un fichier CSV de relevé bancaire.
     Retourne une liste de dicts bruts avec date, label, amount.
     """
+    # Essayer différents encodages
     text = None
     for encoding in ["latin-1", "utf-8", "cp1252", "utf-8-sig"]:
         try:
@@ -110,6 +114,7 @@ def parse_csv(content: bytes) -> List[Dict[str, Any]]:
     if text is None:
         text = content.decode("latin-1", errors="replace")
 
+    # Essayer différents séparateurs
     df = None
     for sep in [";", ",", "\t", "|"]:
         try:
