@@ -30,6 +30,9 @@ DATE_FORMATS = [
 def _parse_date(date_raw: str) -> str:
     """Convertit une date brute en format YYYY-MM-DD."""
     date_raw = date_raw.strip()
+    # Tronquer les timestamps (ex: "2026-02-26 00:00:00" → "2026-02-26")
+    if len(date_raw) > 10 and " " in date_raw:
+        date_raw = date_raw.split(" ")[0]
 
     for fmt in DATE_FORMATS:
         try:
