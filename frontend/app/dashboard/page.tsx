@@ -28,7 +28,7 @@ export default function DashboardPage() {
 
   if (!data) return null
 
-  const { summary, by_category, timeline } = data
+  const { summary, timeline } = data
 
   // Filtrer les transactions
   const filtered = transactions.filter(tx =>
@@ -57,11 +57,20 @@ export default function DashboardPage() {
     }
   }
 
-  const pieData = by_category.map(c => ({
-    name: CATEGORY_LABELS[c.category] || c.category,
-    value: c.total,
-    color: CATEGORY_COLORS[c.category] || '#9E9E9E',
-  }))
+  // Recompute pie data from current transactions state so it updates live when categories change
+  const categoryTotals = transactions
+    .filter(tx => tx.amount < 0)
+    .reduce((acc, tx) => {
+      acc[tx.category] = (acc[tx.category] || 0) + Math.abs(tx.amount)
+      return acc
+    }, {} as Record<string, number>)
+  const pieData = Object.entries(categoryTotals)
+    .sort((a, b) => b[1] - a[1])
+    .map(([category, total]) => ({
+      name: CATEGORY_LABELS[category] || category,
+      value: total,
+      color: CATEGORY_COLORS[category] || '#9E9E9E',
+    }))
 
   return (
     <main className="min-h-screen bg-[#f5f5f2] px-4 py-6">
