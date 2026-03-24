@@ -8,9 +8,9 @@ from typing import List, Dict, Any
 
 CATEGORY_RULES: Dict[str, List[str]] = {
     "salaire": [
-        "salaire", "paie", "remuneration", "virement employeur",
-        "pole emploi", "france travail", "are ", "indemnite chomage",
-        "allocations", "caf ", "cpam", "retraite", "pension",
+        "salaire", " paie ", "remuneration", "virement employeur",
+        "pole emploi", "france travail revenu", "are ", "indemnite chomage",
+        "allocations familiales", "caf ", "cpam versement", "retraite", "pension retraite",
     ],
     "investissement": [
         "bitstack", "crypto", "bitcoin", "ethereum", "bourse",
@@ -115,10 +115,6 @@ def categorize(label_raw: str, amount: float) -> str:
         for kw in keywords:
             if _normalize(kw) in normalized:
                 return category
-
-    # Règles basées sur le montant/direction
-    if amount > 0:
-        return "salaire"  # Crédit non reconnu → probable salaire/revenu
 
     return "autres"
 
