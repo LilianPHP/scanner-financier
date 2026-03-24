@@ -110,9 +110,19 @@ export default function DashboardPage() {
     return result
   }, [transactions, pieData, liveStats])
 
-  if (!data) return null
+  // Bar chart recalculé dynamiquement depuis l'état transactions
+  const liveTimeline = useMemo(() => {
+    const monthly: Record<string, { month: string; income: number; expense: number }> = {}
+    transactions.forEach(tx => {
+      const month = tx.date.slice(0, 7)
+      if (!monthly[month]) monthly[month] = { month, income: 0, expense: 0 }
+      if (tx.amount > 0) monthly[month].income += tx.amount
+      else monthly[month].expense += Math.abs(tx.amount)
+    })
+    return Object.values(monthly).sort((a, b) => a.month.localeCompare(b.month))
+  }, [transactions])
 
-  const { timeline } = data
+  if (!data) return null
 
   // Filtre transactions
   const filtered = transactions.filter(tx =>
@@ -212,7 +222,7 @@ export default function DashboardPage() {
           <div className="bg-white border border-gray-200 rounded-xl p-5">
             <p className="text-sm font-medium mb-4">Revenus et dépenses par mois</p>
             <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={timeline} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+              <BarChart data={liveTimeline} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                 <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                 <YAxis tick={{ fontSize: 11 }} />
