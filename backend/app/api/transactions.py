@@ -85,26 +85,20 @@ def update_transaction(
 
     updated_count = 1
 
-    # Propagation aux transactions similaires si demandé
+    # Propagation aux transactions avec EXACTEMENT le même libellé
     if body.propagate:
-        # Trouver le mot-clé principal du libellé
-        label_words = tx["label_clean"].lower().split()
-        if label_words:
-            # Prendre le mot le plus significatif (ignore mots courts)
-            keyword = next((w for w in label_words if len(w) >= 4), label_words[0])
+        similar = (
+            sb.table("transactions")
+            .select("id")
+            .eq("user_id", user_id)
+            .eq("label_clean", tx["label_clean"])
+            .neq("id", tx_id)
+            .execute()
+        )
 
-            similar = (
-                sb.table("transactions")
-                .select("id")
-                .eq("user_id", user_id)
-                .ilike("label_clean", f"%{keyword}%")
-                .neq("id", tx_id)
-                .execute()
-            )
-
-            for similar_tx in similar.data:
-                sb.table("transactions").update({"category": body.category}).eq("id", similar_tx["id"]).execute()
-                updated_count += 1
+        for similar_tx in similar.data:
+            sb.table("transactions").update({"category": body.category}).eq("id", similar_tx["id"]).execute()
+            updated_count += 1
 
     return {
         "updated": True,
