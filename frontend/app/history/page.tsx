@@ -49,13 +49,13 @@ export default function HistoryPage() {
 
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-xl font-medium">Historique des analyses</h1>
+          <h1 className="text-xl font-medium">Mes analyses</h1>
           <div className="flex gap-2">
             <button
               onClick={() => router.push('/upload')}
               className="text-sm bg-[#1a1a1a] text-white px-4 py-1.5 rounded-lg hover:bg-gray-800"
             >
-              Nouveau fichier
+              Analyser un nouveau relevé
             </button>
             <button
               onClick={async () => { await supabase.auth.signOut(); router.push('/login') }}
@@ -76,7 +76,7 @@ export default function HistoryPage() {
           <div className="text-center text-sm text-gray-400 py-20">Chargement…</div>
         ) : files.length === 0 ? (
           <div className="bg-white border border-gray-200 rounded-2xl p-12 text-center">
-            <p className="text-gray-500 mb-4">Aucune analyse pour l'instant.</p>
+            <p className="text-gray-500 mb-4">Ton premier relevé t'attend.</p>
             <button
               onClick={() => router.push('/upload')}
               className="text-sm bg-[#378ADD] text-white px-5 py-2 rounded-lg hover:bg-blue-600"
@@ -109,7 +109,7 @@ export default function HistoryPage() {
                       <span className="text-[#E24B4A] font-medium">{formatCurrency(f.expense_total!)}</span>
                     </span>
                     <span>
-                      <span className="text-xs text-gray-400 block">Cashflow</span>
+                      <span className="text-xs text-gray-400 block">Il te reste</span>
                       <span className={`font-medium ${(f.cashflow ?? 0) >= 0 ? 'text-[#1D9E75]' : 'text-[#E24B4A]'}`}>
                         {formatCurrency(f.cashflow!)}
                       </span>
@@ -122,7 +122,7 @@ export default function HistoryPage() {
                   disabled={loadingId === f.id}
                   className="text-sm border border-gray-200 rounded-lg px-4 py-1.5 hover:bg-gray-50 disabled:opacity-50 whitespace-nowrap"
                 >
-                  {loadingId === f.id ? 'Chargement…' : 'Voir l\'analyse →'}
+                  {loadingId === f.id ? 'Chargement…' : 'Revoir cette analyse →'}
                 </button>
               </div>
             ))}

@@ -29,7 +29,7 @@ export default function LandingPage() {
           Découvre où part ton argent.
         </h1>
         <p className="text-gray-500 text-lg mb-8 max-w-md">
-          Analyse IA instantanée · Dashboard clair · Aucune connexion bancaire
+          Analyse instantanée · Résultat clair en 30 secondes · Aucune connexion bancaire
         </p>
         <Link
           href="/signup"
@@ -46,8 +46,8 @@ export default function LandingPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[
             { step: '1', title: 'Dépose ton relevé', desc: 'Glisse-dépose ton fichier CSV, XLS ou PDF. Aucune saisie manuelle.' },
-            { step: '2', title: 'Analyse automatique', desc: 'L\'IA catégorise toutes tes transactions en quelques secondes.' },
-            { step: '3', title: 'Dashboard clair', desc: 'Visualise tes dépenses par catégorie, ton cashflow et tes habitudes.' },
+            { step: '2', title: 'Analyse automatique', desc: 'Toutes tes transactions sont triées par catégorie en quelques secondes.' },
+            { step: '3', title: 'Résumé clair', desc: 'Vois exactement où va ton argent, mois par mois.' },
           ].map(({ step, title, desc }) => (
             <div key={step} className="bg-white border border-gray-200 rounded-2xl p-6">
               <div className="w-8 h-8 bg-[#378ADD] text-white rounded-lg flex items-center justify-center text-sm font-medium mb-3">
@@ -63,7 +63,7 @@ export default function LandingPage() {
       {/* Privacy */}
       <section className="text-center pb-16 px-4">
         <p className="text-sm text-gray-400 max-w-sm mx-auto">
-          Tes données sont analysées de manière éphémère. Aucun fichier n'est partagé avec des tiers.
+          Ton fichier est analysé puis supprimé. On ne garde rien, on ne partage rien.
         </p>
       </section>
     </main>

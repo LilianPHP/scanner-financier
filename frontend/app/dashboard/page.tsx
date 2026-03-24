@@ -89,23 +89,23 @@ export default function DashboardPage() {
     })
     if (loisirTotal > 0 && totalDep > 0) result.push({
       icon: '🍽️',
-      text: `<strong>${Math.round(loisirTotal / totalDep * 100)}%</strong> du budget en loisirs`,
+      text: `Tu dépenses <strong>${Math.round(loisirTotal / totalDep * 100)}%</strong> de ton budget en loisirs`,
       sub: `${formatCurrency(loisirTotal)} au total`,
     })
     if (aliTotal > 0 && totalDep > 0) result.push({
       icon: '🛒',
       text: `Alimentation : <strong>${formatCurrency(aliTotal / nbMonths)}/mois</strong>`,
-      sub: `${Math.round(aliTotal / totalDep * 100)}% du budget total`,
+      sub: `${Math.round(aliTotal / totalDep * 100)}% de ton budget total`,
     })
     if (liveStats.cashflow >= 0) result.push({
       icon: '💰',
-      text: `Cashflow positif de <strong>${formatCurrency(liveStats.cashflow)}</strong>`,
-      sub: 'Bonne gestion sur la période',
+      text: `Tu as dépensé moins que tu n'as gagné : <strong>+${formatCurrency(liveStats.cashflow)}</strong>`,
+      sub: 'Tu as dépensé moins que tu n\'as gagné.',
     })
     else result.push({
       icon: '⚠️',
-      text: `Dépenses supérieures aux revenus de <strong>${formatCurrency(Math.abs(liveStats.cashflow))}</strong>`,
-      sub: 'Attention à ton solde',
+      text: `Tu as dépensé <strong>${formatCurrency(Math.abs(liveStats.cashflow))}</strong> de plus que tu n'as gagné`,
+      sub: 'Surveille tes prochaines dépenses.',
     })
     return result
   }, [transactions, pieData, liveStats])
@@ -157,7 +157,7 @@ export default function DashboardPage() {
 
         {/* Header */}
         <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-          <h1 className="text-xl font-medium">Ton analyse financière</h1>
+          <h1 className="text-xl font-medium">Voilà où va ton argent</h1>
           <div className="flex gap-2 flex-wrap">
             <span className="text-sm bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-gray-500">
               {transactions.length} transactions
@@ -173,7 +173,7 @@ export default function DashboardPage() {
           {[
             { label: 'Revenus', value: formatCurrency(liveStats.income), cls: 'text-[#1D9E75]' },
             { label: 'Dépenses', value: formatCurrency(liveStats.expense), cls: 'text-[#E24B4A]' },
-            { label: 'Cashflow', value: formatCurrency(liveStats.cashflow), cls: liveStats.cashflow >= 0 ? 'text-[#1D9E75]' : 'text-[#E24B4A]' },
+            { label: 'Ce qu\'il te reste', value: formatCurrency(liveStats.cashflow), cls: liveStats.cashflow >= 0 ? 'text-[#1D9E75]' : 'text-[#E24B4A]' },
             { label: "Taux d'épargne", value: `${Math.max(0, Math.round(liveStats.savingsRate))}%`, cls: liveStats.savingsRate >= 0 ? 'text-[#1D9E75]' : 'text-[#E24B4A]' },
           ].map(kpi => (
             <div key={kpi.label} className="bg-white border border-gray-200 rounded-xl p-4">
@@ -210,7 +210,7 @@ export default function DashboardPage() {
 
           {/* Bar chart */}
           <div className="bg-white border border-gray-200 rounded-xl p-5">
-            <p className="text-sm font-medium mb-4">Revenus vs Dépenses</p>
+            <p className="text-sm font-medium mb-4">Revenus et dépenses par mois</p>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={timeline} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -227,7 +227,7 @@ export default function DashboardPage() {
 
         {/* Insights */}
         <div className="bg-white border border-gray-200 rounded-xl p-5 mb-5">
-          <p className="text-sm font-medium mb-4">Insights automatiques</p>
+          <p className="text-sm font-medium mb-4">Points clés</p>
           <div className="divide-y divide-gray-100">
             {insights.map((ins, i) => (
               <div key={i} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
@@ -260,7 +260,7 @@ export default function DashboardPage() {
                     <th className="pb-2 pr-4 font-medium">Service</th>
                     <th className="pb-2 pr-4 font-medium text-right">Mensuel</th>
                     <th className="pb-2 pr-4 font-medium text-right">Annuel</th>
-                    <th className="pb-2 font-medium text-right">Occurrences</th>
+                    <th className="pb-2 font-medium text-right">Fois détectées</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -295,7 +295,7 @@ export default function DashboardPage() {
               <thead>
                 <tr className="text-xs text-gray-400 text-left">
                   <th className="pb-2 pr-4 font-medium">Date</th>
-                  <th className="pb-2 pr-4 font-medium">Libellé</th>
+                  <th className="pb-2 pr-4 font-medium">Description</th>
                   <th className="pb-2 pr-4 font-medium">Catégorie</th>
                   <th className="pb-2 text-right font-medium">Montant</th>
                 </tr>
@@ -333,7 +333,7 @@ export default function DashboardPage() {
             </table>
             {filtered.length > 100 && (
               <p className="text-xs text-gray-400 text-center mt-3">
-                Affichage des 100 premières transactions sur {filtered.length}
+                100 transactions affichées sur {filtered.length} au total
               </p>
             )}
           </div>
