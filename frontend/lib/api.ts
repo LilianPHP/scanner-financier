@@ -9,6 +9,14 @@ async function getAuthHeader(): Promise<Record<string, string>> {
   return { Authorization: `Bearer ${token}` }
 }
 
+async function apiFetch(url: string, options?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, options)
+  } catch {
+    throw new Error('Serveur inaccessible — vérifie que le backend est lancé sur le port 8000')
+  }
+}
+
 export type Transaction = {
   id: string
   file_id: string
@@ -40,6 +48,13 @@ export type MonthlyData = {
   cashflow: number
 }
 
+export type Subscription = {
+  label: string
+  occurrences: number
+  monthly_cost: number
+  annual_cost: number
+}
+
 export type UploadResult = {
   file_id: string
   filename: string
@@ -47,6 +62,7 @@ export type UploadResult = {
   summary: AnalysisSummary
   by_category: CategoryData[]
   timeline: MonthlyData[]
+  subscriptions?: Subscription[]
 }
 
 // Upload d'un fichier
@@ -55,15 +71,15 @@ export async function uploadFile(file: File): Promise<UploadResult> {
   const formData = new FormData()
   formData.append('file', file)
 
-  const response = await fetch(`${BACKEND_URL}/files/upload`, {
+  const response = await apiFetch(`${BACKEND_URL}/files/upload`, {
     method: 'POST',
     headers,
     body: formData,
   })
 
   if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.detail || 'Erreur lors de l\'upload')
+    const error = await response.json().catch(() => ({}))
+    throw new Error(error.detail || `Erreur serveur (${response.status})`)
   }
 
   return response.json()
@@ -73,9 +89,7 @@ export async function uploadFile(file: File): Promise<UploadResult> {
 export async function getTransactions(fileId: string): Promise<Transaction[]> {
   const headers = await getAuthHeader()
 
-  const response = await fetch(`${BACKEND_URL}/transactions/${fileId}`, {
-    headers,
-  })
+  const response = await apiFetch(`${BACKEND_URL}/transactions/${fileId}`, { headers })
 
   if (!response.ok) throw new Error('Erreur lors de la récupération des transactions')
 
@@ -91,13 +105,18 @@ export async function updateCategory(
 ): Promise<{ total_updated: number }> {
   const headers = await getAuthHeader()
 
-  const response = await fetch(`${BACKEND_URL}/transactions/${txId}`, {
+  const response = await apiFetch(`${BACKEND_URL}/transactions/${txId}`, {
     method: 'PATCH',
     headers: { ...headers, 'Content-Type': 'application/json' },
     body: JSON.stringify({ category, propagate }),
   })
 
-  if (!response.ok) throw new Error('Erreur lors de la mise à jour')
+  if (!response.ok) {
+    const status = response.status
+    if (status === 401) throw new Error('401')
+    if (status === 404) throw new Error('Transaction introuvable en base')
+    throw new Error(`Erreur serveur (${status})`)
+  }
 
   return response.json()
 }
@@ -107,12 +126,91 @@ export async function getAnalytics(fileId: string) {
   const headers = await getAuthHeader()
 
   const [summary, categories, timeline] = await Promise.all([
-    fetch(`${BACKEND_URL}/analytics/${fileId}/summary`, { headers }).then(r => r.json()),
-    fetch(`${BACKEND_URL}/analytics/${fileId}/categories`, { headers }).then(r => r.json()),
-    fetch(`${BACKEND_URL}/analytics/${fileId}/timeline`, { headers }).then(r => r.json()),
+    apiFetch(`${BACKEND_URL}/analytics/${fileId}/summary`, { headers }).then(r => r.json()),
+    apiFetch(`${BACKEND_URL}/analytics/${fileId}/categories`, { headers }).then(r => r.json()),
+    apiFetch(`${BACKEND_URL}/analytics/${fileId}/timeline`, { headers }).then(r => r.json()),
   ])
 
   return { summary, categories, timeline }
+}
+
+// Type pour l'historique des fichiers
+export type UploadedFile = {
+  id: string
+  filename: string
+  file_type: string
+  transaction_count: number
+  created_at: string
+  // Jointure avec analysis_results (peut être null si pas encore calculé)
+  income_total?: number
+  expense_total?: number
+  cashflow?: number
+  savings_rate?: number
+}
+
+// Récupérer l'historique des fichiers de l'utilisateur
+export async function getUploadHistory(): Promise<UploadedFile[]> {
+  const { data: session } = await supabase.auth.getSession()
+  if (!session.session) throw new Error('Non authentifié')
+  const userId = session.session.user.id
+
+  // Récupérer les fichiers
+  const { data: files, error: filesError } = await supabase
+    .from('uploaded_files')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+
+  if (filesError) throw new Error(filesError.message)
+  if (!files || files.length === 0) return []
+
+  // Récupérer les analytics pour chaque fichier
+  const fileIds = files.map(f => f.id)
+  const { data: analytics } = await supabase
+    .from('analysis_results')
+    .select('*')
+    .in('file_id', fileIds)
+
+  // Fusionner
+  const analyticsMap = Object.fromEntries((analytics || []).map(a => [a.file_id, a]))
+
+  return files.map(f => ({
+    ...f,
+    ...(analyticsMap[f.id] || {}),
+  }))
+}
+
+// Recharger une analyse passée depuis le backend → sessionStorage → dashboard
+export async function loadAnalysis(fileId: string): Promise<UploadResult> {
+  const headers = await getAuthHeader()
+
+  const [txRes, summaryRes, categoriesRes, timelineRes] = await Promise.all([
+    apiFetch(`${BACKEND_URL}/transactions/${fileId}`, { headers }),
+    apiFetch(`${BACKEND_URL}/analytics/${fileId}/summary`, { headers }),
+    apiFetch(`${BACKEND_URL}/analytics/${fileId}/categories`, { headers }),
+    apiFetch(`${BACKEND_URL}/analytics/${fileId}/timeline`, { headers }),
+  ])
+
+  if (!txRes.ok || !summaryRes.ok || !categoriesRes.ok || !timelineRes.ok) {
+    throw new Error('Erreur lors du chargement de l\'analyse')
+  }
+
+  const [txData, summary, categoriesData, timelineData] = await Promise.all([
+    txRes.json(),
+    summaryRes.json(),
+    categoriesRes.json(),
+    timelineRes.json(),
+  ])
+
+  return {
+    file_id: fileId,
+    filename: '',
+    transactions: txData.transactions,
+    summary,
+    by_category: categoriesData.by_category,
+    subscriptions: categoriesData.subscriptions,
+    timeline: timelineData.timeline,
+  }
 }
 
 // Formater un montant en euros

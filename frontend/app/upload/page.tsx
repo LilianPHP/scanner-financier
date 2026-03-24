@@ -40,9 +40,9 @@ export default function UploadPage() {
 
   const STEPS = [
     'Lecture du fichier',
-    'Extraction des transactions',
-    'Catégorisation IA',
-    'Génération du dashboard',
+    'Lecture de tes transactions',
+    'Tri par catégorie',
+    'Préparation de ton résumé',
   ]
 
   async function handleLogout() {
@@ -105,7 +105,7 @@ export default function UploadPage() {
           Dépose ton relevé et découvre où part ton argent
         </h1>
         <p className="text-sm text-gray-500 text-center mb-8">
-          Analyse IA instantanée · 100% privé · Aucune connexion bancaire
+          Analyse instantanée · 100% privé · Aucune connexion bancaire
         </p>
 
         {/* Drop zone */}
@@ -152,7 +152,7 @@ export default function UploadPage() {
         )}
 
         <p className="text-xs text-gray-400 text-center mt-6 leading-relaxed">
-          Tes données sont analysées de manière éphémère. Aucun fichier n'est partagé avec des tiers.
+          Ton fichier est analysé puis supprimé. On ne garde rien, on ne partage rien.
         </p>
       </div>
     </main>
