@@ -1,8 +1,7 @@
 """
 Catégorisation des transactions par règles déterministes.
-L'IA (Claude) n'est utilisée qu'en fallback pour les cas ambigus.
+L'IA (Claude) est utilisée en fallback pour les débits non catégorisés.
 """
-import re
 from typing import List, Dict, Any
 
 
@@ -121,8 +120,27 @@ def categorize(label_raw: str, amount: float) -> str:
 
 def categorize_batch(transactions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
-    Catégorise une liste de transactions.
+    Catégorise une liste de transactions en deux passes :
+    1. Règles déterministes (rapide, sans API)
+    2. Fallback IA Claude pour les débits tombés en "autres"
     """
+    # Passe 1 : règles
     for tx in transactions:
         tx["category"] = categorize(tx["label_raw"], tx["amount"])
+
+    # Passe 2 : fallback IA pour les débits non catégorisés
+    uncategorized = [
+        tx for tx in transactions
+        if tx["category"] == "autres" and tx["amount"] < 0
+    ]
+
+    if uncategorized:
+        from app.services.ai_categorization import categorize_with_ai
+        labels = [tx["label_raw"] for tx in uncategorized]
+        ai_results = categorize_with_ai(labels)
+
+        for tx in uncategorized:
+            if tx["label_raw"] in ai_results:
+                tx["category"] = ai_results[tx["label_raw"]]
+
     return transactions
