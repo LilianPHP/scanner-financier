@@ -137,8 +137,14 @@ export default function DashboardPage() {
       setToast(`${res.total_updated} transaction(s) mise(s) à jour`)
       setTimeout(() => setToast(''), 3000)
     } catch (err: any) {
-      // Rollback en cas d'erreur
-      setTransactions(prev => prev.map(t => t.id === tx.id ? { ...t, category: tx.category } : t))
+      // Rollback en cas d'erreur — recharger depuis la snapshot avant optimistic update
+      setTransactions(prev => prev.map(t => {
+        const labelKey = tx.label_clean.toLowerCase().split(' ').find(w => w.length >= 4) || ''
+        if (t.id === tx.id || (labelKey && t.label_clean.toLowerCase().includes(labelKey))) {
+          return { ...t, category: tx.category }
+        }
+        return t
+      }))
       const msg = err?.message?.includes('401') ? 'Session expirée, reconnecte-toi' : 'Erreur réseau — réessaie'
       setToast(msg)
       setTimeout(() => setToast(''), 4000)

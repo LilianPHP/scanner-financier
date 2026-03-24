@@ -9,12 +9,6 @@ def compute_summary(transactions: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
     Calcule les KPIs principaux.
     """
-    income_categories = {"salaire", "investissement", "epargne"}
-
-    total_income = sum(
-        tx["amount"] for tx in transactions
-        if tx["amount"] > 0 or tx["category"] in income_categories
-    )
     total_income = sum(tx["amount"] for tx in transactions if tx["amount"] > 0)
     total_expense = sum(abs(tx["amount"]) for tx in transactions if tx["amount"] < 0)
 

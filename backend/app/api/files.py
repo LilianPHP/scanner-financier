@@ -12,7 +12,7 @@ from app.parsers.xlsx_parser import parse_xlsx
 from app.parsers.pdf_parser import parse_pdf
 from app.services.normalization import normalize_transactions
 from app.services.categorization import categorize_batch
-from app.services.analytics import compute_summary, compute_by_category, compute_monthly_timeline
+from app.services.analytics import compute_summary, compute_by_category, compute_monthly_timeline, detect_subscriptions
 from app.db.client import get_supabase
 
 router = APIRouter()
@@ -74,6 +74,7 @@ async def upload_file(
     summary = compute_summary(transactions)
     by_category = compute_by_category(transactions)
     timeline = compute_monthly_timeline(transactions)
+    subscriptions = detect_subscriptions(transactions)
 
     # Sauvegarder en base Supabase
     sb = get_supabase()
@@ -122,5 +123,6 @@ async def upload_file(
         "transactions": tx_records,
         "summary": summary,
         "by_category": by_category,
+        "subscriptions": subscriptions,
         "timeline": timeline,
     }
