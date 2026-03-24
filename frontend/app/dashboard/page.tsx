@@ -212,8 +212,16 @@ export default function DashboardPage() {
           {[
             { label: 'Revenus', value: formatCurrency(liveStats.income), cls: 'text-[#1D9E75]' },
             { label: 'Dépenses', value: formatCurrency(liveStats.expense), cls: 'text-[#E24B4A]' },
-            { label: 'Ce qu\'il te reste', value: formatCurrency(liveStats.cashflow), cls: liveStats.cashflow >= 0 ? 'text-[#1D9E75]' : 'text-[#E24B4A]' },
-            { label: "Taux d'épargne", value: `${Math.max(0, Math.round(liveStats.savingsRate))}%`, cls: liveStats.savingsRate >= 0 ? 'text-[#1D9E75]' : 'text-[#E24B4A]' },
+            {
+              label: liveStats.cashflow >= 0 ? 'Ce qu\'il te reste' : 'Tu as dépensé en trop',
+              value: formatCurrency(Math.abs(liveStats.cashflow)),
+              cls: liveStats.cashflow >= 0 ? 'text-[#1D9E75]' : 'text-[#E24B4A]',
+            },
+            {
+              label: 'Mis de côté',
+              value: `${Math.max(0, Math.round(liveStats.savingsRate))}%`,
+              cls: liveStats.savingsRate > 0 ? 'text-[#1D9E75]' : 'text-gray-400',
+            },
           ].map(kpi => (
             <div key={kpi.label} className="bg-white border border-gray-200 rounded-xl p-4">
               <p className="text-xs text-gray-400 uppercase tracking-wide mb-1.5">{kpi.label}</p>
