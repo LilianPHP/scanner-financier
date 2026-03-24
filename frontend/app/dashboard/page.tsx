@@ -79,7 +79,7 @@ export default function DashboardPage() {
 
     if (topCat) result.push({
       icon: CATEGORY_ICONS[topCat.category] || '📦',
-      text: `Poste principal : <strong>${topCat.name}</strong>`,
+      text: `Ta plus grosse dépense : <strong>${topCat.name}</strong>`,
       sub: `${formatCurrency(topCat.value)} — ${Math.round(topCat.value / totalDep * 100)}% des dépenses`,
     })
     if (aboTotal > 0) result.push({
@@ -189,7 +189,7 @@ export default function DashboardPage() {
           <div className="bg-white border border-gray-200 rounded-xl p-5">
             <p className="text-sm font-medium mb-4">Dépenses par catégorie</p>
             <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
+              <PieChart key={pieData.map(d => `${d.category}:${Math.round(d.value)}`).join(',')}>
                 <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={90}>
                   {pieData.map((entry, i) => (
                     <Cell key={i} fill={entry.color} />
