@@ -115,6 +115,26 @@ export default function DashboardPage() {
     return result
   }, [transactions, pieData, liveStats])
 
+  // Abonnements recalculés dynamiquement depuis l'état transactions
+  const liveSubscriptions = useMemo(() => {
+    const aboTx = transactions.filter(tx => tx.category === 'abonnements' && tx.amount < 0)
+    const byLabel: Record<string, { total: number; count: number }> = {}
+    aboTx.forEach(tx => {
+      const key = tx.label_clean
+      if (!byLabel[key]) byLabel[key] = { total: 0, count: 0 }
+      byLabel[key].total += Math.abs(tx.amount)
+      byLabel[key].count += 1
+    })
+    return Object.entries(byLabel)
+      .map(([label, { total, count }]) => ({
+        label,
+        occurrences: count,
+        monthly_cost: Math.round((total / count) * 100) / 100,
+        annual_cost: Math.round((total / count) * 12 * 100) / 100,
+      }))
+      .sort((a, b) => b.monthly_cost - a.monthly_cost)
+  }, [transactions])
+
   // Bar chart recalculé dynamiquement depuis l'état transactions
   const liveTimeline = useMemo(() => {
     const monthly: Record<string, { month: string; income: number; expense: number }> = {}
@@ -291,13 +311,13 @@ export default function DashboardPage() {
         </div>
 
         {/* Abonnements */}
-        {data.subscriptions && data.subscriptions.length > 0 && (
+        {liveSubscriptions.length > 0 && (
           <div className="bg-white border border-gray-200 rounded-xl p-5 mb-5">
             <div className="flex items-center justify-between mb-4">
               <p className="text-sm font-medium">Abonnements détectés</p>
               <span className="text-xs text-gray-400">
-                {formatCurrency(data.subscriptions.reduce((s, a) => s + a.monthly_cost, 0))}/mois
-                · {formatCurrency(data.subscriptions.reduce((s, a) => s + a.annual_cost, 0))}/an
+                {formatCurrency(liveSubscriptions.reduce((s, a) => s + a.monthly_cost, 0))}/mois
+                · {formatCurrency(liveSubscriptions.reduce((s, a) => s + a.annual_cost, 0))}/an
               </span>
             </div>
             <div className="overflow-x-auto">
@@ -311,7 +331,7 @@ export default function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.subscriptions.map((sub: Subscription) => (
+                  {liveSubscriptions.map((sub) => (
                     <tr key={sub.label} className="border-t border-gray-100">
                       <td className="py-2 pr-4 font-medium">{sub.label}</td>
                       <td className="py-2 pr-4 text-right text-[#E24B4A]">{formatCurrency(sub.monthly_cost)}</td>

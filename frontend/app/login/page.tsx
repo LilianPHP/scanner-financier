@@ -4,12 +4,21 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 
+function translateAuthError(msg: string): string {
+  if (msg.includes('Invalid login credentials')) return 'Email ou mot de passe incorrect.'
+  if (msg.includes('Email not confirmed')) return 'Confirme ton email avant de te connecter.'
+  if (msg.includes('Too many requests')) return 'Trop de tentatives. Réessaie dans quelques minutes.'
+  if (msg.includes('User not found')) return 'Aucun compte trouvé avec cet email.'
+  return 'Erreur de connexion. Réessaie.'
+}
+
 export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [resetSent, setResetSent] = useState(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -20,10 +29,17 @@ export default function LoginPage() {
       if (error) throw error
       router.push('/upload')
     } catch (err: any) {
-      setError(err.message || 'Erreur de connexion')
+      setError(translateAuthError(err.message || ''))
     } finally {
       setLoading(false)
     }
+  }
+
+  async function handleForgotPassword() {
+    if (!email) { setError('Entre ton email pour réinitialiser ton mot de passe.'); return }
+    setError('')
+    await supabase.auth.resetPasswordForEmail(email)
+    setResetSent(true)
   }
 
   return (
@@ -62,6 +78,11 @@ export default function LoginPage() {
                 {error}
               </p>
             )}
+            {resetSent && (
+              <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                Email envoyé ! Vérifie ta boîte mail.
+              </p>
+            )}
             <button
               type="submit"
               disabled={loading}
@@ -70,12 +91,19 @@ export default function LoginPage() {
               {loading ? 'Connexion…' : 'Se connecter'}
             </button>
           </form>
-          <p className="text-sm text-gray-500 text-center mt-4">
-            Pas encore de compte ?{' '}
-            <Link href="/signup" className="text-blue-500 hover:underline">
-              Créer un compte
-            </Link>
-          </p>
+          <div className="flex items-center justify-between mt-4">
+            <button
+              onClick={handleForgotPassword}
+              className="text-sm text-gray-400 hover:text-gray-600"
+            >
+              Mot de passe oublié ?
+            </button>
+            <p className="text-sm text-gray-500">
+              <Link href="/signup" className="text-blue-500 hover:underline">
+                Créer un compte
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
     </main>
