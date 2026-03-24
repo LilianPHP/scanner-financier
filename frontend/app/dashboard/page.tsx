@@ -373,7 +373,14 @@ export default function DashboardPage() {
                   return (
                     <tr key={tx.id} className="border-t border-gray-100 hover:bg-gray-50">
                       <td className="py-2 pr-4 text-gray-400 text-xs whitespace-nowrap">{tx.date}</td>
-                      <td className="py-2 pr-4 max-w-[200px] truncate">{tx.label_clean}</td>
+                      <td className="py-2 pr-4 max-w-[200px] truncate">
+                        <span className="flex items-center gap-1.5">
+                          {tx.category === 'autres' && (
+                            <span title="Catégorie non reconnue — à corriger ?" className="text-gray-300 text-xs">❓</span>
+                          )}
+                          {tx.label_clean}
+                        </span>
+                      </td>
                       <td className="py-2 pr-4">
                         <select
                           value={tx.category}

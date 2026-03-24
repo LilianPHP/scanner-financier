@@ -11,6 +11,7 @@ export default function UploadPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [step, setStep] = useState(0) // 0=idle, 1=upload, 2=analyse, 3=dashboard
+  const [slowWarning, setSlowWarning] = useState(false)
 
   // Vérifier l'auth
   useEffect(() => {
@@ -22,19 +23,26 @@ export default function UploadPage() {
   async function handleFile(file: File) {
     setError('')
     setLoading(true)
+    setSlowWarning(false)
     setStep(1)
+
+    // Si ça prend plus de 5s, afficher un message rassurant (cold start Railway)
+    const slowTimer = setTimeout(() => setSlowWarning(true), 5000)
 
     try {
       setStep(2)
       const result: UploadResult = await uploadFile(file)
+      clearTimeout(slowTimer)
       setStep(3)
       // Stocker le résultat dans sessionStorage pour le dashboard
       sessionStorage.setItem('analysis', JSON.stringify(result))
       router.push('/dashboard')
     } catch (err: any) {
+      clearTimeout(slowTimer)
       setError(err.message || 'Une erreur est survenue')
       setLoading(false)
       setStep(0)
+      setSlowWarning(false)
     }
   }
 
@@ -55,7 +63,9 @@ export default function UploadPage() {
       <main className="min-h-screen bg-[#f5f5f2] flex items-center justify-center px-4">
         <div className="bg-white border border-gray-200 rounded-2xl p-8 w-full max-w-sm">
           <h2 className="text-lg font-medium text-center mb-2">Analyse en cours…</h2>
-          <p className="text-sm text-gray-500 text-center mb-6">Quelques secondes</p>
+          <p className="text-sm text-gray-500 text-center mb-6">
+            {slowWarning ? '⏳ Le serveur se réveille, encore quelques secondes…' : 'Quelques secondes'}
+          </p>
           <div className="space-y-3">
             {STEPS.map((label, i) => (
               <div key={i} className="flex items-center gap-3 text-sm">
