@@ -33,6 +33,11 @@ export default function DashboardPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [search, setSearch] = useState('')
   const [toast, setToast] = useState('')
+  const [propagatePrompt, setPropagatePrompt] = useState<{
+    label: string
+    category: string
+    ids: string[]
+  } | null>(null)
 
   useEffect(() => {
     const raw = sessionStorage.getItem('analysis')
@@ -132,33 +137,57 @@ export default function DashboardPage() {
   )
 
   async function handleCategoryChange(tx: Transaction, newCategory: string) {
-    // Mise à jour optimiste immédiate
+    // Optimistic update : uniquement cette transaction (par ID)
     setTransactions(prev =>
-      prev.map(t => {
-        const labelKey = tx.label_clean.toLowerCase().split(' ').find(w => w.length >= 4) || ''
-        if (t.id === tx.id || (labelKey && t.label_clean.toLowerCase().includes(labelKey))) {
-          return { ...t, category: newCategory }
-        }
-        return t
-      })
+      prev.map(t => t.id === tx.id ? { ...t, category: newCategory } : t)
     )
     try {
-      const res = await updateCategory(tx.id, newCategory, true)
-      setToast(`${res.total_updated} transaction(s) mise(s) à jour`)
-      setTimeout(() => setToast(''), 3000)
+      await updateCategory(tx.id, newCategory, false)
+
+      // Chercher les transactions avec EXACTEMENT le même libellé et une catégorie différente
+      const duplicates = transactions.filter(
+        t => t.id !== tx.id &&
+          t.label_clean.toLowerCase() === tx.label_clean.toLowerCase() &&
+          t.category !== newCategory
+      )
+
+      if (duplicates.length > 0) {
+        // Proposer à l'utilisateur de reclasser les doublons
+        setPropagatePrompt({
+          label: tx.label_clean,
+          category: newCategory,
+          ids: duplicates.map(t => t.id),
+        })
+      } else {
+        setToast('Catégorie mise à jour')
+        setTimeout(() => setToast(''), 2500)
+      }
     } catch (err: any) {
-      // Rollback en cas d'erreur — recharger depuis la snapshot avant optimistic update
-      setTransactions(prev => prev.map(t => {
-        const labelKey = tx.label_clean.toLowerCase().split(' ').find(w => w.length >= 4) || ''
-        if (t.id === tx.id || (labelKey && t.label_clean.toLowerCase().includes(labelKey))) {
-          return { ...t, category: tx.category }
-        }
-        return t
-      }))
+      // Rollback uniquement cette transaction
+      setTransactions(prev =>
+        prev.map(t => t.id === tx.id ? { ...t, category: tx.category } : t)
+      )
       const msg = err?.message?.includes('401') ? 'Session expirée, reconnecte-toi' : 'Erreur réseau — réessaie'
       setToast(msg)
       setTimeout(() => setToast(''), 4000)
     }
+  }
+
+  async function handlePropagate() {
+    if (!propagatePrompt) return
+    const { ids, category } = propagatePrompt
+    setPropagatePrompt(null)
+
+    // Optimistic update de tous les doublons
+    setTransactions(prev =>
+      prev.map(t => ids.includes(t.id) ? { ...t, category } : t)
+    )
+
+    // Mise à jour en base pour chacun
+    await Promise.all(ids.map(id => updateCategory(id, category, false).catch(() => {})))
+
+    setToast(`${ids.length + 1} transactions mises à jour`)
+    setTimeout(() => setToast(''), 3000)
   }
 
   return (
@@ -351,10 +380,33 @@ export default function DashboardPage() {
 
       </div>
 
-      {/* Toast */}
-      {toast && (
+      {/* Toast simple */}
+      {toast && !propagatePrompt && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#1a1a1a] text-white text-sm px-5 py-2.5 rounded-xl shadow-lg">
           {toast}
+        </div>
+      )}
+
+      {/* Toast de propagation — proposer de reclasser les doublons exacts */}
+      {propagatePrompt && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#1a1a1a] text-white text-sm px-5 py-3.5 rounded-xl shadow-lg flex items-center gap-4 max-w-sm">
+          <span>
+            <span className="font-medium">{propagatePrompt.ids.length}</span> transaction{propagatePrompt.ids.length > 1 ? 's' : ''} identique{propagatePrompt.ids.length > 1 ? 's' : ''} trouvée{propagatePrompt.ids.length > 1 ? 's' : ''}. Reclasser aussi ?
+          </span>
+          <div className="flex gap-2 flex-shrink-0">
+            <button
+              onClick={() => setPropagatePrompt(null)}
+              className="text-gray-400 hover:text-white text-xs"
+            >
+              Non
+            </button>
+            <button
+              onClick={handlePropagate}
+              className="bg-white text-[#1a1a1a] font-medium text-xs px-3 py-1.5 rounded-lg hover:bg-gray-100"
+            >
+              Oui
+            </button>
+          </div>
         </div>
       )}
     </main>
