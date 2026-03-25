@@ -13,20 +13,26 @@ from app.parsers.pdf_parser import parse_pdf
 from app.services.normalization import normalize_transactions
 from app.services.categorization import categorize_batch
 from app.services.analytics import compute_summary, compute_by_category, compute_monthly_timeline, detect_subscriptions
+from jose import jwt as jose_jwt
+
 from app.db.client import get_supabase
 
 router = APIRouter()
 
 
 def _get_user_id(authorization: Optional[str]) -> str:
-    """Vérifie le JWT Supabase et retourne l'user_id."""
+    """Extrait l'user_id depuis le JWT Supabase sans vérification de signature."""
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Token d'authentification manquant")
     token = authorization.split(" ")[1]
     try:
-        sb = get_supabase()
-        user = sb.auth.get_user(token)
-        return user.user.id
+        payload = jose_jwt.get_unverified_claims(token)
+        user_id = payload.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Token invalide")
+        return user_id
+    except HTTPException:
+        raise
     except Exception:
         raise HTTPException(status_code=401, detail="Token invalide ou expiré")
 
