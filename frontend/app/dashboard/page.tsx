@@ -33,6 +33,7 @@ export default function DashboardPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [search, setSearch] = useState('')
   const [toast, setToast] = useState('')
+  const [showAllTx, setShowAllTx] = useState(false)
   const [propagatePrompt, setPropagatePrompt] = useState<{
     label: string
     category: string
@@ -368,7 +369,7 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.slice(0, 100).map(tx => {
+                {(showAllTx ? filtered : filtered.slice(0, 100)).map(tx => {
                   const color = CATEGORY_COLORS[tx.category] || '#9E9E9E'
                   return (
                     <tr key={tx.id} className="border-t border-gray-100 hover:bg-gray-50">
@@ -405,10 +406,15 @@ export default function DashboardPage() {
                 })}
               </tbody>
             </table>
-            {filtered.length > 100 && (
-              <p className="text-xs text-gray-400 text-center mt-3">
-                100 transactions affichées sur {filtered.length} au total
-              </p>
+            {filtered.length > 100 && !showAllTx && (
+              <div className="text-center mt-4">
+                <button
+                  onClick={() => setShowAllTx(true)}
+                  className="text-sm text-gray-500 border border-gray-200 rounded-lg px-4 py-2 hover:bg-gray-50"
+                >
+                  Voir les {filtered.length - 100} transactions suivantes
+                </button>
+              </div>
             )}
           </div>
         </div>

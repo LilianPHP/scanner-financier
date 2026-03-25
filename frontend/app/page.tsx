@@ -167,7 +167,7 @@ export default function LandingPage() {
       </section>
 
       {/* How it works */}
-      <section className="max-w-4xl mx-auto px-4 pb-24">
+      <section className="max-w-4xl mx-auto px-4 pb-12 md:pb-24">
         <h2 className="text-center text-2xl font-medium mb-10">Comment ça marche ?</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[
@@ -187,7 +187,7 @@ export default function LandingPage() {
       </section>
 
       {/* Privacy */}
-      <section className="text-center pb-16 px-4">
+      <section className="text-center pb-10 md:pb-16 px-4">
         <p className="text-sm text-gray-400 max-w-sm mx-auto">
           Ton fichier est analysé puis supprimé. On ne garde rien, on ne partage rien.
         </p>
