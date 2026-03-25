@@ -67,8 +67,14 @@ export default function HistoryPage() {
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600 mb-4">
-            {error}
+          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600 mb-4 flex items-center justify-between gap-4">
+            <span>{error}</span>
+            <button
+              onClick={() => setError('')}
+              className="text-red-400 hover:text-red-600 text-xs underline whitespace-nowrap"
+            >
+              Fermer
+            </button>
           </div>
         )}
 

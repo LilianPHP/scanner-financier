@@ -192,7 +192,17 @@ export async function loadAnalysis(fileId: string): Promise<UploadResult> {
   ])
 
   if (!txRes.ok || !summaryRes.ok || !categoriesRes.ok || !timelineRes.ok) {
-    throw new Error('Erreur lors du chargement de l\'analyse')
+    const failed = !txRes.ok ? txRes : !summaryRes.ok ? summaryRes : !categoriesRes.ok ? categoriesRes : timelineRes
+    if (failed.status === 503 || failed.status === 0) {
+      throw new Error('Le serveur se réveille — réessaie dans quelques secondes')
+    }
+    if (failed.status === 401) {
+      throw new Error('Session expirée — reconnecte-toi')
+    }
+    if (failed.status === 404) {
+      throw new Error('Analyse introuvable — ce fichier a peut-être été supprimé')
+    }
+    throw new Error(`Erreur serveur (${failed.status}) — réessaie`)
   }
 
   const [txData, summary, categoriesData, timelineData] = await Promise.all([
