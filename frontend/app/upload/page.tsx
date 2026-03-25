@@ -71,14 +71,14 @@ export default function UploadPage() {
               <div key={i} className="flex items-center gap-3 text-sm">
                 <div
                   className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
-                    i < step
+                    i < step || step >= STEPS.length - 1
                       ? 'bg-[#1D9E75]'
                       : i === step - 1
                       ? 'bg-[#378ADD]'
                       : 'bg-gray-100 border border-gray-300'
                   }`}
                 >
-                  {i < step && (
+                  {(i < step || step >= STEPS.length - 1) && (
                     <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
                       <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="2" strokeLinecap="round" />
                     </svg>
@@ -91,7 +91,7 @@ export default function UploadPage() {
           <div className="mt-6 h-1.5 bg-gray-100 rounded-full overflow-hidden">
             <div
               className="h-full bg-[#378ADD] rounded-full transition-all duration-500"
-              style={{ width: `${(step / 4) * 100}%` }}
+              style={{ width: `${step >= STEPS.length - 1 ? 100 : (step / (STEPS.length - 1)) * 100}%` }}
             />
           </div>
         </div>

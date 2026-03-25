@@ -109,9 +109,9 @@ export default function HistoryPage() {
                       <span className="text-[#E24B4A] font-medium">{formatCurrency(f.expense_total!)}</span>
                     </span>
                     <span>
-                      <span className="text-xs text-gray-400 block">Il te reste</span>
+                      <span className="text-xs text-gray-400 block">{(f.cashflow ?? 0) >= 0 ? 'Il te reste' : 'En dépassement'}</span>
                       <span className={`font-medium ${(f.cashflow ?? 0) >= 0 ? 'text-[#1D9E75]' : 'text-[#E24B4A]'}`}>
-                        {formatCurrency(f.cashflow!)}
+                        {formatCurrency(Math.abs(f.cashflow!))}
                       </span>
                     </span>
                   </div>

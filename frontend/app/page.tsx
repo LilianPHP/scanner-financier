@@ -93,7 +93,7 @@ export default function LandingPage() {
                   {/* CSS conic pie */}
                   <div className="relative flex-shrink-0">
                     <div className="w-24 h-24 rounded-full" style={{
-                      background: 'conic-gradient(#4CAF50 0% 35%, #2196F3 35% 63%, #FF9800 63% 78%, #9C27B0 78% 90%, #9E9E9E 90% 100%)'
+                      background: 'conic-gradient(#4CAF50 0% 35%, #378ADD 35% 63%, #FF9800 63% 78%, #E4A853 78% 90%, #9E9E9E 90% 100%)'
                     }} />
                     <div className="absolute inset-0 m-auto w-12 h-12 bg-white rounded-full" />
                   </div>
@@ -101,9 +101,9 @@ export default function LandingPage() {
                   <div className="space-y-1.5 text-xs text-gray-600 flex-1">
                     {[
                       { label: 'Alimentation', color: '#4CAF50', pct: '35%' },
-                      { label: 'Logement', color: '#2196F3', pct: '28%' },
+                      { label: 'Logement', color: '#378ADD', pct: '28%' },
                       { label: 'Transport', color: '#FF9800', pct: '15%' },
-                      { label: 'Loisirs', color: '#9C27B0', pct: '12%' },
+                      { label: 'Loisirs', color: '#E4A853', pct: '12%' },
                       { label: 'Autres', color: '#9E9E9E', pct: '10%' },
                     ].map(d => (
                       <div key={d.label} className="flex items-center justify-between">

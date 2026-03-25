@@ -105,7 +105,7 @@ export default function DashboardPage() {
     if (liveStats.cashflow >= 0) result.push({
       icon: '💰',
       text: `Tu as dépensé moins que tu n'as gagné : <strong>+${formatCurrency(liveStats.cashflow)}</strong>`,
-      sub: 'Tu as dépensé moins que tu n\'as gagné.',
+      sub: `Soit ${Math.round(liveStats.savingsRate)}% de tes revenus mis de côté.`,
     })
     else result.push({
       icon: '⚠️',

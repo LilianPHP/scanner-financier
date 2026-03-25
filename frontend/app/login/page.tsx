@@ -94,7 +94,7 @@ export default function LoginPage() {
           <div className="flex items-center justify-between mt-4">
             <button
               onClick={handleForgotPassword}
-              className="text-sm text-gray-400 hover:text-gray-600"
+              className="text-sm text-blue-500 hover:underline"
             >
               Mot de passe oublié ?
             </button>
