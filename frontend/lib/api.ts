@@ -171,13 +171,20 @@ export async function getUploadHistory(): Promise<UploadedFile[]> {
     .select('*')
     .in('file_id', fileIds)
 
-  // Fusionner
+  // Fusionner — on prend uniquement les champs financiers pour éviter
+  // que l'`id` de analysis_results écrase le file_id
   const analyticsMap = Object.fromEntries((analytics || []).map(a => [a.file_id, a]))
 
-  return files.map(f => ({
-    ...f,
-    ...(analyticsMap[f.id] || {}),
-  }))
+  return files.map(f => {
+    const a = analyticsMap[f.id]
+    return {
+      ...f,
+      income_total: a?.income_total,
+      expense_total: a?.expense_total,
+      cashflow: a?.cashflow,
+      savings_rate: a?.savings_rate,
+    }
+  })
 }
 
 // Recharger une analyse passée depuis le backend → sessionStorage → dashboard
