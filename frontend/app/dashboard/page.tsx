@@ -51,6 +51,24 @@ export default function DashboardPage() {
 
   const SAVINGS_CATS = useMemo(() => new Set(['epargne', 'investissement']), [])
 
+  function exportCSV() {
+    const header = ['Date', 'Libellé', 'Catégorie', 'Montant (€)']
+    const rows = transactions.map(tx => [
+      tx.date,
+      `"${tx.label_clean.replace(/"/g, '""')}"`,
+      CATEGORY_LABELS[tx.category] ?? tx.category,
+      tx.amount.toFixed(2).replace('.', ','),
+    ])
+    const csv = [header, ...rows].map(r => r.join(';')).join('\n')
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `scanner-financier-${data?.filename?.replace(/\.[^.]+$/, '') ?? 'export'}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   // Total épargne + investissement détectés (débits)
   const savingsTotal = useMemo(() =>
     transactions
@@ -253,6 +271,12 @@ export default function DashboardPage() {
             <span className="text-sm bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-gray-500">
               {transactions.length} transactions
             </span>
+            <button onClick={exportCSV} className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 text-gray-500 hover:bg-gray-100 flex items-center gap-1.5">
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
+              </svg>
+              Exporter
+            </button>
             <button onClick={() => router.push('/history')} className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 text-gray-500 hover:bg-gray-100">Historique</button>
             <button onClick={() => router.push('/upload')} className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 text-gray-500 hover:bg-gray-100">Nouveau fichier</button>
             <button onClick={async () => { await supabase.auth.signOut(); router.push('/login') }} className="text-sm text-gray-400 hover:text-gray-600 px-1.5 py-1.5">Déconnexion</button>
