@@ -279,6 +279,7 @@ export default function DashboardPage() {
               </svg>
               Exporter
             </button>
+            <button onClick={() => router.push('/regles')} className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 text-gray-500 hover:bg-gray-100">Mes règles</button>
             <button onClick={() => router.push('/history')} className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 text-gray-500 hover:bg-gray-100">Historique</button>
             <button onClick={() => router.push('/upload')} className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 text-gray-500 hover:bg-gray-100">Nouveau fichier</button>
             <button onClick={async () => { await supabase.auth.signOut(); router.push('/login') }} className="text-sm text-gray-400 hover:text-gray-600 px-1.5 py-1.5">Déconnexion</button>

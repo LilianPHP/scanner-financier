@@ -241,6 +241,29 @@ export async function saveRule(labelClean: string, category: string): Promise<vo
   if (!response.ok) throw new Error('Erreur lors de la sauvegarde de la règle')
 }
 
+export type CategoryRule = {
+  label_pattern: string
+  category: string
+  created_at: string
+}
+
+export async function getRules(): Promise<CategoryRule[]> {
+  const headers = await getAuthHeader()
+  const response = await apiFetch(`${BACKEND_URL}/rules`, { headers })
+  if (!response.ok) throw new Error('Erreur lors de la récupération des règles')
+  const data = await response.json()
+  return data.rules
+}
+
+export async function deleteRule(labelPattern: string): Promise<void> {
+  const headers = await getAuthHeader()
+  const response = await apiFetch(`${BACKEND_URL}/rules/${encodeURIComponent(labelPattern)}`, {
+    method: 'DELETE',
+    headers,
+  })
+  if (!response.ok) throw new Error('Erreur lors de la suppression')
+}
+
 // Formater un montant en euros
 export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('fr-FR', {
