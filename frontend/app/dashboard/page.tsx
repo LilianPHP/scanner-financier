@@ -34,6 +34,7 @@ export default function DashboardPage() {
   const [search, setSearch] = useState('')
   const [toast, setToast] = useState('')
   const [showAllTx, setShowAllTx] = useState(false)
+  const [savingsConfirmed, setSavingsConfirmed] = useState(false)
   const [propagatePrompt, setPropagatePrompt] = useState<{
     label: string
     category: string
@@ -48,12 +49,23 @@ export default function DashboardPage() {
     setTransactions(parsed.transactions)
   }, [router])
 
-  // Pie chart recalculé dynamiquement depuis l'état transactions
+  const SAVINGS_CATS = useMemo(() => new Set(['epargne', 'investissement']), [])
+
+  // Total épargne + investissement détectés (débits)
+  const savingsTotal = useMemo(() =>
+    transactions
+      .filter(tx => tx.amount < 0 && SAVINGS_CATS.has(tx.category))
+      .reduce((s, tx) => s + Math.abs(tx.amount), 0)
+  , [transactions, SAVINGS_CATS])
+
+  // Pie chart — exclut épargne/investissement si confirmé
   const pieData = useMemo(() => {
     const catTotals: Record<string, number> = {}
-    transactions.filter(tx => tx.amount < 0).forEach(tx => {
-      catTotals[tx.category] = (catTotals[tx.category] || 0) + Math.abs(tx.amount)
-    })
+    transactions
+      .filter(tx => tx.amount < 0 && (!savingsConfirmed || !SAVINGS_CATS.has(tx.category)))
+      .forEach(tx => {
+        catTotals[tx.category] = (catTotals[tx.category] || 0) + Math.abs(tx.amount)
+      })
     return Object.entries(catTotals)
       .sort((a, b) => b[1] - a[1])
       .map(([category, value]) => ({
@@ -62,16 +74,18 @@ export default function DashboardPage() {
         value,
         color: CATEGORY_COLORS[category] || '#9E9E9E',
       }))
-  }, [transactions])
+  }, [transactions, savingsConfirmed, SAVINGS_CATS])
 
-  // KPIs recalculés dynamiquement
+  // KPIs — exclut épargne/investissement si confirmé
   const liveStats = useMemo(() => {
     const income = transactions.filter(tx => tx.amount > 0).reduce((s, tx) => s + tx.amount, 0)
-    const expense = transactions.filter(tx => tx.amount < 0).reduce((s, tx) => s + Math.abs(tx.amount), 0)
+    const expense = transactions
+      .filter(tx => tx.amount < 0 && (!savingsConfirmed || !SAVINGS_CATS.has(tx.category)))
+      .reduce((s, tx) => s + Math.abs(tx.amount), 0)
     const cashflow = income - expense
     const savingsRate = income > 0 ? cashflow / income * 100 : 0
     return { income, expense, cashflow, savingsRate }
-  }, [transactions])
+  }, [transactions, savingsConfirmed, SAVINGS_CATS])
 
   // Insights automatiques
   const insights = useMemo(() => {
@@ -80,7 +94,8 @@ export default function DashboardPage() {
     const aboTotal = transactions.filter(tx => tx.amount < 0 && tx.category === 'abonnements').reduce((s, tx) => s + Math.abs(tx.amount), 0)
     const loisirTotal = transactions.filter(tx => tx.amount < 0 && tx.category === 'loisirs').reduce((s, tx) => s + Math.abs(tx.amount), 0)
     const aliTotal = transactions.filter(tx => tx.amount < 0 && tx.category === 'alimentation').reduce((s, tx) => s + Math.abs(tx.amount), 0)
-    const topCat = pieData[0]
+    // Exclut épargne/investissement du top dépense (même si non confirmé, car trompeur)
+    const topCat = pieData.find(d => !SAVINGS_CATS.has(d.category)) || pieData[0]
     const result = []
 
     if (topCat) result.push({
@@ -136,17 +151,18 @@ export default function DashboardPage() {
       .sort((a, b) => b.monthly_cost - a.monthly_cost)
   }, [transactions])
 
-  // Bar chart recalculé dynamiquement depuis l'état transactions
+  // Bar chart — exclut épargne/investissement des dépenses si confirmé
   const liveTimeline = useMemo(() => {
     const monthly: Record<string, { month: string; income: number; expense: number }> = {}
     transactions.forEach(tx => {
       const month = tx.date.slice(0, 7)
       if (!monthly[month]) monthly[month] = { month, income: 0, expense: 0 }
       if (tx.amount > 0) monthly[month].income += tx.amount
-      else monthly[month].expense += Math.abs(tx.amount)
+      else if (!savingsConfirmed || !SAVINGS_CATS.has(tx.category))
+        monthly[month].expense += Math.abs(tx.amount)
     })
     return Object.values(monthly).sort((a, b) => a.month.localeCompare(b.month))
-  }, [transactions])
+  }, [transactions, savingsConfirmed, SAVINGS_CATS])
 
   if (!data) return null
 
@@ -251,6 +267,40 @@ export default function DashboardPage() {
           ))}
         </div>
 
+        {/* Bannière confirmation épargne */}
+        {savingsTotal > 0 && !savingsConfirmed && (
+          <div className="bg-[#f0faf5] border border-[#1D9E75]/30 rounded-xl px-4 py-3.5 mb-5">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div>
+                <p className="text-sm font-medium text-[#1D9E75]">
+                  💰 {formatCurrency(savingsTotal)} mis de côté détectés
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  On a classé ces virements comme épargne ou investissement. Si c'est bien le cas,
+                  on les sort des dépenses pour un tableau de bord plus juste.
+                </p>
+              </div>
+              <div className="flex gap-2 flex-shrink-0 mt-0.5">
+                <button
+                  onClick={() => setSavingsConfirmed(true)}
+                  className="text-sm bg-[#1D9E75] text-white px-3 py-1.5 rounded-lg hover:bg-[#178a64] transition-colors"
+                >
+                  Oui, c'est de l'épargne
+                </button>
+                <button
+                  onClick={() => {
+                    const el = document.getElementById('transactions-section')
+                    el?.scrollIntoView({ behavior: 'smooth' })
+                  }}
+                  className="text-sm border border-gray-200 bg-white px-3 py-1.5 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  Revoir ↗
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Charts */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
           {/* Pie chart */}
@@ -347,7 +397,7 @@ export default function DashboardPage() {
         )}
 
         {/* Transactions */}
-        <div className="bg-white border border-gray-200 rounded-xl p-5 mb-6">
+        <div id="transactions-section" className="bg-white border border-gray-200 rounded-xl p-5 mb-6">
           <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
             <p className="text-sm font-medium">Transactions <span className="text-gray-400 font-normal">({filtered.length})</span></p>
             <input

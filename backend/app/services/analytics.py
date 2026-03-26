@@ -5,12 +5,23 @@ from collections import defaultdict
 from typing import List, Dict, Any
 
 
+SAVINGS_CATEGORIES = {"epargne", "investissement"}
+
+
 def compute_summary(transactions: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
     Calcule les KPIs principaux.
+    Distingue les dépenses réelles des transferts épargne/investissement.
     """
     total_income = sum(tx["amount"] for tx in transactions if tx["amount"] > 0)
     total_expense = sum(abs(tx["amount"]) for tx in transactions if tx["amount"] < 0)
+
+    # Montant mis de côté (épargne + investissement) — argent préservé, pas dépensé
+    savings_out = sum(
+        abs(tx["amount"]) for tx in transactions
+        if tx["amount"] < 0 and tx.get("category") in SAVINGS_CATEGORIES
+    )
+    real_expense = total_expense - savings_out
 
     cashflow = total_income - total_expense
     savings_rate = (cashflow / total_income * 100) if total_income > 0 else 0
@@ -18,6 +29,8 @@ def compute_summary(transactions: List[Dict[str, Any]]) -> Dict[str, Any]:
     return {
         "income_total": round(total_income, 2),
         "expense_total": round(total_expense, 2),
+        "real_expense_total": round(real_expense, 2),
+        "savings_out": round(savings_out, 2),
         "cashflow": round(cashflow, 2),
         "savings_rate": round(savings_rate, 1),
         "transaction_count": len(transactions),
