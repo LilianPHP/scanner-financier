@@ -74,7 +74,7 @@ export default function UploadPage() {
                     i < step || step >= STEPS.length - 1
                       ? 'bg-[#1D9E75]'
                       : i === step - 1
-                      ? 'bg-[#378ADD]'
+                      ? 'bg-[#1D9E75] opacity-60'
                       : 'bg-gray-100 border border-gray-300'
                   }`}
                 >
@@ -90,7 +90,7 @@ export default function UploadPage() {
           </div>
           <div className="mt-6 h-1.5 bg-gray-100 rounded-full overflow-hidden">
             <div
-              className="h-full bg-[#378ADD] rounded-full transition-all duration-500"
+              className="h-full bg-[#1D9E75] rounded-full transition-all duration-500"
               style={{ width: `${step >= STEPS.length - 1 ? 100 : (step / (STEPS.length - 1)) * 100}%` }}
             />
           </div>
@@ -130,7 +130,7 @@ export default function UploadPage() {
             if (f) handleFile(f)
           }}
           className={`border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all ${
-            dragOver ? 'border-blue-400 bg-blue-50' : 'border-gray-300 bg-white hover:border-gray-400'
+            dragOver ? 'border-[#1D9E75] bg-[#f0faf5]' : 'border-gray-300 bg-white hover:border-gray-400'
           }`}
         >
           <svg className="w-10 h-10 mx-auto mb-3 stroke-gray-400" viewBox="0 0 24 24" fill="none" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
