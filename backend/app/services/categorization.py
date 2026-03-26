@@ -8,9 +8,12 @@ from typing import List, Dict, Any
 # Règles directionnelles : certains libellés signifient des choses différentes
 # selon que c'est un crédit ou un débit.
 DIRECTION_RULES: Dict[str, Dict[str, str]] = {
+    # France Travail : allocation (crédit) = salaire, cotisation (débit) = impots
     "france travail": {"credit": "salaire", "debit": "impots"},
     "pole emploi":    {"credit": "salaire", "debit": "impots"},
-    "en votre faveur": {"credit": "salaire"},   # virement entrant générique = revenu
+    # CPAM : remboursement (crédit) = santé, prélèvement (débit) = santé aussi
+    "cpam remboursement": {"credit": "sante"},
+    "remboursement securite sociale": {"credit": "sante"},
 }
 
 CATEGORY_RULES: Dict[str, List[str]] = {
@@ -143,24 +146,31 @@ def categorize(label_raw: str, amount: float) -> str:
 def categorize_batch(transactions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
     Catégorise une liste de transactions en deux passes :
-    1. Règles déterministes (rapide, sans API)
+    1. Règles déterministes sur label_clean ET label_raw (rapide, sans API)
     2. Fallback IA Claude pour les transactions encore en "autres"
+       → utilise label_clean (plus lisible pour l'IA)
     """
-    # Passe 1 : règles
+    # Passe 1 : règles keyword
     for tx in transactions:
-        tx["category"] = categorize(tx["label_raw"], tx["amount"])
+        # Essaie label_clean d'abord (épuré du bruit bancaire)
+        cat = categorize(tx.get("label_clean", ""), tx["amount"])
+        # Si pas de match, essaie label_raw (peut contenir des patterns différents)
+        if cat == "autres":
+            cat = categorize(tx["label_raw"], tx["amount"])
+        tx["category"] = cat
 
-    # Passe 2 : fallback IA pour les transactions non catégorisées
-    # On inclut les crédits aussi (ex: virements entrants atypiques)
+    # Passe 2 : fallback IA — crédits ET débits non catégorisés
     uncategorized = [tx for tx in transactions if tx["category"] == "autres"]
 
     if uncategorized:
         from app.services.ai_categorization import categorize_with_ai
-        labels = [tx["label_raw"] for tx in uncategorized]
+        # Envoie label_clean à l'IA : libellé épuré, sans codes internes
+        labels = [tx.get("label_clean", tx["label_raw"]) for tx in uncategorized]
         ai_results = categorize_with_ai(labels)
 
         for tx in uncategorized:
-            if tx["label_raw"] in ai_results:
-                tx["category"] = ai_results[tx["label_raw"]]
+            label_key = tx.get("label_clean", tx["label_raw"])
+            if label_key in ai_results:
+                tx["category"] = ai_results[label_key]
 
     return transactions
