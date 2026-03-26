@@ -161,7 +161,17 @@ export default function DashboardPage() {
       else if (!savingsConfirmed || !SAVINGS_CATS.has(tx.category))
         monthly[month].expense += Math.abs(tx.amount)
     })
-    return Object.values(monthly).sort((a, b) => a.month.localeCompare(b.month))
+    const sorted = Object.values(monthly).sort((a, b) => a.month.localeCompare(b.month))
+    return sorted.map((m, i) => {
+      const prev = sorted[i - 1]
+      const expenseChange = prev && prev.expense > 0
+        ? Math.round(((m.expense - prev.expense) / prev.expense) * 100)
+        : null
+      const incomeChange = prev && prev.income > 0
+        ? Math.round(((m.income - prev.income) / prev.income) * 100)
+        : null
+      return { ...m, expenseChange, incomeChange }
+    })
   }, [transactions, savingsConfirmed, SAVINGS_CATS])
 
   if (!data) return null
@@ -345,6 +355,33 @@ export default function DashboardPage() {
                 <Bar dataKey="expense" name="Dépenses" fill="#E24B4A" radius={[3, 3, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
+            {liveTimeline.length > 1 && (
+              <div className="mt-3 pt-3 border-t border-gray-100">
+                <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-2">Variation mois / mois</p>
+                <div className="flex gap-3 flex-wrap">
+                  {liveTimeline.filter(m => m.expenseChange !== null || m.incomeChange !== null).map(m => {
+                    const monthLabel = new Date(m.month + '-01').toLocaleDateString('fr-FR', { month: 'short' })
+                    return (
+                      <div key={m.month} className="flex flex-col gap-1">
+                        <span className="text-[10px] text-gray-400 text-center">{monthLabel}</span>
+                        <div className="flex gap-1">
+                          {m.incomeChange !== null && (
+                            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${m.incomeChange >= 0 ? 'bg-[#f0faf5] text-[#1D9E75]' : 'bg-red-50 text-red-500'}`}>
+                              Rev. {m.incomeChange >= 0 ? '+' : ''}{m.incomeChange}%
+                            </span>
+                          )}
+                          {m.expenseChange !== null && (
+                            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${m.expenseChange <= 0 ? 'bg-[#f0faf5] text-[#1D9E75]' : 'bg-red-50 text-red-500'}`}>
+                              Dép. {m.expenseChange >= 0 ? '+' : ''}{m.expenseChange}%
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
