@@ -233,7 +233,12 @@ export default function DashboardPage() {
 
         {/* Header */}
         <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-          <h1 className="text-xl font-medium">Voilà où va ton argent</h1>
+          <div>
+            <h1 className="text-xl font-medium">Voilà où va ton argent</h1>
+            {data?.filename && (
+              <p className="text-xs text-gray-400 mt-0.5 truncate max-w-[240px]">{data.filename}</p>
+            )}
+          </div>
           <div className="flex gap-2 flex-wrap">
             <span className="text-sm bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-gray-500">
               {transactions.length} transactions

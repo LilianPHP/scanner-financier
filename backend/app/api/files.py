@@ -4,8 +4,30 @@ POST /files/upload  → upload, parse, catégorise, sauvegarde
 """
 import uuid
 import io
-from fastapi import APIRouter, UploadFile, File, Header, HTTPException, Depends
+import time
+from collections import defaultdict
+from fastapi import APIRouter, UploadFile, File, Header, HTTPException, Depends, Request
 from typing import Optional
+
+# Rate limiting : max 10 uploads par user par heure (fenêtre glissante)
+_RATE_LIMIT_MAX = 10
+_RATE_LIMIT_WINDOW = 3600  # secondes
+_upload_timestamps: dict = defaultdict(list)
+
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+
+
+def _check_rate_limit(user_id: str) -> None:
+    now = time.time()
+    timestamps = _upload_timestamps[user_id]
+    # Supprimer les entrées hors fenêtre
+    _upload_timestamps[user_id] = [t for t in timestamps if now - t < _RATE_LIMIT_WINDOW]
+    if len(_upload_timestamps[user_id]) >= _RATE_LIMIT_MAX:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Trop d'uploads — limite de {_RATE_LIMIT_MAX} fichiers par heure atteinte."
+        )
+    _upload_timestamps[user_id].append(now)
 
 from app.parsers.csv_parser import parse_csv
 from app.parsers.xlsx_parser import parse_xlsx
@@ -49,8 +71,15 @@ async def upload_file(
     # Auth
     user_id = _get_user_id(authorization)
 
+    # Rate limiting
+    _check_rate_limit(user_id)
+
     # Lire le fichier
     content = await file.read()
+
+    # Taille max 10 MB
+    if len(content) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=413, detail="Fichier trop volumineux — maximum 10 Mo.")
     filename = file.filename or "unknown"
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
 

@@ -81,11 +81,13 @@ export default function HistoryPage() {
         {loading ? (
           <div className="text-center text-sm text-gray-400 py-20">Chargement…</div>
         ) : files.length === 0 ? (
-          <div className="bg-white border border-gray-200 rounded-2xl p-12 text-center">
-            <p className="text-gray-500 mb-4">Ton premier relevé t'attend.</p>
+          <div className="bg-white border border-gray-200 rounded-2xl p-16 text-center">
+            <div className="text-4xl mb-4">📂</div>
+            <p className="font-medium text-gray-700 mb-1">Aucune analyse pour l'instant</p>
+            <p className="text-sm text-gray-400 mb-6">Dépose ton premier relevé bancaire pour découvrir où part ton argent.</p>
             <button
               onClick={() => router.push('/upload')}
-              className="text-sm bg-[#378ADD] text-white px-5 py-2 rounded-lg hover:bg-blue-600"
+              className="text-sm bg-[#1D9E75] text-white px-5 py-2 rounded-lg hover:bg-[#178a64] transition-colors"
             >
               Analyser mon premier relevé
             </button>

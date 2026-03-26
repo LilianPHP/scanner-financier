@@ -33,7 +33,7 @@ export default function LandingPage() {
         </p>
         <Link
           href="/signup"
-          className="bg-[#378ADD] text-white px-8 py-3 rounded-xl text-base font-medium hover:bg-blue-600 transition-colors"
+          className="bg-[#1D9E75] text-white px-8 py-3 rounded-xl text-base font-medium hover:bg-[#178a64] transition-colors"
         >
           Analyser mon relevé gratuitement
         </Link>
@@ -192,6 +192,18 @@ export default function LandingPage() {
           Ton fichier est analysé puis supprimé. On ne garde rien, on ne partage rien.
         </p>
       </section>
+
+      {/* Footer */}
+      <footer className="border-t border-gray-200 py-6 px-6">
+        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-400">
+          <span>© {new Date().getFullYear()} Scanner Financier</span>
+          <div className="flex gap-5">
+            <a href="/mentions-legales" className="hover:text-gray-600 transition-colors">Mentions légales</a>
+            <a href="/confidentialite" className="hover:text-gray-600 transition-colors">Confidentialité</a>
+            <a href="mailto:contact@scanner-financier.app" className="hover:text-gray-600 transition-colors">Contact</a>
+          </div>
+        </div>
+      </footer>
     </main>
   )
 }

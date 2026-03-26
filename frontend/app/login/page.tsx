@@ -45,9 +45,11 @@ export default function LoginPage() {
   return (
     <main className="min-h-screen bg-[#f5f5f2] flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        <p className="text-center text-sm font-medium tracking-widest text-gray-400 uppercase mb-8">
-          Scanner Financier
-        </p>
+        <div className="flex items-center justify-center gap-3 mb-8">
+          <Link href="/" className="text-sm text-gray-400 hover:text-gray-600 transition-colors">← Accueil</Link>
+          <span className="text-gray-300">|</span>
+          <p className="text-sm font-medium tracking-widest text-gray-400 uppercase">Scanner Financier</p>
+        </div>
         <div className="bg-white border border-gray-200 rounded-2xl p-8">
           <h1 className="text-xl font-medium mb-6">Connexion</h1>
           <form onSubmit={handleSubmit} className="space-y-4">
