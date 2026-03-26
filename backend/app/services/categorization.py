@@ -1,15 +1,25 @@
 """
 Catégorisation des transactions par règles déterministes.
-L'IA (Claude) est utilisée en fallback pour les débits non catégorisés.
+L'IA (Claude) est utilisée en fallback pour les transactions non catégorisées.
 """
 from typing import List, Dict, Any
 
 
+# Règles directionnelles : certains libellés signifient des choses différentes
+# selon que c'est un crédit ou un débit.
+DIRECTION_RULES: Dict[str, Dict[str, str]] = {
+    "france travail": {"credit": "salaire", "debit": "impots"},
+    "pole emploi":    {"credit": "salaire", "debit": "impots"},
+    "en votre faveur": {"credit": "salaire"},   # virement entrant générique = revenu
+}
+
 CATEGORY_RULES: Dict[str, List[str]] = {
     "salaire": [
         "salaire", " paie ", "remuneration", "virement employeur",
-        "pole emploi", "france travail revenu", "are ", "indemnite chomage",
+        "france travail revenu", "are ", "indemnite chomage",
         "allocations familiales", "caf ", "cpam versement", "retraite", "pension retraite",
+        "alloca",          # FRANCE TRAVAIL DR IDF ALLOCA...
+        "chomage",
     ],
     "investissement": [
         "bitstack", "crypto", "bitcoin", "ethereum", "bourse",
@@ -18,11 +28,12 @@ CATEGORY_RULES: Dict[str, List[str]] = {
     ],
     "epargne": [
         "livret a", "ldds", "ldd ", "pel ", "cel ", "livret jeune",
-        "livret epargne", "virement emis web m.", "virement a moi",
-        "virement perso", "epargne",
+        "livret epargne", "emis web",   # "VIREMENT EMIS WEB M." → épargne perso
+        "virement a moi", "virement perso", "epargne",
     ],
     "impots": [
-        "france travail prelevement", "impots", "dgfip", "tva",
+        "france travail prelevement", "france travail idf",  # prelevement avant france travail dans le libelle CA
+        "impots", "dgfip", "tva",
         "taxe fonciere", "taxe habitation", "urssaf", "cotisation sociale",
         "rsi ", "cipav", "sip ", "tresor public",
     ],
@@ -64,7 +75,8 @@ CATEGORY_RULES: Dict[str, List[str]] = {
         "darty ", "boulanger ", "ikea ", "but ", "conforama",
     ],
     "sante": [
-        "pharmacie", "medecin", "docteur", "dentiste", "opticien",
+        "pharmacie", "pharmacy", "drug store", "drugstore",  # labels FR et EN
+        "medecin", "docteur", "dentiste", "dentist", "opticien",
         "kinesitherapeute", "osteopathe", "hopital", "clinique",
         "mutuelle", "prevoyance",
         "doctolib", "ameli", "cpam ",
@@ -81,14 +93,15 @@ CATEGORY_RULES: Dict[str, List[str]] = {
         "playstation", "xbox ", "steam ", "nintendo",
     ],
     "frais bancaires": [
-        "cotisation carte", "cotisation compte", "commission",
-        "frais de tenue", "frais bancaires", "agios", "interet debiteur",
+        "cotisation carte", "cotisation compte", "cotisation offre", "offre premium",
+        "commission", "frais de tenue", "frais bancaires", "agios", "interet debiteur",
         "frais virement", "frais change", "frais cb",
     ],
 }
 
-# Mapping pour normalisation (accents supprimés)
+
 def _normalize(text: str) -> str:
+    """Minuscule + suppression des accents."""
     text = text.lower()
     replacements = {
         "é": "e", "è": "e", "ê": "e", "ë": "e",
@@ -109,7 +122,16 @@ def categorize(label_raw: str, amount: float) -> str:
     Retourne la catégorie détectée ou "autres".
     """
     normalized = _normalize(label_raw)
+    direction = "credit" if amount > 0 else "debit"
 
+    # Passe 0 : règles directionnelles (crédit vs débit)
+    for kw, mapping in DIRECTION_RULES.items():
+        if _normalize(kw) in normalized:
+            cat = mapping.get(direction)
+            if cat:
+                return cat
+
+    # Passe 1 : règles génériques
     for category, keywords in CATEGORY_RULES.items():
         for kw in keywords:
             if _normalize(kw) in normalized:
@@ -122,17 +144,15 @@ def categorize_batch(transactions: List[Dict[str, Any]]) -> List[Dict[str, Any]]
     """
     Catégorise une liste de transactions en deux passes :
     1. Règles déterministes (rapide, sans API)
-    2. Fallback IA Claude pour les débits tombés en "autres"
+    2. Fallback IA Claude pour les transactions encore en "autres"
     """
     # Passe 1 : règles
     for tx in transactions:
         tx["category"] = categorize(tx["label_raw"], tx["amount"])
 
-    # Passe 2 : fallback IA pour les débits non catégorisés
-    uncategorized = [
-        tx for tx in transactions
-        if tx["category"] == "autres" and tx["amount"] < 0
-    ]
+    # Passe 2 : fallback IA pour les transactions non catégorisées
+    # On inclut les crédits aussi (ex: virements entrants atypiques)
+    uncategorized = [tx for tx in transactions if tx["category"] == "autres"]
 
     if uncategorized:
         from app.services.ai_categorization import categorize_with_ai
