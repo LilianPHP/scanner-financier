@@ -230,6 +230,17 @@ export async function loadAnalysis(fileId: string): Promise<UploadResult> {
   }
 }
 
+// Sauvegarder une règle de catégorisation personnalisée
+export async function saveRule(labelClean: string, category: string): Promise<void> {
+  const headers = await getAuthHeader()
+  const response = await apiFetch(`${BACKEND_URL}/rules`, {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ label_pattern: labelClean.toLowerCase(), category }),
+  })
+  if (!response.ok) throw new Error('Erreur lors de la sauvegarde de la règle')
+}
+
 // Formater un montant en euros
 export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('fr-FR', {

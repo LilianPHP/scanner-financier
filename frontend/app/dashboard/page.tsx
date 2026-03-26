@@ -7,7 +7,7 @@ import {
 } from 'recharts'
 import { supabase } from '@/lib/supabase'
 import {
-  formatCurrency, updateCategory,
+  formatCurrency, updateCategory, saveRule,
   CATEGORY_LABELS, CATEGORY_COLORS,
   type UploadResult, type Transaction, type Subscription,
 } from '@/lib/api'
@@ -39,6 +39,10 @@ export default function DashboardPage() {
     label: string
     category: string
     ids: string[]
+  } | null>(null)
+  const [memorizePrompt, setMemorizePrompt] = useState<{
+    label: string
+    category: string
   } | null>(null)
 
   useEffect(() => {
@@ -224,8 +228,7 @@ export default function DashboardPage() {
           ids: duplicates.map(t => t.id),
         })
       } else {
-        setToast('Catégorie mise à jour')
-        setTimeout(() => setToast(''), 2500)
+        setMemorizePrompt({ label: tx.label_clean, category: newCategory })
       }
     } catch (err: any) {
       // Rollback uniquement cette transaction
@@ -251,8 +254,7 @@ export default function DashboardPage() {
     // Mise à jour en base pour chacun
     await Promise.all(ids.map(id => updateCategory(id, category, false).catch(() => {})))
 
-    setToast(`${ids.length + 1} transactions mises à jour`)
-    setTimeout(() => setToast(''), 3000)
+    setMemorizePrompt({ label: propagatePrompt.label, category: category })
   }
 
   return (
@@ -533,9 +535,41 @@ export default function DashboardPage() {
       </div>
 
       {/* Toast simple */}
-      {toast && !propagatePrompt && (
+      {toast && !propagatePrompt && !memorizePrompt && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#1a1a1a] text-white text-sm px-5 py-2.5 rounded-xl shadow-lg">
           {toast}
+        </div>
+      )}
+
+      {/* Toast mémorisation */}
+      {memorizePrompt && !propagatePrompt && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#1a1a1a] text-white text-sm px-5 py-3.5 rounded-xl shadow-lg flex items-center gap-4 max-w-sm w-full">
+          <span className="flex-1">Catégorie mise à jour</span>
+          <div className="flex gap-2 flex-shrink-0">
+            <button
+              onClick={() => setMemorizePrompt(null)}
+              className="text-gray-400 hover:text-white text-xs"
+            >
+              Ignorer
+            </button>
+            <button
+              onClick={async () => {
+                try {
+                  await saveRule(memorizePrompt.label, memorizePrompt.category)
+                  setMemorizePrompt(null)
+                  setToast('Règle mémorisée ✓')
+                  setTimeout(() => setToast(''), 2500)
+                } catch {
+                  setMemorizePrompt(null)
+                  setToast('Erreur — réessaie')
+                  setTimeout(() => setToast(''), 2500)
+                }
+              }}
+              className="bg-[#1D9E75] text-white font-medium text-xs px-3 py-1.5 rounded-lg hover:bg-[#178a64]"
+            >
+              Mémoriser →
+            </button>
+          </div>
         </div>
       )}
 

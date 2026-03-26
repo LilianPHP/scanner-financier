@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import FRONTEND_URL
-from app.api import files, transactions, analytics
+from app.api import files, transactions, analytics, rules
 
 app = FastAPI(
     title="Scanner Financier API",
@@ -23,6 +23,7 @@ app.add_middleware(
 app.include_router(files.router, prefix="/files", tags=["Fichiers"])
 app.include_router(transactions.router, prefix="/transactions", tags=["Transactions"])
 app.include_router(analytics.router, prefix="/analytics", tags=["Analytics"])
+app.include_router(rules.router, prefix="/rules", tags=["Règles"])
 
 
 @app.get("/health")

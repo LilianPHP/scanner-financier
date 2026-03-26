@@ -143,15 +143,30 @@ def categorize(label_raw: str, amount: float) -> str:
     return "autres"
 
 
-def categorize_batch(transactions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def categorize_batch(
+    transactions: List[Dict[str, Any]],
+    user_rules: Dict[str, str] | None = None,
+) -> List[Dict[str, Any]]:
     """
-    Catégorise une liste de transactions en deux passes :
+    Catégorise une liste de transactions en trois passes :
+    0. Règles personnalisées de l'utilisateur (priorité absolue)
     1. Règles déterministes sur label_clean ET label_raw (rapide, sans API)
     2. Fallback IA Claude pour les transactions encore en "autres"
        → utilise label_clean (plus lisible pour l'IA)
     """
-    # Passe 1 : règles keyword
+    # Passe 0 : règles perso (exact match sur label_clean normalisé)
     for tx in transactions:
+        if user_rules:
+            key = _normalize(tx.get("label_clean", ""))
+            if key in user_rules:
+                tx["category"] = user_rules[key]
+                continue
+        tx["category"] = "__pending__"
+
+    # Passe 1 : règles keyword pour les non-matchés
+    for tx in transactions:
+        if tx["category"] != "__pending__":
+            continue
         # Essaie label_clean d'abord (épuré du bruit bancaire)
         cat = categorize(tx.get("label_clean", ""), tx["amount"])
         # Si pas de match, essaie label_raw (peut contenir des patterns différents)

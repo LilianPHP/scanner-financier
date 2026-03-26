@@ -102,17 +102,24 @@ async def upload_file(
     # Normaliser
     transactions = normalize_transactions(raw_rows)
 
-    # Catégoriser
-    transactions = categorize_batch(transactions)
+    # Connexion Supabase
+    sb = get_supabase()
+
+    # Charger les règles perso de l'utilisateur
+    rules_res = sb.table("user_category_rules") \
+        .select("label_pattern,category") \
+        .eq("user_id", user_id) \
+        .execute()
+    user_rules = {r["label_pattern"]: r["category"] for r in (rules_res.data or [])}
+
+    # Catégoriser (règles perso appliquées en priorité)
+    transactions = categorize_batch(transactions, user_rules=user_rules)
 
     # Analytics
     summary = compute_summary(transactions)
     by_category = compute_by_category(transactions)
     timeline = compute_monthly_timeline(transactions)
     subscriptions = detect_subscriptions(transactions)
-
-    # Sauvegarder en base Supabase
-    sb = get_supabase()
     file_id = str(uuid.uuid4())
 
     # Enregistrer le fichier
