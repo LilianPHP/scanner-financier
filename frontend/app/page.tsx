@@ -176,7 +176,7 @@ export default function LandingPage() {
             { step: '3', title: 'Résumé clair', desc: 'Vois exactement où va ton argent, mois par mois.' },
           ].map(({ step, title, desc }) => (
             <div key={step} className="bg-white border border-gray-200 rounded-2xl p-6">
-              <div className="w-8 h-8 bg-[#378ADD] text-white rounded-lg flex items-center justify-center text-sm font-medium mb-3">
+              <div className="w-8 h-8 bg-[#1D9E75] text-white rounded-lg flex items-center justify-center text-sm font-medium mb-3">
                 {step}
               </div>
               <h3 className="font-medium mb-2">{title}</h3>
