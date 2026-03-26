@@ -73,7 +73,7 @@ def categorize_with_ai(labels: List[str]) -> Dict[str, str]:
 
         labels_text = "\n".join(f'"{l}"' for l in to_classify)
         message = client.messages.create(
-            model="claude-3-haiku-20240307",
+            model="claude-3-5-sonnet-20241022",
             max_tokens=1024,
             system=_SYSTEM_PROMPT,
             messages=[
