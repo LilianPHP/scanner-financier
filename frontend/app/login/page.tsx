@@ -43,45 +43,45 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f5f5f2] flex items-center justify-center px-4">
+    <main className="min-h-screen bg-[#f5f5f2] dark:bg-[#111110] flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="flex items-center justify-center gap-3 mb-8">
-          <Link href="/" className="text-sm text-gray-400 hover:text-gray-600 transition-colors">← Accueil</Link>
+          <Link href="/" className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 transition-colors">← Accueil</Link>
           <span className="text-gray-300">|</span>
-          <p className="text-sm font-medium tracking-widest text-gray-400 uppercase">Scanner Financier</p>
+          <p className="text-sm font-medium tracking-widest text-gray-400 dark:text-gray-500 uppercase">Scanner Financier</p>
         </div>
-        <div className="bg-white border border-gray-200 rounded-2xl p-8">
+        <div className="bg-white dark:bg-[#1c1c1a] border border-gray-200 dark:border-gray-700/50 rounded-2xl p-8">
           <h1 className="text-xl font-medium mb-6">Connexion</h1>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="text-sm text-gray-600 block mb-1">Email</label>
+              <label className="text-sm text-gray-600 dark:text-gray-400 block mb-1">Email</label>
               <input
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:border-blue-400"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:border-blue-400 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:focus:border-blue-500"
                 placeholder="ton@email.com"
               />
             </div>
             <div>
-              <label className="text-sm text-gray-600 block mb-1">Mot de passe</label>
+              <label className="text-sm text-gray-600 dark:text-gray-400 block mb-1">Mot de passe</label>
               <input
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:border-blue-400"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:border-blue-400 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:focus:border-blue-500"
                 placeholder="••••••••"
               />
             </div>
             {error && (
-              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              <p className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-lg px-3 py-2">
                 {error}
               </p>
             )}
             {resetSent && (
-              <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+              <p className="text-sm text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/50 rounded-lg px-3 py-2">
                 Email envoyé ! Vérifie ta boîte mail.
               </p>
             )}
@@ -100,7 +100,7 @@ export default function LoginPage() {
             >
               Mot de passe oublié ?
             </button>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               <Link href="/signup" className="text-blue-500 hover:underline">
                 Créer un compte
               </Link>

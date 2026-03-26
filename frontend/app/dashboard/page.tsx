@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend,
@@ -258,7 +259,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f5f5f2] px-4 py-6">
+    <main className="min-h-screen bg-[#f5f5f2] dark:bg-[#111110] px-4 py-6">
       <div className="max-w-4xl mx-auto">
 
         {/* Header */}
@@ -266,23 +267,24 @@ export default function DashboardPage() {
           <div>
             <h1 className="text-xl font-medium">Voilà où va ton argent</h1>
             {data?.filename && (
-              <p className="text-xs text-gray-400 mt-0.5 truncate max-w-[240px]">{data.filename}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate max-w-[240px]">{data.filename}</p>
             )}
           </div>
           <div className="flex gap-2 flex-wrap">
-            <span className="text-sm bg-white border border-gray-200 rounded-lg px-3 py-1.5 text-gray-500">
+            <span className="text-sm bg-white dark:bg-[#1c1c1a] border border-gray-200 dark:border-gray-700/50 rounded-lg px-3 py-1.5 text-gray-500 dark:text-gray-400">
               {transactions.length} transactions
             </span>
-            <button onClick={exportCSV} className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 text-gray-500 hover:bg-gray-100 flex items-center gap-1.5">
+            <button onClick={exportCSV} className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 flex items-center gap-1.5">
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
               </svg>
               Exporter
             </button>
-            <button onClick={() => router.push('/regles')} className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 text-gray-500 hover:bg-gray-100">Mes règles</button>
-            <button onClick={() => router.push('/history')} className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 text-gray-500 hover:bg-gray-100">Historique</button>
-            <button onClick={() => router.push('/upload')} className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 text-gray-500 hover:bg-gray-100">Nouveau fichier</button>
-            <button onClick={async () => { await supabase.auth.signOut(); router.push('/login') }} className="text-sm text-gray-400 hover:text-gray-600 px-1.5 py-1.5">Déconnexion</button>
+            <ThemeToggle />
+            <button onClick={() => router.push('/regles')} className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50">Mes règles</button>
+            <button onClick={() => router.push('/history')} className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50">Historique</button>
+            <button onClick={() => router.push('/upload')} className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50">Nouveau fichier</button>
+            <button onClick={async () => { await supabase.auth.signOut(); router.push('/login') }} className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 px-1.5 py-1.5">Déconnexion</button>
           </div>
         </div>
 
@@ -302,8 +304,8 @@ export default function DashboardPage() {
               cls: liveStats.savingsRate > 0 ? 'text-[#1D9E75]' : 'text-gray-400',
             },
           ].map(kpi => (
-            <div key={kpi.label} className="bg-white border border-gray-200 rounded-xl p-4">
-              <p className="text-xs text-gray-400 uppercase tracking-wide mb-1.5">{kpi.label}</p>
+            <div key={kpi.label} className="bg-white dark:bg-[#1c1c1a] border border-gray-200 dark:border-gray-700/50 rounded-xl p-4">
+              <p className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1.5">{kpi.label}</p>
               <p className={`text-2xl font-medium ${kpi.cls}`}>{kpi.value}</p>
             </div>
           ))}
@@ -311,13 +313,13 @@ export default function DashboardPage() {
 
         {/* Bannière confirmation épargne */}
         {savingsTotal > 0 && !savingsConfirmed && (
-          <div className="bg-[#f0faf5] border border-[#1D9E75]/30 rounded-xl px-4 py-3.5 mb-5">
+          <div className="bg-[#f0faf5] dark:bg-[#1a2e25] border border-[#1D9E75]/30 dark:border-[#1D9E75]/20 rounded-xl px-4 py-3.5 mb-5">
             <div className="flex items-start justify-between gap-4 flex-wrap">
               <div>
                 <p className="text-sm font-medium text-[#1D9E75]">
                   💰 {formatCurrency(savingsTotal)} mis de côté détectés
                 </p>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   On a classé ces virements comme épargne ou investissement. Si c'est bien le cas,
                   on les sort des dépenses pour un tableau de bord plus juste.
                 </p>
@@ -334,7 +336,7 @@ export default function DashboardPage() {
                     const el = document.getElementById('transactions-section')
                     el?.scrollIntoView({ behavior: 'smooth' })
                   }}
-                  className="text-sm border border-gray-200 bg-white px-3 py-1.5 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"
+                  className="text-sm border border-gray-200 dark:border-gray-700/50 bg-white dark:bg-[#1c1c1a] px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                 >
                   Revoir ↗
                 </button>
@@ -346,7 +348,7 @@ export default function DashboardPage() {
         {/* Charts */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
           {/* Pie chart */}
-          <div className="bg-white border border-gray-200 rounded-xl p-5">
+          <div className="bg-white dark:bg-[#1c1c1a] border border-gray-200 dark:border-gray-700/50 rounded-xl p-5">
             <p className="text-sm font-medium mb-4">Dépenses par catégorie</p>
             <ResponsiveContainer width="100%" height={220}>
               <PieChart key={pieData.map(d => `${d.category}:${Math.round(d.value)}`).join(',')}>
@@ -360,7 +362,7 @@ export default function DashboardPage() {
             </ResponsiveContainer>
             <div className="flex flex-wrap gap-x-3 gap-y-1.5 mt-3">
               {pieData.slice(0, 8).map(d => (
-                <span key={d.name} className="flex items-center gap-1 text-xs text-gray-600">
+                <span key={d.name} className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
                   <span className="w-2 h-2 rounded-sm inline-block" style={{ background: d.color }} />
                   {d.name}
                 </span>
@@ -369,7 +371,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Bar chart */}
-          <div className="bg-white border border-gray-200 rounded-xl p-5">
+          <div className="bg-white dark:bg-[#1c1c1a] border border-gray-200 dark:border-gray-700/50 rounded-xl p-5">
             <p className="text-sm font-medium mb-4">Revenus et dépenses par mois</p>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={liveTimeline} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
@@ -383,22 +385,22 @@ export default function DashboardPage() {
               </BarChart>
             </ResponsiveContainer>
             {liveTimeline.length > 1 && (
-              <div className="mt-3 pt-3 border-t border-gray-100">
-                <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-2">Variation mois / mois</p>
+              <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700/50">
+                <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Variation mois / mois</p>
                 <div className="flex gap-3 flex-wrap">
                   {liveTimeline.filter(m => m.expenseChange !== null || m.incomeChange !== null).map(m => {
                     const monthLabel = new Date(m.month + '-01').toLocaleDateString('fr-FR', { month: 'short' })
                     return (
                       <div key={m.month} className="flex flex-col gap-1">
-                        <span className="text-[10px] text-gray-400 text-center">{monthLabel}</span>
+                        <span className="text-[10px] text-gray-400 dark:text-gray-500 text-center">{monthLabel}</span>
                         <div className="flex gap-1">
                           {m.incomeChange !== null && (
-                            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${m.incomeChange >= 0 ? 'bg-[#f0faf5] text-[#1D9E75]' : 'bg-red-50 text-red-500'}`}>
+                            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${m.incomeChange >= 0 ? 'bg-[#f0faf5] dark:bg-[#1a2e25] text-[#1D9E75]' : 'bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400'}`}>
                               Rev. {m.incomeChange >= 0 ? '+' : ''}{m.incomeChange}%
                             </span>
                           )}
                           {m.expenseChange !== null && (
-                            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${m.expenseChange <= 0 ? 'bg-[#f0faf5] text-[#1D9E75]' : 'bg-red-50 text-red-500'}`}>
+                            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${m.expenseChange <= 0 ? 'bg-[#f0faf5] dark:bg-[#1a2e25] text-[#1D9E75]' : 'bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400'}`}>
                               Dép. {m.expenseChange >= 0 ? '+' : ''}{m.expenseChange}%
                             </span>
                           )}
@@ -413,17 +415,17 @@ export default function DashboardPage() {
         </div>
 
         {/* Insights */}
-        <div className="bg-white border border-gray-200 rounded-xl p-5 mb-5">
+        <div className="bg-white dark:bg-[#1c1c1a] border border-gray-200 dark:border-gray-700/50 rounded-xl p-5 mb-5">
           <p className="text-sm font-medium mb-4">Points clés</p>
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-gray-100 dark:divide-gray-700/50">
             {insights.map((ins, i) => (
               <div key={i} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
-                <div className="w-9 h-9 rounded-lg bg-gray-50 flex items-center justify-center text-lg flex-shrink-0">
+                <div className="w-9 h-9 rounded-lg bg-gray-50 dark:bg-gray-800/50 flex items-center justify-center text-lg flex-shrink-0">
                   {ins.icon}
                 </div>
                 <div>
                   <p className="text-sm" dangerouslySetInnerHTML={{ __html: ins.text }} />
-                  <p className="text-xs text-gray-400 mt-0.5">{ins.sub}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{ins.sub}</p>
                 </div>
               </div>
             ))}
@@ -432,10 +434,10 @@ export default function DashboardPage() {
 
         {/* Abonnements */}
         {liveSubscriptions.length > 0 && (
-          <div className="bg-white border border-gray-200 rounded-xl p-5 mb-5">
+          <div className="bg-white dark:bg-[#1c1c1a] border border-gray-200 dark:border-gray-700/50 rounded-xl p-5 mb-5">
             <div className="flex items-center justify-between mb-4">
               <p className="text-sm font-medium">Abonnements détectés</p>
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-gray-400 dark:text-gray-500">
                 {formatCurrency(liveSubscriptions.reduce((s, a) => s + a.monthly_cost, 0))}/mois
                 · {formatCurrency(liveSubscriptions.reduce((s, a) => s + a.annual_cost, 0))}/an
               </span>
@@ -443,7 +445,7 @@ export default function DashboardPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm border-collapse">
                 <thead>
-                  <tr className="text-xs text-gray-400 text-left">
+                  <tr className="text-xs text-gray-400 dark:text-gray-500 text-left">
                     <th className="pb-2 pr-4 font-medium">Service</th>
                     <th className="pb-2 pr-4 font-medium text-right">Mensuel</th>
                     <th className="pb-2 pr-4 font-medium text-right">Annuel</th>
@@ -452,11 +454,11 @@ export default function DashboardPage() {
                 </thead>
                 <tbody>
                   {liveSubscriptions.map((sub) => (
-                    <tr key={sub.label} className="border-t border-gray-100">
+                    <tr key={sub.label} className="border-t border-gray-100 dark:border-gray-700/50">
                       <td className="py-2 pr-4 font-medium">{sub.label}</td>
                       <td className="py-2 pr-4 text-right text-[#E24B4A]">{formatCurrency(sub.monthly_cost)}</td>
-                      <td className="py-2 pr-4 text-right text-gray-500">{formatCurrency(sub.annual_cost)}</td>
-                      <td className="py-2 text-right text-gray-400">{sub.occurrences}×</td>
+                      <td className="py-2 pr-4 text-right text-gray-500 dark:text-gray-400">{formatCurrency(sub.annual_cost)}</td>
+                      <td className="py-2 text-right text-gray-400 dark:text-gray-500">{sub.occurrences}×</td>
                     </tr>
                   ))}
                 </tbody>
@@ -466,21 +468,21 @@ export default function DashboardPage() {
         )}
 
         {/* Transactions */}
-        <div id="transactions-section" className="bg-white border border-gray-200 rounded-xl p-5 mb-6">
+        <div id="transactions-section" className="bg-white dark:bg-[#1c1c1a] border border-gray-200 dark:border-gray-700/50 rounded-xl p-5 mb-6">
           <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-            <p className="text-sm font-medium">Transactions <span className="text-gray-400 font-normal">({filtered.length})</span></p>
+            <p className="text-sm font-medium">Transactions <span className="text-gray-400 dark:text-gray-500 font-normal">({filtered.length})</span></p>
             <input
               type="text"
               placeholder="Rechercher…"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-gray-50 focus:outline-none w-48"
+              className="border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-[#1c1c1a] dark:text-gray-200 focus:outline-none w-48"
             />
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm border-collapse">
               <thead>
-                <tr className="text-xs text-gray-400 text-left">
+                <tr className="text-xs text-gray-400 dark:text-gray-500 text-left">
                   <th className="pb-2 pr-4 font-medium">Date</th>
                   <th className="pb-2 pr-4 font-medium">Description</th>
                   <th className="pb-2 pr-4 font-medium">Catégorie</th>
@@ -491,8 +493,8 @@ export default function DashboardPage() {
                 {(showAllTx ? filtered : filtered.slice(0, 100)).map(tx => {
                   const color = CATEGORY_COLORS[tx.category] || '#9E9E9E'
                   return (
-                    <tr key={tx.id} className="border-t border-gray-100 hover:bg-gray-50">
-                      <td className="py-2 pr-4 text-gray-400 text-xs whitespace-nowrap">{tx.date}</td>
+                    <tr key={tx.id} className="border-t border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-800/50">
+                      <td className="py-2 pr-4 text-gray-400 dark:text-gray-500 text-xs whitespace-nowrap">{tx.date}</td>
                       <td className="py-2 pr-4 max-w-[200px] truncate">
                         {tx.label_clean}
                       </td>
@@ -505,7 +507,7 @@ export default function DashboardPage() {
                             background: color + '22',
                             color: color,
                           }}
-                          className="text-xs border rounded px-2 py-1 focus:outline-none cursor-pointer font-medium"
+                          className="text-xs border rounded px-2 py-1 focus:outline-none cursor-pointer font-medium dark:bg-[#1c1c1a]"
                         >
                           {Object.entries(CATEGORY_LABELS).map(([val, label]) => (
                             <option key={val} value={val}>{label}</option>
@@ -524,7 +526,7 @@ export default function DashboardPage() {
               <div className="text-center mt-4">
                 <button
                   onClick={() => setShowAllTx(true)}
-                  className="text-sm text-gray-500 border border-gray-200 rounded-lg px-4 py-2 hover:bg-gray-50"
+                  className="text-sm text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700/50 rounded-lg px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                 >
                   Voir les {filtered.length - 100} transactions suivantes
                 </button>
@@ -537,14 +539,14 @@ export default function DashboardPage() {
 
       {/* Toast simple */}
       {toast && !propagatePrompt && !memorizePrompt && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#1a1a1a] text-white text-sm px-5 py-2.5 rounded-xl shadow-lg">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#1a1a1a] dark:bg-gray-800 text-white text-sm px-5 py-2.5 rounded-xl shadow-lg">
           {toast}
         </div>
       )}
 
       {/* Toast mémorisation */}
       {memorizePrompt && !propagatePrompt && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#1a1a1a] text-white text-sm px-5 py-3.5 rounded-xl shadow-lg flex items-center gap-4 max-w-sm w-full">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#1a1a1a] dark:bg-gray-800 text-white text-sm px-5 py-3.5 rounded-xl shadow-lg flex items-center gap-4 max-w-sm w-full">
           <span className="flex-1">Catégorie mise à jour</span>
           <div className="flex gap-2 flex-shrink-0">
             <button
@@ -576,7 +578,7 @@ export default function DashboardPage() {
 
       {/* Toast de propagation — proposer de reclasser les doublons exacts */}
       {propagatePrompt && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#1a1a1a] text-white text-sm px-5 py-3.5 rounded-xl shadow-lg flex items-center gap-4 max-w-sm">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#1a1a1a] dark:bg-gray-800 text-white text-sm px-5 py-3.5 rounded-xl shadow-lg flex items-center gap-4 max-w-sm">
           <span>
             <span className="font-medium">{propagatePrompt.ids.length}</span> transaction{propagatePrompt.ids.length > 1 ? 's' : ''} identique{propagatePrompt.ids.length > 1 ? 's' : ''} trouvée{propagatePrompt.ids.length > 1 ? 's' : ''}. Reclasser aussi ?
           </span>
@@ -589,7 +591,7 @@ export default function DashboardPage() {
             </button>
             <button
               onClick={handlePropagate}
-              className="bg-white text-[#1a1a1a] font-medium text-xs px-3 py-1.5 rounded-lg hover:bg-gray-100"
+              className="bg-white dark:bg-gray-700/50 text-[#1a1a1a] dark:text-gray-200 font-medium text-xs px-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50"
             >
               Oui
             </button>

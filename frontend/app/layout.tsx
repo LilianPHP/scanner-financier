@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { ThemeProvider } from '@/lib/theme'
 
 export const metadata: Metadata = {
   title: 'Scanner Financier — Analyse tes dépenses en un clic',
@@ -21,8 +22,14 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr">
-      <body>{children}</body>
+    <html lang="fr" suppressHydrationWarning>
+      <head>
+        {/* No-flash script : lit localStorage avant hydration */}
+        <script dangerouslySetInnerHTML={{ __html: `(function(){var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark')}})()` }} />
+      </head>
+      <body className="bg-[#f5f5f2] dark:bg-[#111110] transition-colors">
+        <ThemeProvider>{children}</ThemeProvider>
+      </body>
     </html>
   )
 }
