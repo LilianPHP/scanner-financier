@@ -12,6 +12,7 @@ export default function UploadPage() {
   const [error, setError] = useState('')
   const [step, setStep] = useState(0) // 0=idle, 1=upload, 2=analyse, 3=dashboard
   const [slowWarning, setSlowWarning] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   // Vérifier l'auth
   useEffect(() => {
@@ -161,7 +162,48 @@ export default function UploadPage() {
           </div>
         )}
 
-        <p className="text-xs text-gray-400 text-center mt-6 leading-relaxed">
+        {/* Accordéon aide banques */}
+        <div className="mt-5 border border-gray-200 rounded-xl overflow-hidden bg-white">
+          <button
+            onClick={() => setHelpOpen(o => !o)}
+            className="w-full flex items-center justify-between px-4 py-3 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+          >
+            <span className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" />
+              </svg>
+              Comment obtenir mon relevé ?
+            </span>
+            <svg className={`w-4 h-4 text-gray-400 transition-transform ${helpOpen ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+
+          {helpOpen && (
+            <div className="border-t border-gray-100 divide-y divide-gray-100">
+              {[
+                { bank: 'Crédit Agricole', steps: 'Espace client → Mes comptes → ⋮ → Télécharger les opérations → CSV' },
+                { bank: 'BNP Paribas', steps: 'Mes comptes → Consulter les opérations → Exporter → CSV' },
+                { bank: 'Société Générale', steps: 'Mes comptes → Relevés et documents → Télécharger → CSV' },
+                { bank: 'LCL', steps: 'Mon compte → Mes opérations → Exporter → Format CSV' },
+                { bank: 'Boursorama / Boursobank', steps: 'Compte → Opérations → Télécharger → CSV' },
+                { bank: 'Fortuneo', steps: 'Mon compte → Mes opérations → Exporter en CSV' },
+                { bank: 'Revolut', steps: 'Profil → Relevés → Sélectionner la période → Exporter CSV' },
+                { bank: 'N26', steps: 'Compte → Relevés → Télécharger → CSV' },
+              ].map(({ bank, steps }) => (
+                <div key={bank} className="px-4 py-3">
+                  <p className="text-xs font-medium text-gray-700 mb-0.5">{bank}</p>
+                  <p className="text-xs text-gray-400 leading-relaxed">{steps}</p>
+                </div>
+              ))}
+              <div className="px-4 py-3 bg-gray-50">
+                <p className="text-xs text-gray-400">Tu ne trouves pas ta banque ? La plupart des banques proposent l'export CSV depuis la section "Mes opérations" ou "Relevés".</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <p className="text-xs text-gray-400 text-center mt-5 leading-relaxed">
           Ton fichier est analysé puis supprimé. On ne garde rien, on ne partage rien.
         </p>
       </div>
