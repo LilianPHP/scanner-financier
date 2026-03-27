@@ -23,7 +23,9 @@ export type Transaction = {
   date: string
   label_raw: string
   label_clean: string
-  amount: number
+  amount: number          // toujours en EUR
+  amount_original?: number // montant dans la devise d'origine
+  currency?: string        // code ISO ex: "AUD", "USD", "EUR"
   direction: 'debit' | 'credit'
   category: string
 }

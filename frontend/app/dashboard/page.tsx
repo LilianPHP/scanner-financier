@@ -511,7 +511,14 @@ export default function DashboardPage() {
                         </select>
                       </td>
                       <td className={`py-2 text-right font-medium ${tx.amount >= 0 ? 'text-[#1D9E75]' : ''}`}>
-                        {formatCurrency(tx.amount)}
+                        {tx.currency && tx.currency !== 'EUR' && tx.amount_original != null ? (
+                          <span className="flex flex-col items-end gap-0.5">
+                            <span className="text-xs text-gray-400 dark:text-gray-500 font-normal">
+                              {tx.currency} {Math.abs(tx.amount_original).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+                            </span>
+                            <span>{formatCurrency(tx.amount)}</span>
+                          </span>
+                        ) : formatCurrency(tx.amount)}
                       </td>
                     </tr>
                   )

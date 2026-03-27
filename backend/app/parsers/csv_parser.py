@@ -4,8 +4,10 @@ Gère différents encodages et structures de colonnes.
 Supporte les formats avec lignes de métadonnées en tête (BNP, CA, SG, etc.)
 """
 import io
+import re
 import pandas as pd
 from typing import List, Dict, Any, Optional
+from app.services.currency import detect_currency_from_columns
 
 
 # Noms de colonnes courants dans les relevés bancaires français
@@ -57,12 +59,21 @@ def _find_column(df: pd.DataFrame, candidates: List[str]) -> Optional[str]:
     return None
 
 
+_CURRENCY_STRIP = str.maketrans("", "", "€$£¥₹₩₪₫₴₵₲₡₣₦₨₱₺₼₽")
+
+
 def _parse_amount(value: Any) -> float:
-    """Convertit une valeur de montant en float."""
+    """Convertit une valeur de montant en float (devise-agnostique)."""
     if pd.isna(value):
         return 0.0
     s = str(value).strip()
-    s = s.replace("\xa0", "").replace("\u202f", "").replace(" ", "").replace("€", "")
+    # Supprimer espaces insécables et symboles de devise
+    s = s.replace("\xa0", "").replace("\u202f", "").replace(" ", "")
+    s = s.translate(_CURRENCY_STRIP)
+    # Supprimer les codes ISO (ex: AUD, USD, CHF) en fin/début
+    import re
+    s = re.sub(r'^[A-Z]{2,3}', '', s).strip()
+    s = re.sub(r'[A-Z]{2,3}$', '', s).strip()
     s = s.replace(",", ".")
     if s.count(".") > 1:
         s = s.replace(".", "", s.count(".") - 1)
@@ -159,6 +170,13 @@ def parse_csv(content: bytes) -> List[Dict[str, Any]]:
     credit_col = _find_column(df, CREDIT_COLUMNS)
     amount_col = _find_column(df, AMOUNT_COLUMNS)
 
+    # Détecter la devise depuis les noms de colonnes + quelques valeurs exemple
+    amount_cols = [c for c in [amount_col, debit_col, credit_col] if c]
+    sample_vals = []
+    for col in amount_cols:
+        sample_vals += list(df[col].dropna().head(5).astype(str))
+    currency = detect_currency_from_columns(list(df.columns), sample_vals)
+
     rows = []
     for _, row in df.iterrows():
         date_val = str(row[date_col]).strip()
@@ -188,6 +206,7 @@ def parse_csv(content: bytes) -> List[Dict[str, Any]]:
             "date_raw": date_val,
             "label_raw": label_val,
             "amount": amount,
+            "currency": currency,
         })
 
     if not rows:
