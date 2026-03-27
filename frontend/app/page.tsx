@@ -8,7 +8,7 @@ export default function LandingPage() {
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 py-4 max-w-5xl mx-auto">
         <span className="text-sm font-medium tracking-widest text-gray-500 dark:text-gray-400 uppercase">
-          Scanner Financier
+          Senzio
         </span>
         <div className="flex items-center gap-3">
           <ThemeToggle />
@@ -56,7 +56,7 @@ export default function LandingPage() {
               <div className="w-3 h-3 rounded-full bg-green-400" />
             </div>
             <div className="flex-1 bg-white dark:bg-[#1c1c1a] rounded-md px-3 py-1 text-xs text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-gray-700/50 max-w-xs mx-auto text-center">
-              scanner-financier-app.vercel.app
+              senzio-app.vercel.app
             </div>
           </div>
 
@@ -198,11 +198,11 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-gray-200 dark:border-gray-700/50 py-6 px-6">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-400 dark:text-gray-500">
-          <span>© {new Date().getFullYear()} Scanner Financier</span>
+          <span>© {new Date().getFullYear()} Senzio</span>
           <div className="flex gap-5">
             <a href="/mentions-legales" className="hover:text-gray-600 dark:hover:text-gray-300 transition-colors">Mentions légales</a>
             <a href="/confidentialite" className="hover:text-gray-600 dark:hover:text-gray-300 transition-colors">Confidentialité</a>
-            <a href="mailto:contact@scanner-financier.app" className="hover:text-gray-600 dark:hover:text-gray-300 transition-colors">Contact</a>
+            <a href="mailto:contact@senzio.app" className="hover:text-gray-600 dark:hover:text-gray-300 transition-colors">Contact</a>
           </div>
         </div>
       </footer>

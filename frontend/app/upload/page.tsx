@@ -106,7 +106,7 @@ export default function UploadPage() {
       <div className="w-full max-w-[480px]">
         <div className="flex items-center justify-between mb-10">
           <span className="text-xs font-medium tracking-widest text-gray-400 dark:text-gray-500 uppercase">
-            Scanner Financier
+            Senzio
           </span>
           <div className="flex items-center gap-3">
             <ThemeToggle />
