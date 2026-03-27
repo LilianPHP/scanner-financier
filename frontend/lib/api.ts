@@ -13,7 +13,7 @@ async function apiFetch(url: string, options?: RequestInit): Promise<Response> {
   try {
     return await fetch(url, options)
   } catch {
-    throw new Error('Serveur inaccessible — vérifie que le backend est lancé sur le port 8000')
+    throw new Error('Serveur inaccessible — réessaie dans quelques secondes')
   }
 }
 

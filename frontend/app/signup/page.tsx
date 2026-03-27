@@ -58,7 +58,7 @@ export default function SignupPage() {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:border-blue-400 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:focus:border-blue-500"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:border-[#1D9E75] dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:focus:border-[#1D9E75]"
                 placeholder="ton@email.com"
               />
             </div>
@@ -70,7 +70,7 @@ export default function SignupPage() {
                 onChange={e => setPassword(e.target.value)}
                 required
                 minLength={6}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:border-blue-400 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:focus:border-blue-500"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:border-[#1D9E75] dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:focus:border-[#1D9E75]"
                 placeholder="minimum 6 caractères"
               />
             </div>

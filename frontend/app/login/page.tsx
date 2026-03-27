@@ -61,7 +61,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:border-blue-400 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:focus:border-blue-500"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:border-[#1D9E75] dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:focus:border-[#1D9E75]"
                 placeholder="ton@email.com"
               />
             </div>
@@ -72,7 +72,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:border-blue-400 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:focus:border-blue-500"
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:border-[#1D9E75] dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:focus:border-[#1D9E75]"
                 placeholder="••••••••"
               />
             </div>
@@ -97,12 +97,12 @@ export default function LoginPage() {
           <div className="flex items-center justify-between mt-4">
             <button
               onClick={handleForgotPassword}
-              className="text-sm text-blue-500 hover:underline"
+              className="text-sm text-[#1D9E75] hover:underline"
             >
               Mot de passe oublié ?
             </button>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              <Link href="/signup" className="text-blue-500 hover:underline">
+              <Link href="/signup" className="text-[#1D9E75] hover:underline">
                 Créer un compte
               </Link>
             </p>
