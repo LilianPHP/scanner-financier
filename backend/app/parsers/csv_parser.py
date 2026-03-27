@@ -19,15 +19,21 @@ LABEL_COLUMNS = [
     "libelle", "libellé", "description", "intitule", "intitulé",
     "opération", "operation", "detail", "détail", "motif", "libelle operation",
     "libellé opération", "nature de l'opération", "nature operation",
+    # Formats budget perso / suivi de dépenses
+    "categorie", "catégorie", "categories", "catégories",
+    "activite", "activité", "activites", "activités",
+    "designation", "désignation", "poste",
 ]
 AMOUNT_COLUMNS = ["montant", "montant eur", "montant en eur", "valeur"]
 DEBIT_COLUMNS = [
     "debit", "débit", "montant debit", "montant débit", "sortie",
+    "depense", "dépense", "depenses", "dépenses",
     "debit eur", "débit eur", "montant debite",
 ]
 CREDIT_COLUMNS = [
     "credit", "crédit", "montant credit", "montant crédit", "entree", "entrée",
     "credit eur", "crédit eur", "montant credite",
+    "revenu", "revenus", "recette", "recettes", "encaissement",
 ]
 
 
