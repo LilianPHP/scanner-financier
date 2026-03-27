@@ -8,7 +8,7 @@ export default function LandingPage() {
     <main className="min-h-screen bg-[#f5f5f2] dark:bg-[#111110]">
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 py-4 max-w-5xl mx-auto">
-        <SenzioLogo height={22} />
+        <SenzioLogo height={30} />
         <div className="flex items-center gap-3">
           <ThemeToggle />
           <Link href="/login" className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 px-3 py-1.5">

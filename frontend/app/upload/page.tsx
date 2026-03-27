@@ -106,7 +106,7 @@ export default function UploadPage() {
     <main className="min-h-screen bg-[#f5f5f2] dark:bg-[#111110] flex flex-col items-center justify-center px-4">
       <div className="w-full max-w-[480px]">
         <div className="flex items-center justify-between mb-10">
-          <SenzioLogo height={20} />
+          <SenzioLogo height={26} />
           <div className="flex items-center gap-3">
             <ThemeToggle />
             <button onClick={handleLogout} className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400">
