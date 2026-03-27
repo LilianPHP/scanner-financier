@@ -222,7 +222,7 @@ export async function exportXLSX(d: ExportData) {
   /* ── Sheet 1 : Résumé ──────────────────────────────────── */
   const s1: Array<Array<Record<string, unknown> | null>> = []
 
-  s1.push([cl('RAPPORT FINANCIER — Scanner Financier', S.title), null, null])
+  s1.push([cl('RAPPORT SENZIO', S.title), null, null])
   s1.push([cl('', S.empty), null, null])
   s1.push([cl('Fichier analysé', S.label), cl(d.filename, S.value), null])
   s1.push([cl('Période', S.label), cl(period, S.value), null])

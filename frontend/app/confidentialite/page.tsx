@@ -16,7 +16,7 @@ export default function Confidentialite() {
 
           <section>
             <h2 className="text-base font-medium text-gray-900 dark:text-gray-200 mb-3">Ce qu'on collecte</h2>
-            <p>Pour utiliser Scanner Financier, nous collectons uniquement :</p>
+            <p>Pour utiliser Senzio, nous collectons uniquement :</p>
             <ul className="mt-2 space-y-1 list-disc list-inside text-gray-500 dark:text-gray-400">
               <li>Ton adresse email (pour la connexion)</li>
               <li>Les transactions extraites de ton relevé bancaire (date, libellé, montant, catégorie)</li>
@@ -51,7 +51,7 @@ export default function Confidentialite() {
 
           <section>
             <h2 className="text-base font-medium text-gray-900 dark:text-gray-200 mb-3">Tes droits</h2>
-            <p>Conformément au RGPD, tu disposes d'un droit d'accès, de rectification et de suppression de tes données. Pour exercer ces droits ou supprimer ton compte, contacte-nous à <a href="mailto:contact@scanner-financier.app" className="text-blue-500 hover:underline">contact@scanner-financier.app</a>.</p>
+            <p>Conformément au RGPD, tu disposes d'un droit d'accès, de rectification et de suppression de tes données. Pour exercer ces droits ou supprimer ton compte, contacte-nous à <a href="mailto:contact@senzio.app" className="text-blue-500 hover:underline">contact@senzio.app</a>.</p>
           </section>
 
           <section>

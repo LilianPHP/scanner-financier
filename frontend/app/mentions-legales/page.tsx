@@ -16,8 +16,8 @@ export default function MentionsLegales() {
 
           <section>
             <h2 className="text-base font-medium text-gray-900 dark:text-gray-200 mb-3">Éditeur du site</h2>
-            <p>Scanner Financier est un service édité à titre personnel.</p>
-            <p className="mt-2">Contact : <a href="mailto:contact@scanner-financier.app" className="text-blue-500 hover:underline">contact@scanner-financier.app</a></p>
+            <p>Senzio est un service édité à titre personnel.</p>
+            <p className="mt-2">Contact : <a href="mailto:contact@senzio.app" className="text-blue-500 hover:underline">contact@senzio.app</a></p>
           </section>
 
           <section>
@@ -34,7 +34,7 @@ export default function MentionsLegales() {
 
           <section>
             <h2 className="text-base font-medium text-gray-900 dark:text-gray-200 mb-3">Limitation de responsabilité</h2>
-            <p>Scanner Financier est un outil d'analyse personnel. Les résultats fournis sont indicatifs et ne constituent en aucun cas un conseil financier, fiscal ou juridique. L'éditeur ne saurait être tenu responsable des décisions prises sur la base des analyses produites par le service.</p>
+            <p>Senzio est un outil d'analyse personnel. Les résultats fournis sont indicatifs et ne constituent en aucun cas un conseil financier, fiscal ou juridique. L'éditeur ne saurait être tenu responsable des décisions prises sur la base des analyses produites par le service.</p>
           </section>
 
           <section>

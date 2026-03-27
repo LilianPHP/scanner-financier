@@ -4,7 +4,7 @@ from app.config import FRONTEND_URL
 from app.api import files, transactions, analytics, rules
 
 app = FastAPI(
-    title="Scanner Financier API",
+    title="Senzio API",
     description="Backend d'analyse de relevés bancaires",
     version="1.0.0",
 )
@@ -28,4 +28,4 @@ app.include_router(rules.router, prefix="/rules", tags=["Règles"])
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "service": "scanner-financier-api"}
+    return {"status": "ok", "service": "senzio-api"}
