@@ -5,20 +5,21 @@ Utilisé par tous les endpoints protégés.
 import base64
 from typing import Optional
 from fastapi import HTTPException
-from jose import jwt, JWTError
+from jose import jwt, JWTError, ExpiredSignatureError
 
 from app.config import SUPABASE_JWT_SECRET
 
 
-def _decode_secret(secret: str) -> bytes | str:
-    """
-    Supabase stocke le JWT secret comme une chaîne base64.
-    python-jose a besoin des bytes bruts pour vérifier la signature HS256.
-    """
+def _secret_variants(secret: str):
+    """Retourne les variantes du secret à tester : raw string + bytes base64-décodés."""
+    variants = [secret]
     try:
-        return base64.b64decode(secret)
+        decoded = base64.b64decode(secret)
+        if decoded != secret.encode():
+            variants.append(decoded)
     except Exception:
-        return secret
+        pass
+    return variants
 
 
 def get_user_id(authorization: Optional[str]) -> str:
@@ -34,22 +35,25 @@ def get_user_id(authorization: Optional[str]) -> str:
     if not SUPABASE_JWT_SECRET:
         raise HTTPException(status_code=500, detail="Configuration serveur manquante")
 
-    secret = _decode_secret(SUPABASE_JWT_SECRET)
+    # Essayer les deux variantes du secret (raw string et bytes b64-décodés)
+    # Supabase GoTrue peut utiliser l'une ou l'autre selon la version
+    last_error: str = "Token invalide ou expiré"
+    for secret in _secret_variants(SUPABASE_JWT_SECRET):
+        try:
+            payload = jwt.decode(
+                token,
+                secret,
+                algorithms=["HS256"],
+                options={"verify_aud": False},
+            )
+            user_id = payload.get("sub")
+            if not user_id:
+                raise HTTPException(status_code=401, detail="Token invalide")
+            return user_id
+        except ExpiredSignatureError:
+            last_error = "Session expirée — reconnecte-toi"
+            break  # inutile d'essayer l'autre variante si le token est expiré
+        except JWTError:
+            continue
 
-    try:
-        payload = jwt.decode(
-            token,
-            secret,
-            algorithms=["HS256"],
-            options={"verify_aud": False},  # Supabase n'utilise pas le claim standard aud
-        )
-        user_id = payload.get("sub")
-        if not user_id:
-            raise HTTPException(status_code=401, detail="Token invalide")
-        return user_id
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Token invalide ou expiré")
-    except HTTPException:
-        raise
-    except Exception:
-        raise HTTPException(status_code=401, detail="Token invalide ou expiré")
+    raise HTTPException(status_code=401, detail=last_error)
