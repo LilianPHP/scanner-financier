@@ -9,6 +9,7 @@ from app.parsers.csv_parser import (
     _find_column, _parse_amount, _normalize_col,
     DATE_COLUMNS, LABEL_COLUMNS, DEBIT_COLUMNS, CREDIT_COLUMNS, AMOUNT_COLUMNS
 )
+from app.services.currency import detect_currency_from_columns
 
 
 def _find_header_row_xlsx(df_raw: pd.DataFrame) -> int:
@@ -74,6 +75,13 @@ def parse_xlsx(content: bytes) -> List[Dict[str, Any]]:
     credit_col = _find_column(df, CREDIT_COLUMNS)
     amount_col = _find_column(df, AMOUNT_COLUMNS)
 
+    # Détecter la devise
+    amount_cols = [c for c in [amount_col, debit_col, credit_col] if c]
+    sample_vals = []
+    for col in amount_cols:
+        sample_vals += list(df[col].dropna().head(5).astype(str))
+    currency = detect_currency_from_columns(list(df.columns), sample_vals)
+
     rows = []
     for _, row in df.iterrows():
         date_val = str(row[date_col]).strip()
@@ -103,6 +111,7 @@ def parse_xlsx(content: bytes) -> List[Dict[str, Any]]:
             "date_raw": date_val,
             "label_raw": label_val,
             "amount": amount,
+            "currency": currency,
         })
 
     if not rows:

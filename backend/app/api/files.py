@@ -37,6 +37,7 @@ from app.services.categorization import categorize_batch
 from app.services.analytics import compute_summary, compute_by_category, compute_monthly_timeline, detect_subscriptions
 from app.db.client import get_supabase
 from app.auth import get_user_id as _get_user_id
+from app.services.currency import to_eur, get_eur_rate
 
 router = APIRouter()
 
@@ -84,6 +85,21 @@ async def upload_file(
     # Normaliser
     transactions = normalize_transactions(raw_rows)
 
+    # Détecter la devise du fichier (première transaction ou EUR par défaut)
+    file_currency = raw_rows[0].get("currency", "EUR") if raw_rows else "EUR"
+
+    # Convertir les montants vers EUR si nécessaire
+    if file_currency != "EUR":
+        rate = get_eur_rate(file_currency)
+        for tx in transactions:
+            tx["amount_original"] = tx["amount"]
+            tx["currency"] = file_currency
+            tx["amount"] = round(tx["amount"] * rate, 2)
+    else:
+        for tx in transactions:
+            tx["amount_original"] = tx["amount"]
+            tx["currency"] = "EUR"
+
     # Connexion Supabase
     sb = get_supabase()
 
@@ -122,7 +138,9 @@ async def upload_file(
             "date": tx["date"],
             "label_raw": tx["label_raw"],
             "label_clean": tx["label_clean"],
-            "amount": tx["amount"],
+            "amount": tx["amount"],           # toujours en EUR
+            "amount_original": tx.get("amount_original", tx["amount"]),
+            "currency": tx.get("currency", "EUR"),
             "direction": tx["direction"],
             "category": tx["category"],
         }
