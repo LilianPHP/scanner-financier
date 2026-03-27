@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { SenzioLogo } from '@/components/SenzioLogo'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -44,9 +45,9 @@ export default function SignupPage() {
   return (
     <main className="min-h-screen bg-[#f5f5f2] dark:bg-[#111110] flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        <p className="text-center text-sm font-medium tracking-widest text-gray-400 dark:text-gray-500 uppercase mb-8">
-          Senzio
-        </p>
+        <div className="flex justify-center mb-8">
+          <SenzioLogo height={20} />
+        </div>
         <div className="bg-white dark:bg-[#1c1c1a] border border-gray-200 dark:border-gray-700/50 rounded-2xl p-8">
           <h1 className="text-xl font-medium mb-6">Créer un compte</h1>
           <form onSubmit={handleSubmit} className="space-y-4">

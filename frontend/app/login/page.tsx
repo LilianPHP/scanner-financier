@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
+import { SenzioLogo } from '@/components/SenzioLogo'
 
 function translateAuthError(msg: string): string {
   if (msg.includes('Invalid login credentials')) return 'Email ou mot de passe incorrect.'
@@ -48,7 +49,7 @@ export default function LoginPage() {
         <div className="flex items-center justify-center gap-3 mb-8">
           <Link href="/" className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 transition-colors">← Accueil</Link>
           <span className="text-gray-300">|</span>
-          <p className="text-sm font-medium tracking-widest text-gray-400 dark:text-gray-500 uppercase">Senzio</p>
+          <SenzioLogo height={20} />
         </div>
         <div className="bg-white dark:bg-[#1c1c1a] border border-gray-200 dark:border-gray-700/50 rounded-2xl p-8">
           <h1 className="text-xl font-medium mb-6">Connexion</h1>
