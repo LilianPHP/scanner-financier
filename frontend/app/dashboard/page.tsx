@@ -57,19 +57,105 @@ export default function DashboardPage() {
   const SAVINGS_CATS = useMemo(() => new Set(['epargne', 'investissement']), [])
 
   function exportCSV() {
-    const header = ['Date', 'Libellé', 'Catégorie', 'Montant (€)']
-    const rows = transactions.map(tx => [
-      tx.date,
-      `"${tx.label_clean.replace(/"/g, '""')}"`,
-      CATEGORY_LABELS[tx.category] ?? tx.category,
-      tx.amount.toFixed(2).replace('.', ','),
-    ])
-    const csv = [header, ...rows].map(r => r.join(';')).join('\n')
+    const sep = ';'
+    const fmt = (n: number) => n.toFixed(2).replace('.', ',')
+    const esc = (s: string) => `"${s.replace(/"/g, '""')}"`
+    const row = (...cells: string[]) => cells.join(sep)
+    const empty = () => ''
+
+    const dates = transactions.map(tx => tx.date).sort()
+    const period = dates.length
+      ? `${dates[0]} → ${dates[dates.length - 1]}`
+      : ''
+
+    // Section 1 — Résumé
+    const section1 = [
+      row('RÉSUMÉ'),
+      row('Fichier analysé', esc(data?.filename ?? '')),
+      row('Période', period),
+      row('Revenus totaux', fmt(liveStats.income) + ' €'),
+      row('Dépenses totales', fmt(liveStats.expense) + ' €'),
+      row('Cash flow', fmt(liveStats.cashflow) + ' €'),
+      row("Taux d'épargne", Math.max(0, Math.round(liveStats.savingsRate)) + ' %'),
+    ]
+
+    // Section 2 — Dépenses par catégorie
+    const totalDep = liveStats.expense || 1
+    const section2 = [
+      empty(),
+      row('DÉPENSES PAR CATÉGORIE'),
+      row('Catégorie', 'Montant (€)', '% des dépenses'),
+      ...pieData.map(d =>
+        row(d.name, fmt(d.value), Math.round(d.value / totalDep * 100) + ' %')
+      ),
+    ]
+
+    // Section 3 — Évolution mensuelle
+    const monthlyMap: Record<string, { income: number; expense: number }> = {}
+    transactions.forEach(tx => {
+      const m = tx.date.slice(0, 7)
+      if (!monthlyMap[m]) monthlyMap[m] = { income: 0, expense: 0 }
+      if (tx.amount > 0) monthlyMap[m].income += tx.amount
+      else monthlyMap[m].expense += Math.abs(tx.amount)
+    })
+    const section3 = [
+      empty(),
+      row('ÉVOLUTION MENSUELLE'),
+      row('Mois', 'Revenus (€)', 'Dépenses (€)', 'Cash flow (€)'),
+      ...Object.entries(monthlyMap)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([month, { income, expense }]) =>
+          row(month, fmt(income), fmt(expense), fmt(income - expense))
+        ),
+    ]
+
+    // Section 4 — Abonnements (optionnel)
+    const section4: string[] = []
+    if (data?.subscriptions && data.subscriptions.length > 0) {
+      const totalAbo = data.subscriptions.reduce((s, a) => s + a.monthly_cost, 0)
+      section4.push(
+        empty(),
+        row('ABONNEMENTS DÉTECTÉS'),
+        row('Service', 'Mensuel (€)', 'Annuel (€)', 'Occurrences'),
+        ...data.subscriptions.map(s =>
+          row(esc(s.label), fmt(s.monthly_cost), fmt(s.annual_cost), String(s.occurrences))
+        ),
+        row('TOTAL', fmt(totalAbo), fmt(totalAbo * 12), ''),
+      )
+    }
+
+    // Section 5 — Toutes les transactions
+    const section5 = [
+      empty(),
+      row('TOUTES LES TRANSACTIONS'),
+      row('Date', 'Description', 'Catégorie', 'Type', 'Montant (€)'),
+      ...transactions
+        .slice()
+        .sort((a, b) => a.date.localeCompare(b.date))
+        .map(tx =>
+          row(
+            tx.date,
+            esc(tx.label_clean),
+            CATEGORY_LABELS[tx.category] ?? tx.category,
+            tx.amount >= 0 ? 'Crédit' : 'Débit',
+            fmt(tx.amount),
+          )
+        ),
+    ]
+
+    const csv = [
+      ...section1,
+      ...section2,
+      ...section3,
+      ...section4,
+      ...section5,
+    ].join('\n')
+
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `scanner-financier-${data?.filename?.replace(/\.[^.]+$/, '') ?? 'export'}.csv`
+    a.download = `rapport-${data?.filename?.replace(/\.[^.]+$/, '') ?? 'export'}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }
