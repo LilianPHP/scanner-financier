@@ -1,15 +1,14 @@
 'use client'
 import Link from 'next/link'
 import { ThemeToggle } from '@/components/ThemeToggle'
+import { SenzioLogo } from '@/components/SenzioLogo'
 
 export default function LandingPage() {
   return (
     <main className="min-h-screen bg-[#f5f5f2] dark:bg-[#111110]">
       {/* Nav */}
       <nav className="flex items-center justify-between px-6 py-4 max-w-5xl mx-auto">
-        <span className="text-sm font-medium tracking-widest text-gray-500 dark:text-gray-400 uppercase">
-          Senzio
-        </span>
+        <SenzioLogo height={22} />
         <div className="flex items-center gap-3">
           <ThemeToggle />
           <Link href="/login" className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 px-3 py-1.5">
