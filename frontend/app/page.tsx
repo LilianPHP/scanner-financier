@@ -16,7 +16,7 @@ export default function LandingPage() {
           </Link>
           <Link
             href="/signup"
-            className="text-sm bg-[#1a1a1a] dark:bg-white text-white dark:text-[#1a1a1a] px-4 py-1.5 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-200"
+            className="text-sm bg-[#1D9E75] dark:bg-[#1D9E75] text-white px-4 py-1.5 rounded-lg hover:bg-[#178a64] dark:hover:bg-[#178a64]"
           >
             Commencer
           </Link>
@@ -55,7 +55,7 @@ export default function LandingPage() {
               <div className="w-3 h-3 rounded-full bg-green-400" />
             </div>
             <div className="flex-1 bg-white dark:bg-[#1c1c1a] rounded-md px-3 py-1 text-xs text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-gray-700/50 max-w-xs mx-auto text-center">
-              senzio-app.vercel.app
+              senzio.app
             </div>
           </div>
 

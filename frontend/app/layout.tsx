@@ -5,10 +5,15 @@ import { ThemeProvider } from '@/lib/theme'
 export const metadata: Metadata = {
   title: 'Senzio — Analyse tes dépenses en un clic',
   description: 'Dépose ton relevé bancaire et découvre instantanément où part ton argent. Analyse automatique, dashboard clair, 100% privé.',
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
   openGraph: {
     title: 'Senzio — Dépose ton relevé, découvre où part ton argent',
     description: 'Analyse instantanée de ton relevé bancaire. Catégories, graphiques, abonnements détectés. Gratuit et 100% privé.',
-    url: 'https://senzio-app.vercel.app',
+    url: 'https://senzio.app',
     siteName: 'Senzio',
     locale: 'fr_FR',
     type: 'website',
