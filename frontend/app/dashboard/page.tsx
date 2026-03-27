@@ -12,6 +12,7 @@ import {
   CATEGORY_LABELS, CATEGORY_COLORS,
   type UploadResult, type Transaction, type Subscription,
 } from '@/lib/api'
+import { exportXLSX } from '@/lib/exportXLSX'
 
 const CATEGORY_ICONS: Record<string, string> = {
   alimentation: '🛒',
@@ -56,22 +57,17 @@ export default function DashboardPage() {
 
   const SAVINGS_CATS = useMemo(() => new Set(['epargne', 'investissement']), [])
 
-  function exportCSV() {
-    const header = ['Date', 'Libellé', 'Catégorie', 'Montant (€)']
-    const rows = transactions.map(tx => [
-      tx.date,
-      `"${tx.label_clean.replace(/"/g, '""')}"`,
-      CATEGORY_LABELS[tx.category] ?? tx.category,
-      tx.amount.toFixed(2).replace('.', ','),
-    ])
-    const csv = [header, ...rows].map(r => r.join(';')).join('\n')
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `scanner-financier-${data?.filename?.replace(/\.[^.]+$/, '') ?? 'export'}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+  function handleExport() {
+    if (!data) return
+    exportXLSX({
+      filename: data.filename ?? 'export',
+      transactions,
+      liveStats,
+      pieData,
+      liveTimeline,
+      liveSubscriptions,
+      CATEGORY_LABELS,
+    })
   }
 
   // Total épargne + investissement détectés (débits)
@@ -274,7 +270,7 @@ export default function DashboardPage() {
             <span className="text-sm bg-white dark:bg-[#1c1c1a] border border-gray-200 dark:border-gray-700/50 rounded-lg px-3 py-1.5 text-gray-500 dark:text-gray-400">
               {transactions.length} transactions
             </span>
-            <button onClick={exportCSV} className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 flex items-center gap-1.5">
+            <button onClick={handleExport} className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 flex items-center gap-1.5">
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
               </svg>

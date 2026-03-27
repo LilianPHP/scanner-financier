@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import {
   getUploadHistory, loadAnalysis,
@@ -50,7 +51,12 @@ export default function HistoryPage() {
 
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-xl font-medium">Mes analyses</h1>
+          <div>
+            <Link href="/dashboard" className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors block mb-1">
+              ← Retour au dashboard
+            </Link>
+            <h1 className="text-xl font-medium">Mes analyses</h1>
+          </div>
           <div className="flex gap-2 items-center">
             <ThemeToggle />
             <button
