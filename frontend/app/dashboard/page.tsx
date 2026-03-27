@@ -12,6 +12,7 @@ import {
   CATEGORY_LABELS, CATEGORY_COLORS,
   type UploadResult, type Transaction, type Subscription,
 } from '@/lib/api'
+import { exportXLSX } from '@/lib/exportXLSX'
 
 const CATEGORY_ICONS: Record<string, string> = {
   alimentation: '🛒',
@@ -56,108 +57,17 @@ export default function DashboardPage() {
 
   const SAVINGS_CATS = useMemo(() => new Set(['epargne', 'investissement']), [])
 
-  function exportCSV() {
-    const sep = ';'
-    const fmt = (n: number) => n.toFixed(2).replace('.', ',')
-    const esc = (s: string) => `"${s.replace(/"/g, '""')}"`
-    const row = (...cells: string[]) => cells.join(sep)
-    const empty = () => ''
-
-    const dates = transactions.map(tx => tx.date).sort()
-    const period = dates.length
-      ? `${dates[0]} → ${dates[dates.length - 1]}`
-      : ''
-
-    // Section 1 — Résumé
-    const section1 = [
-      row('RÉSUMÉ'),
-      row('Fichier analysé', esc(data?.filename ?? '')),
-      row('Période', period),
-      row('Revenus totaux', fmt(liveStats.income) + ' €'),
-      row('Dépenses totales', fmt(liveStats.expense) + ' €'),
-      row('Cash flow', fmt(liveStats.cashflow) + ' €'),
-      row("Taux d'épargne", Math.max(0, Math.round(liveStats.savingsRate)) + ' %'),
-    ]
-
-    // Section 2 — Dépenses par catégorie
-    const totalDep = liveStats.expense || 1
-    const section2 = [
-      empty(),
-      row('DÉPENSES PAR CATÉGORIE'),
-      row('Catégorie', 'Montant (€)', '% des dépenses'),
-      ...pieData.map(d =>
-        row(d.name, fmt(d.value), Math.round(d.value / totalDep * 100) + ' %')
-      ),
-    ]
-
-    // Section 3 — Évolution mensuelle
-    const monthlyMap: Record<string, { income: number; expense: number }> = {}
-    transactions.forEach(tx => {
-      const m = tx.date.slice(0, 7)
-      if (!monthlyMap[m]) monthlyMap[m] = { income: 0, expense: 0 }
-      if (tx.amount > 0) monthlyMap[m].income += tx.amount
-      else monthlyMap[m].expense += Math.abs(tx.amount)
+  function handleExport() {
+    if (!data) return
+    exportXLSX({
+      filename: data.filename ?? 'export',
+      transactions,
+      liveStats,
+      pieData,
+      liveTimeline,
+      liveSubscriptions,
+      CATEGORY_LABELS,
     })
-    const section3 = [
-      empty(),
-      row('ÉVOLUTION MENSUELLE'),
-      row('Mois', 'Revenus (€)', 'Dépenses (€)', 'Cash flow (€)'),
-      ...Object.entries(monthlyMap)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([month, { income, expense }]) =>
-          row(month, fmt(income), fmt(expense), fmt(income - expense))
-        ),
-    ]
-
-    // Section 4 — Abonnements (optionnel)
-    const section4: string[] = []
-    if (data?.subscriptions && data.subscriptions.length > 0) {
-      const totalAbo = data.subscriptions.reduce((s, a) => s + a.monthly_cost, 0)
-      section4.push(
-        empty(),
-        row('ABONNEMENTS DÉTECTÉS'),
-        row('Service', 'Mensuel (€)', 'Annuel (€)', 'Occurrences'),
-        ...data.subscriptions.map(s =>
-          row(esc(s.label), fmt(s.monthly_cost), fmt(s.annual_cost), String(s.occurrences))
-        ),
-        row('TOTAL', fmt(totalAbo), fmt(totalAbo * 12), ''),
-      )
-    }
-
-    // Section 5 — Toutes les transactions
-    const section5 = [
-      empty(),
-      row('TOUTES LES TRANSACTIONS'),
-      row('Date', 'Description', 'Catégorie', 'Type', 'Montant (€)'),
-      ...transactions
-        .slice()
-        .sort((a, b) => a.date.localeCompare(b.date))
-        .map(tx =>
-          row(
-            tx.date,
-            esc(tx.label_clean),
-            CATEGORY_LABELS[tx.category] ?? tx.category,
-            tx.amount >= 0 ? 'Crédit' : 'Débit',
-            fmt(tx.amount),
-          )
-        ),
-    ]
-
-    const csv = [
-      ...section1,
-      ...section2,
-      ...section3,
-      ...section4,
-      ...section5,
-    ].join('\n')
-
-    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `rapport-${data?.filename?.replace(/\.[^.]+$/, '') ?? 'export'}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
   }
 
   // Total épargne + investissement détectés (débits)
@@ -360,7 +270,7 @@ export default function DashboardPage() {
             <span className="text-sm bg-white dark:bg-[#1c1c1a] border border-gray-200 dark:border-gray-700/50 rounded-lg px-3 py-1.5 text-gray-500 dark:text-gray-400">
               {transactions.length} transactions
             </span>
-            <button onClick={exportCSV} className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 flex items-center gap-1.5">
+            <button onClick={handleExport} className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 flex items-center gap-1.5">
               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
               </svg>

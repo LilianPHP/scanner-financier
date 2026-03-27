@@ -41,8 +41,8 @@ export default function ReglesPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <Link href="/upload" className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors block mb-1">
-              ← Retour
+            <Link href="/dashboard" className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors block mb-1">
+              ← Retour au dashboard
             </Link>
             <h1 className="text-xl font-medium">Mes règles mémorisées</h1>
           </div>
