@@ -7,9 +7,8 @@ GET /analytics/{file_id}/timeline
 from fastapi import APIRouter, Header, HTTPException, Path
 from typing import Optional
 
-from jose import jwt as jose_jwt
-
 from app.db.client import get_supabase
+from app.auth import get_user_id as _get_user_id
 from app.services.analytics import (
     compute_summary,
     compute_by_category,
@@ -18,22 +17,6 @@ from app.services.analytics import (
 )
 
 router = APIRouter()
-
-
-def _get_user_id(authorization: Optional[str]) -> str:
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Token d'authentification manquant")
-    token = authorization.split(" ")[1]
-    try:
-        payload = jose_jwt.get_unverified_claims(token)
-        user_id = payload.get("sub")
-        if not user_id:
-            raise HTTPException(status_code=401, detail="Token invalide")
-        return user_id
-    except HTTPException:
-        raise
-    except Exception:
-        raise HTTPException(status_code=401, detail="Token invalide ou expiré")
 
 
 def _get_transactions_for_file(file_id: str, user_id: str):
