@@ -7,27 +7,10 @@ DELETE /rules/{label_pattern} → supprimer une règle
 from fastapi import APIRouter, Header, HTTPException
 from typing import Optional
 from pydantic import BaseModel
-from jose import jwt as jose_jwt
-
 from app.db.client import get_supabase
+from app.auth import get_user_id as _get_user_id
 
 router = APIRouter()
-
-
-def _get_user_id(authorization: Optional[str]) -> str:
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Token d'authentification manquant")
-    token = authorization.split(" ")[1]
-    try:
-        payload = jose_jwt.get_unverified_claims(token)
-        user_id = payload.get("sub")
-        if not user_id:
-            raise HTTPException(status_code=401, detail="Token invalide")
-        return user_id
-    except HTTPException:
-        raise
-    except Exception:
-        raise HTTPException(status_code=401, detail="Token invalide ou expiré")
 
 
 class RuleIn(BaseModel):
