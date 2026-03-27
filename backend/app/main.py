@@ -9,10 +9,18 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# CORS — autorise le frontend Next.js (tous les ports localhost pour le dev)
+# CORS — tous les domaines Senzio + localhost dev
+_ALLOWED_ORIGINS = list({
+    FRONTEND_URL,
+    "https://senzio.app",
+    "https://www.senzio.app",
+    "https://scanner-financier-app.vercel.app",
+    "https://scanner-financier-app-lilianphps-projects.vercel.app",
+})
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_URL],
+    allow_origins=_ALLOWED_ORIGINS,
     allow_origin_regex=r"http://localhost:\d+",
     allow_credentials=True,
     allow_methods=["*"],
