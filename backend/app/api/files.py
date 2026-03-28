@@ -76,88 +76,98 @@ async def upload_file(
             raw_rows = parse_pdf(content)
         else:
             raise HTTPException(status_code=400, detail=f"Format non supporté : .{ext}")
-    except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        raise HTTPException(status_code=422, detail=f"Erreur parsing : {type(e).__name__}: {e}\n{traceback.format_exc()}")
 
     if not raw_rows:
         raise HTTPException(status_code=422, detail="Aucune transaction trouvée dans le fichier")
 
-    # Normaliser
-    transactions = normalize_transactions(raw_rows)
+    import traceback as _tb
+    try:
+        # Normaliser
+        transactions = normalize_transactions(raw_rows)
 
-    # Détecter la devise du fichier (première transaction ou EUR par défaut)
-    file_currency = raw_rows[0].get("currency", "EUR") if raw_rows else "EUR"
+        # Détecter la devise du fichier (première transaction ou EUR par défaut)
+        file_currency = raw_rows[0].get("currency", "EUR") if raw_rows else "EUR"
 
-    # Convertir les montants vers EUR si nécessaire
-    if file_currency != "EUR":
-        rate = get_eur_rate(file_currency)
-        for tx in transactions:
-            tx["amount_original"] = tx["amount"]
-            tx["currency"] = file_currency
-            tx["amount"] = round(tx["amount"] * rate, 2)
-    else:
-        for tx in transactions:
-            tx["amount_original"] = tx["amount"]
-            tx["currency"] = "EUR"
+        # Convertir les montants vers EUR si nécessaire
+        if file_currency != "EUR":
+            rate = get_eur_rate(file_currency)
+            for tx in transactions:
+                tx["amount_original"] = tx["amount"]
+                tx["currency"] = file_currency
+                tx["amount"] = round(tx["amount"] * rate, 2)
+        else:
+            for tx in transactions:
+                tx["amount_original"] = tx["amount"]
+                tx["currency"] = "EUR"
 
-    # Connexion Supabase
-    sb = get_supabase()
+        # Connexion Supabase
+        sb = get_supabase()
 
-    # Charger les règles perso de l'utilisateur
-    rules_res = sb.table("user_category_rules") \
-        .select("label_pattern,category") \
-        .eq("user_id", user_id) \
-        .execute()
-    user_rules = {r["label_pattern"]: r["category"] for r in (rules_res.data or [])}
+        # Charger les règles perso de l'utilisateur
+        rules_res = sb.table("user_category_rules") \
+            .select("label_pattern,category") \
+            .eq("user_id", user_id) \
+            .execute()
+        user_rules = {r["label_pattern"]: r["category"] for r in (rules_res.data or [])}
 
-    # Catégoriser (règles perso appliquées en priorité)
-    transactions = categorize_batch(transactions, user_rules=user_rules)
+        # Catégoriser (règles perso appliquées en priorité)
+        transactions = categorize_batch(transactions, user_rules=user_rules)
 
-    # Analytics
-    summary = compute_summary(transactions)
-    by_category = compute_by_category(transactions)
-    timeline = compute_monthly_timeline(transactions)
-    subscriptions = detect_subscriptions(transactions)
-    file_id = str(uuid.uuid4())
+        # Analytics
+        summary = compute_summary(transactions)
+        by_category = compute_by_category(transactions)
+        timeline = compute_monthly_timeline(transactions)
+        subscriptions = detect_subscriptions(transactions)
+        file_id = str(uuid.uuid4())
 
-    # Enregistrer le fichier
-    sb.table("uploaded_files").insert({
-        "id": file_id,
-        "user_id": user_id,
-        "filename": filename,
-        "file_type": ext,
-        "transaction_count": len(transactions),
-    }).execute()
-
-    # Sauvegarder les transactions
-    tx_records = [
-        {
-            "id": str(uuid.uuid4()),
+        # Enregistrer le fichier
+        sb.table("uploaded_files").insert({
+            "id": file_id,
             "user_id": user_id,
-            "file_id": file_id,
-            "date": tx["date"],
-            "label_raw": tx["label_raw"],
-            "label_clean": tx["label_clean"],
-            "amount": tx["amount"],           # toujours en EUR
-            "amount_original": tx.get("amount_original", tx["amount"]),
-            "currency": tx.get("currency", "EUR"),
-            "direction": tx["direction"],
-            "category": tx["category"],
-        }
-        for tx in transactions
-    ]
-    sb.table("transactions").insert(tx_records).execute()
+            "filename": filename,
+            "file_type": ext,
+            "transaction_count": len(transactions),
+        }).execute()
 
-    # Sauvegarder le résumé analytique
-    sb.table("analysis_results").insert({
-        "id": str(uuid.uuid4()),
-        "file_id": file_id,
-        "user_id": user_id,
-        "income_total": summary["income_total"],
-        "expense_total": summary["expense_total"],
-        "cashflow": summary["cashflow"],
-        "savings_rate": summary["savings_rate"],
-    }).execute()
+        # Sauvegarder les transactions
+        tx_records = [
+            {
+                "id": str(uuid.uuid4()),
+                "user_id": user_id,
+                "file_id": file_id,
+                "date": tx["date"],
+                "label_raw": tx["label_raw"],
+                "label_clean": tx["label_clean"],
+                "amount": tx["amount"],           # toujours en EUR
+                "amount_original": tx.get("amount_original", tx["amount"]),
+                "currency": tx.get("currency", "EUR"),
+                "direction": tx["direction"],
+                "category": tx["category"],
+            }
+            for tx in transactions
+        ]
+        sb.table("transactions").insert(tx_records).execute()
+
+        # Sauvegarder le résumé analytique
+        sb.table("analysis_results").insert({
+            "id": str(uuid.uuid4()),
+            "file_id": file_id,
+            "user_id": user_id,
+            "income_total": summary["income_total"],
+            "expense_total": summary["expense_total"],
+            "cashflow": summary["cashflow"],
+            "savings_rate": summary["savings_rate"],
+        }).execute()
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"[DEBUG] {type(e).__name__}: {e} | {_tb.format_exc()[-800:]}")
 
     return {
         "file_id": file_id,
