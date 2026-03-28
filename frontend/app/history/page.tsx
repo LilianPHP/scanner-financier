@@ -27,10 +27,10 @@ export default function HistoryPage() {
     })
   }, [router])
 
-  async function handleOpen(fileId: string) {
+  async function handleOpen(fileId: string, filename: string) {
     setLoadingId(fileId)
     try {
-      const result = await loadAnalysis(fileId)
+      const result = await loadAnalysis(fileId, filename)
       sessionStorage.setItem('analysis', JSON.stringify(result))
       router.push('/dashboard')
     } catch (e: any) {
@@ -134,7 +134,7 @@ export default function HistoryPage() {
                 )}
 
                 <button
-                  onClick={() => handleOpen(f.id)}
+                  onClick={() => handleOpen(f.id, f.filename)}
                   disabled={loadingId === f.id}
                   className="text-sm border border-gray-200 dark:border-gray-700/50 rounded-lg px-4 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 disabled:opacity-50 whitespace-nowrap"
                 >

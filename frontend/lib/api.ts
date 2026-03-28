@@ -190,7 +190,7 @@ export async function getUploadHistory(): Promise<UploadedFile[]> {
 }
 
 // Recharger une analyse passée depuis le backend → sessionStorage → dashboard
-export async function loadAnalysis(fileId: string): Promise<UploadResult> {
+export async function loadAnalysis(fileId: string, filename = ''): Promise<UploadResult> {
   const headers = await getAuthHeader()
 
   const [txRes, summaryRes, categoriesRes, timelineRes] = await Promise.all([
@@ -223,7 +223,7 @@ export async function loadAnalysis(fileId: string): Promise<UploadResult> {
 
   return {
     file_id: fileId,
-    filename: '',
+    filename,
     transactions: txData.transactions,
     summary,
     by_category: categoriesData.by_category,

@@ -89,7 +89,7 @@ export default function SignupPage() {
           </form>
           <p className="text-sm text-gray-500 dark:text-gray-400 text-center mt-4">
             Déjà un compte ?{' '}
-            <Link href="/login" className="text-blue-500 hover:underline">
+            <Link href="/login" className="text-[#1D9E75] hover:underline">
               Se connecter
             </Link>
           </p>

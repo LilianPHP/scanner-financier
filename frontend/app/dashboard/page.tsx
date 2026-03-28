@@ -60,7 +60,7 @@ export default function DashboardPage() {
   function handleExport() {
     if (!data) return
     exportXLSX({
-      filename: data.filename ?? 'export',
+      filename: data.filename || 'export',
       transactions,
       liveStats,
       pieData,
