@@ -79,13 +79,11 @@ async def upload_file(
     except HTTPException:
         raise
     except Exception as e:
-        import traceback
-        raise HTTPException(status_code=422, detail=f"Erreur parsing : {type(e).__name__}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=422, detail=f"Erreur lors de la lecture du fichier : {e}")
 
     if not raw_rows:
         raise HTTPException(status_code=422, detail="Aucune transaction trouvée dans le fichier")
 
-    import traceback as _tb
     try:
         # Normaliser
         transactions = normalize_transactions(raw_rows)
@@ -167,7 +165,7 @@ async def upload_file(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"[DEBUG] {type(e).__name__}: {e} | {_tb.format_exc()[-800:]}")
+        raise HTTPException(status_code=500, detail=f"Erreur serveur lors du traitement : {e}")
 
     return {
         "file_id": file_id,
