@@ -4,7 +4,7 @@ Convertit les dates, nettoie les libellés, standardise les montants.
 """
 import re
 from datetime import datetime, date
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 
 # Codes internes à supprimer du libellé
@@ -27,12 +27,26 @@ DATE_FORMATS = [
 ]
 
 
-def _parse_date(date_raw: str) -> str:
-    """Convertit une date brute en format YYYY-MM-DD."""
+def _parse_date(date_raw: str) -> Optional[str]:
+    """Convertit une date brute en format YYYY-MM-DD. Retourne None si non parseable."""
     date_raw = date_raw.strip()
     # Tronquer les timestamps (ex: "2026-02-26 00:00:00" → "2026-02-26")
     if len(date_raw) > 10 and " " in date_raw:
         date_raw = date_raw.split(" ")[0]
+
+    # Gérer les plages de dates type "4 & 5/3/26" → prendre la première date : "4/3/26"
+    if "&" in date_raw:
+        parts = date_raw.split("&")
+        first_day = parts[0].strip()
+        rest = parts[1].strip()  # ex: "5/3/26"
+        for sep in ("/", "-", "."):
+            if sep in rest:
+                rest_parts = rest.split(sep)
+                if len(rest_parts) >= 2:
+                    date_raw = first_day + sep + sep.join(rest_parts[1:])
+                    break
+        else:
+            date_raw = rest  # fallback : utiliser la seconde date telle quelle
 
     for fmt in DATE_FORMATS:
         try:
@@ -55,8 +69,8 @@ def _parse_date(date_raw: str) -> str:
         except ValueError:
             pass
 
-    # Retourner tel quel si on n'arrive pas à parser
-    return date_raw
+    # Impossible à parser → None (la transaction sera ignorée)
+    return None
 
 
 def _clean_label(label_raw: str) -> str:
@@ -97,8 +111,12 @@ def normalize_transactions(raw_rows: List[Dict[str, Any]]) -> List[Dict[str, Any
         if amount == 0:
             continue
 
+        parsed_date = _parse_date(date_raw)
+        if parsed_date is None:
+            continue  # date non parseable → ignorer la transaction
+
         normalized.append({
-            "date": _parse_date(date_raw),
+            "date": parsed_date,
             "label_raw": label_raw,
             "label_clean": _clean_label(label_raw),
             "amount": round(amount, 2),
