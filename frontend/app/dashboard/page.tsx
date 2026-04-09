@@ -10,7 +10,7 @@ import { supabase } from '@/lib/supabase'
 import {
   formatCurrency, updateCategory, saveRule,
   CATEGORY_LABELS, CATEGORY_COLORS,
-  type UploadResult, type Transaction, type Subscription,
+  type UploadResult, type Transaction, type Subscription, type ScoreResult,
 } from '@/lib/api'
 import { exportXLSX } from '@/lib/exportXLSX'
 
@@ -311,6 +311,47 @@ export default function DashboardPage() {
             </div>
           ))}
         </div>
+
+        {/* Score financier */}
+        {data?.score && (() => {
+          const s = data.score
+          const COLOR_MAP: Record<string, { bg: string; border: string; text: string; bar: string }> = {
+            green:  { bg: 'bg-[#f0faf5] dark:bg-[#1a2e25]', border: 'border-[#1D9E75]/30', text: 'text-[#1D9E75]', bar: 'bg-[#1D9E75]' },
+            lime:   { bg: 'bg-[#f4faf0] dark:bg-[#1e2d1a]', border: 'border-[#6abf54]/30', text: 'text-[#6abf54]', bar: 'bg-[#6abf54]' },
+            orange: { bg: 'bg-[#fff8f0] dark:bg-[#2d2218]', border: 'border-orange-300/40', text: 'text-orange-500', bar: 'bg-orange-400' },
+            red:    { bg: 'bg-[#fff5f5] dark:bg-[#2d1a1a]', border: 'border-[#E24B4A]/30', text: 'text-[#E24B4A]', bar: 'bg-[#E24B4A]' },
+          }
+          const c = COLOR_MAP[s.color] || COLOR_MAP.orange
+          const bars = [
+            { label: 'Cashflow', val: s.details.cashflow, max: 35 },
+            { label: 'Épargne', val: s.details.savings_rate, max: 35 },
+            { label: 'Investissement', val: s.details.investment, max: 20 },
+            { label: 'Diversification', val: s.details.diversification, max: 10 },
+          ]
+          return (
+            <div className={`${c.bg} border ${c.border} rounded-xl px-5 py-4 mb-5 flex items-center gap-5 flex-wrap`}>
+              {/* Big score */}
+              <div className="flex flex-col items-center min-w-[72px]">
+                <span className={`text-5xl font-bold ${c.text} leading-none`}>{s.score}</span>
+                <span className="text-xs text-gray-400 dark:text-gray-500 mt-1 uppercase tracking-wide">/100</span>
+              </div>
+              <div className="flex-1 min-w-[200px]">
+                <p className={`text-sm font-semibold ${c.text} mb-2.5`}>Score de santé financière · {s.label}</p>
+                <div className="space-y-1.5">
+                  {bars.map(b => (
+                    <div key={b.label} className="flex items-center gap-2">
+                      <span className="text-xs text-gray-400 dark:text-gray-500 w-28 shrink-0">{b.label}</span>
+                      <div className="flex-1 bg-gray-200 dark:bg-gray-700/50 rounded-full h-1.5 overflow-hidden">
+                        <div className={`h-full ${c.bar} rounded-full transition-all`} style={{ width: `${Math.round(b.val / b.max * 100)}%` }} />
+                      </div>
+                      <span className="text-xs text-gray-400 dark:text-gray-500 w-12 text-right">{b.val}/{b.max}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )
+        })()}
 
         {/* Bannière confirmation épargne */}
         {savingsTotal > 0 && !savingsConfirmed && (

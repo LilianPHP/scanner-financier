@@ -14,6 +14,7 @@ from app.services.analytics import (
     compute_by_category,
     compute_monthly_timeline,
     detect_subscriptions,
+    compute_score,
 )
 
 router = APIRouter()
@@ -60,6 +61,19 @@ def get_categories(
         "by_category": compute_by_category(transactions),
         "subscriptions": detect_subscriptions(transactions),
     }
+
+
+@router.get("/{file_id}/score")
+def get_score(
+    file_id: str = Path(...),
+    authorization: Optional[str] = Header(None),
+):
+    """Score de santé financière 0-100."""
+    user_id = _get_user_id(authorization)
+    transactions = _get_transactions_for_file(file_id, user_id)
+    if not transactions:
+        raise HTTPException(status_code=404, detail="Aucune transaction pour ce fichier")
+    return compute_score(transactions)
 
 
 @router.get("/{file_id}/timeline")

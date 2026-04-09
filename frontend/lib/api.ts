@@ -57,6 +57,18 @@ export type Subscription = {
   annual_cost: number
 }
 
+export type ScoreResult = {
+  score: number
+  label: string
+  color: string
+  details: {
+    cashflow: number
+    savings_rate: number
+    investment: number
+    diversification: number
+  }
+}
+
 export type UploadResult = {
   file_id: string
   filename: string
@@ -65,6 +77,7 @@ export type UploadResult = {
   by_category: CategoryData[]
   timeline: MonthlyData[]
   subscriptions?: Subscription[]
+  score?: ScoreResult
 }
 
 // Upload d'un fichier
@@ -84,7 +97,15 @@ export async function uploadFile(file: File): Promise<UploadResult> {
     throw new Error(error.detail || `Erreur serveur (${response.status})`)
   }
 
-  return response.json()
+  const result: UploadResult = await response.json()
+
+  // Fetch score in parallel after upload (non-blocking on failure)
+  try {
+    const scoreRes = await apiFetch(`${BACKEND_URL}/analytics/${result.file_id}/score`, { headers })
+    if (scoreRes.ok) result.score = await scoreRes.json()
+  } catch { /* score is optional */ }
+
+  return result
 }
 
 // Récupérer les transactions d'un fichier
@@ -193,11 +214,12 @@ export async function getUploadHistory(): Promise<UploadedFile[]> {
 export async function loadAnalysis(fileId: string, filename = ''): Promise<UploadResult> {
   const headers = await getAuthHeader()
 
-  const [txRes, summaryRes, categoriesRes, timelineRes] = await Promise.all([
+  const [txRes, summaryRes, categoriesRes, timelineRes, scoreRes] = await Promise.all([
     apiFetch(`${BACKEND_URL}/transactions/${fileId}`, { headers }),
     apiFetch(`${BACKEND_URL}/analytics/${fileId}/summary`, { headers }),
     apiFetch(`${BACKEND_URL}/analytics/${fileId}/categories`, { headers }),
     apiFetch(`${BACKEND_URL}/analytics/${fileId}/timeline`, { headers }),
+    apiFetch(`${BACKEND_URL}/analytics/${fileId}/score`, { headers }),
   ])
 
   if (!txRes.ok || !summaryRes.ok || !categoriesRes.ok || !timelineRes.ok) {
@@ -221,6 +243,8 @@ export async function loadAnalysis(fileId: string, filename = ''): Promise<Uploa
     timelineRes.json(),
   ])
 
+  const score: ScoreResult | undefined = scoreRes.ok ? await scoreRes.json() : undefined
+
   return {
     file_id: fileId,
     filename,
@@ -229,6 +253,7 @@ export async function loadAnalysis(fileId: string, filename = ''): Promise<Uploa
     by_category: categoriesData.by_category,
     subscriptions: categoriesData.subscriptions,
     timeline: timelineData.timeline,
+    score,
   }
 }
 

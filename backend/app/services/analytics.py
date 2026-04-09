@@ -84,6 +84,84 @@ def compute_monthly_timeline(transactions: List[Dict[str, Any]]) -> List[Dict[st
     return result
 
 
+def compute_score(transactions: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Calcule un score de santé financière de 0 à 100.
+
+    Composantes :
+    - Cashflow positif      (0-35 pts)
+    - Taux d'épargne        (0-35 pts)
+    - Épargne/Investissement (0-20 pts)
+    - Diversification       (0-10 pts)
+
+    Retourne le score, le détail des composantes et un libellé (Critique / À améliorer / Bien / Excellent).
+    """
+    summary = compute_summary(transactions)
+    income = summary["income_total"]
+    cashflow = summary["cashflow"]
+    savings_rate = summary["savings_rate"]
+    savings_out = summary["savings_out"]
+
+    # 1. Cashflow (0-35 pts) : cashflow positif = bien
+    if income <= 0:
+        cashflow_score = 0.0
+    elif cashflow >= 0:
+        cashflow_score = min(cashflow / income * 35, 35)
+    else:
+        # Pénalité proportionnelle au déficit
+        cashflow_score = max(0, 35 + (cashflow / income) * 35)
+
+    # 2. Taux d'épargne (0-35 pts) : 20% = max
+    savings_rate_score = min(abs(savings_rate) / 20 * 35, 35) if income > 0 else 0
+
+    # 3. Épargne / Investissement (0-20 pts)
+    has_epargne = any(
+        tx["amount"] < 0 and tx.get("category") == "epargne"
+        for tx in transactions
+    )
+    has_invest = any(
+        tx["amount"] < 0 and tx.get("category") == "investissement"
+        for tx in transactions
+    )
+    invest_score = (10 if has_epargne else 0) + (10 if has_invest else 0)
+
+    # 4. Diversification (0-10 pts) : aucune catégorie > 60% des dépenses réelles
+    by_cat = compute_by_category(transactions)
+    real_expense = summary["real_expense_total"]
+    max_cat_pct = 0.0
+    if real_expense > 0 and by_cat:
+        max_cat_pct = max(c["total"] for c in by_cat) / real_expense * 100
+    diversification_score = 10 if max_cat_pct <= 60 else max(0, 10 - (max_cat_pct - 60) / 10)
+
+    total = round(cashflow_score + savings_rate_score + invest_score + diversification_score)
+    total = max(0, min(100, total))
+
+    if total >= 80:
+        label = "Excellent"
+        color = "green"
+    elif total >= 60:
+        label = "Bien"
+        color = "lime"
+    elif total >= 40:
+        label = "À améliorer"
+        color = "orange"
+    else:
+        label = "Critique"
+        color = "red"
+
+    return {
+        "score": total,
+        "label": label,
+        "color": color,
+        "details": {
+            "cashflow": round(cashflow_score, 1),
+            "savings_rate": round(savings_rate_score, 1),
+            "investment": invest_score,
+            "diversification": round(diversification_score, 1),
+        },
+    }
+
+
 def detect_subscriptions(transactions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
     Détecte les abonnements récurrents (même libellé, intervalle mensuel).
