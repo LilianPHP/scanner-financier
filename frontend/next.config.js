@@ -13,8 +13,10 @@ const nextConfig = {
 module.exports = withSentryConfig(nextConfig, {
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
-  silent: true,           // pas de logs Sentry au build
-  disableLogger: true,
-  automaticVercelMonitors: false,
+  silent: true,
   widenClientFileUpload: true,
+  webpack: {
+    treeshake: { removeDebugLogging: true },
+    automaticVercelMonitors: false,
+  },
 })
