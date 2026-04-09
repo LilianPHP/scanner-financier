@@ -29,6 +29,9 @@ const CATEGORY_ICONS: Record<string, string> = {
   autres: '📦',
 }
 
+// 👉 Remplace ce lien par ton formulaire Tally une fois créé
+const FEEDBACK_URL = 'https://tally.so/r/PLACEHOLDER'
+
 export default function DashboardPage() {
   const router = useRouter()
   const [data, setData] = useState<UploadResult | null>(null)
@@ -345,6 +348,7 @@ export default function DashboardPage() {
             <button onClick={() => router.push('/regles')} className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50">Mes règles</button>
             <button onClick={() => router.push('/history')} className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50">Historique</button>
             <button onClick={() => router.push('/upload')} className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50">Nouveau fichier</button>
+            <a href={FEEDBACK_URL} target="_blank" rel="noopener noreferrer" className="text-sm bg-[#1D9E75] text-white rounded-lg px-3 py-1.5 hover:bg-[#178a64] transition-colors">💬 Donner mon avis</a>
             <button onClick={async () => { await supabase.auth.signOut(); router.push('/login') }} className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 px-1.5 py-1.5">Déconnexion</button>
           </div>
         </div>
