@@ -36,6 +36,7 @@ export default function DashboardPage() {
   const [search, setSearch] = useState('')
   const [toast, setToast] = useState('')
   const [showAllTx, setShowAllTx] = useState(false)
+  const [txFilter, setTxFilter] = useState<'all' | 'income' | 'expense'>('all')
   const [savingsConfirmed, setSavingsConfirmed] = useState(false)
   const [propagatePrompt, setPropagatePrompt] = useState<{
     label: string
@@ -196,11 +197,15 @@ export default function DashboardPage() {
   if (!data) return null
 
   // Filtre transactions
-  const filtered = transactions.filter(tx =>
-    tx.label_clean.toLowerCase().includes(search.toLowerCase()) ||
-    tx.label_raw.toLowerCase().includes(search.toLowerCase()) ||
-    CATEGORY_LABELS[tx.category]?.toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = transactions.filter(tx => {
+    if (txFilter === 'income' && tx.amount <= 0) return false
+    if (txFilter === 'expense' && tx.amount >= 0) return false
+    return (
+      tx.label_clean.toLowerCase().includes(search.toLowerCase()) ||
+      tx.label_raw.toLowerCase().includes(search.toLowerCase()) ||
+      CATEGORY_LABELS[tx.category]?.toLowerCase().includes(search.toLowerCase())
+    )
+  })
 
   async function handleCategoryChange(tx: Transaction, newCategory: string) {
     // Optimistic update : uniquement cette transaction (par ID)
@@ -467,13 +472,34 @@ export default function DashboardPage() {
         <div id="transactions-section" className="bg-white dark:bg-[#1c1c1a] border border-gray-200 dark:border-gray-700/50 rounded-xl p-5 mb-6">
           <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
             <p className="text-sm font-medium">Transactions <span className="text-gray-400 dark:text-gray-500 font-normal">({filtered.length})</span></p>
-            <input
-              type="text"
-              placeholder="Rechercher…"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-[#1c1c1a] dark:text-gray-200 focus:outline-none w-48"
-            />
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden text-xs">
+                {([['all', 'Tous'], ['income', 'Revenus ↑'], ['expense', 'Dépenses ↓']] as const).map(([val, label]) => (
+                  <button
+                    key={val}
+                    onClick={() => { setTxFilter(val); setShowAllTx(false) }}
+                    className={`px-3 py-1.5 transition-colors ${
+                      txFilter === val
+                        ? val === 'income'
+                          ? 'bg-[#1D9E75] text-white'
+                          : val === 'expense'
+                          ? 'bg-[#E24B4A] text-white'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200'
+                        : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="text"
+                placeholder="Rechercher…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-[#1c1c1a] dark:text-gray-200 focus:outline-none w-48"
+              />
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm border-collapse">

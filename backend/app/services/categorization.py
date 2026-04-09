@@ -39,16 +39,26 @@ CATEGORY_RULES: Dict[str, List[str]] = {
         "impots", "dgfip", "tva",
         "taxe fonciere", "taxe habitation", "urssaf", "cotisation sociale",
         "rsi ", "cipav", "sip ", "tresor public",
+        # Australie / International — frais administratifs et visas
+        "working holiday visa", "tourist visa", "student visa", "visa fee",
+        "ato ", "australian tax", "medicare levy",
+        "service nsw", "service vic", "service qld", "vicroads", "transport nsw",
     ],
     "abonnements": [
+        # France
         "free ", "orange ", "sfr ", "bouygues",
         "netflix", "spotify", "amazon prime", "disney+", "disney plus",
         "canal+", "apple tv", "hulu", "dazn",
         "google play", "google one", "apple icloud", "apple music",
         "adobe", "microsoft 365", "dropbox", "youtube premium",
         "bee tv", "molotov", "salto",
+        # Australie / International
+        "telstra", "optus ", "vodafone", "tpg ", "aussie broadband",
+        "stan ", "binge ", "kayo ", "foxtel", "paramount+",
+        "amazon au", "prime video",
     ],
     "alimentation": [
+        # France
         "carrefour", "leclerc", "lidl", "aldi", "auchan", "intermarche",
         "monoprix", "franprix", "casino ", "super u", "netto ",
         "biocoop", "naturalia", "picard",
@@ -57,8 +67,16 @@ CATEGORY_RULES: Dict[str, List[str]] = {
         "boulangerie", "patisserie", "boucherie", "fromagerie",
         "restaurant", "cafe ", "bistrot", "brasserie",
         "sushi", "pizza", "kebab",
+        # Australie / International
+        "coles", "woolworths", "iga ", "costco", "harris farm",
+        "countdown", "pak'nsave", "new world",
+        "grill'd", "oporto", "hungry jack", "nando", "chatime",
+        "boost juice", "schnitz", "mad mex", "zambreros",
+        "the cheesecake shop", "bakers delight",
+        "twelve cafe", "yo-chi", "yo chi",
     ],
     "transport": [
+        # France
         "uber ", "bolt ", "heetch", "taxi", "vtc ",
         "sncf", "ratp", "navigo", "transpole", "tcl ", "tan ",
         "ouigo", "tgv ", "ter ", "intercites",
@@ -68,6 +86,12 @@ CATEGORY_RULES: Dict[str, List[str]] = {
         "peage", "parking", "indigo ", "q-park",
         "autoroutes", "vinci autoroutes", "sanef",
         "velib", "lime ", "bird ", "tier ",
+        # Australie / International
+        "7-eleven", "ampol", "caltex", "united petrol", "metro petroleum",
+        "go card", "myki ", "opal ", "translink", "ptv ", "transperth",
+        "qantas", "jetstar", "virgin australia", "rex airlines",
+        "airasia", "scoot ", "tigerair",
+        "bus ", "tram ", "ferry ", "train ",
     ],
     "logement": [
         "loyer", "charges locatives", "edf ", "engie ", "gdf ",
@@ -76,6 +100,10 @@ CATEGORY_RULES: Dict[str, List[str]] = {
         "macif ", "axa ", "allianz ", "generali ", "matmut ",
         "copropriete", "syndic ", "gardien",
         "darty ", "boulanger ", "ikea ", "but ", "conforama",
+        # Australie
+        "bunnings", "mitre 10", "total tools", "diy ",
+        "origin energy", "agl ", "energex", "ausgrid", "synergy ",
+        "real estate", "domain.com", "rent ", "strata ",
     ],
     "sante": [
         "pharmacie", "pharmacy", "drug store", "drugstore",  # labels FR et EN
@@ -83,8 +111,13 @@ CATEGORY_RULES: Dict[str, List[str]] = {
         "kinesitherapeute", "osteopathe", "hopital", "clinique",
         "mutuelle", "prevoyance",
         "doctolib", "ameli", "cpam ",
+        # Australie
+        "chemist warehouse", "priceline", "terry white", "blooms the chemist",
+        "medical centre", "bulk bill", "medibank", "bupa ", "hcf ",
+        "nib health", "australian unity",
     ],
     "loisirs": [
+        # France
         "cinema", "ugc ", "pathe ", "gaumont ", "mk2 ",
         "theatre", "opera", "concert", "spectacle", "musee",
         "sport ", "gym ", "salle de sport", "fitness",
@@ -94,11 +127,23 @@ CATEGORY_RULES: Dict[str, List[str]] = {
         "fnac ", "cultura ", "virgin",
         "amazon ", "cdiscount ", "ebay ", "vinted ",
         "playstation", "xbox ", "steam ", "nintendo",
+        # Australie / International — grande distribution & shopping
+        "kmart", "k mart", "k-mart", "target ", "big w", "myer ",
+        "david jones", "jb hi-fi", "jb hifi", "harvey norman",
+        "rebel sport", "bcf ", "kathmandu", "macpac",
+        "event cinema", "hoyts", "village cinema",
+        "sea world", "dreamworld", "luna park",
     ],
     "frais bancaires": [
         "cotisation carte", "cotisation compte", "cotisation offre", "offre premium",
         "commission", "frais de tenue", "frais bancaires", "agios", "interet debiteur",
         "frais virement", "frais change", "frais cb",
+        # Transferts P2P (libellé reconnaissable, montant variable)
+        "lydia ", "lydia*", "paylib",
+        # Australie
+        "wise ", "transferwise", "western union", "worldremit",
+        "osko ", "payid", "bpay ",
+        "atm fee", "atm withdrawal", "international fee",
     ],
 }
 
