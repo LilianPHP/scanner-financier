@@ -171,6 +171,66 @@ export default function DashboardPage() {
       .sort((a, b) => b.monthly_cost - a.monthly_cost)
   }, [transactions])
 
+  // Alertes budget — recalculées dynamiquement
+  const liveAlerts = useMemo(() => {
+    const alerts: { level: 'warning' | 'info'; icon: string; text: string }[] = []
+    const { income, expense, cashflow, savingsRate } = liveStats
+
+    if (income === 0) {
+      alerts.push({ level: 'warning', icon: '⚠️', text: 'Aucun revenu détecté dans ce relevé.' })
+      return alerts
+    }
+
+    // Cashflow négatif
+    if (cashflow < 0) {
+      alerts.push({
+        level: 'warning', icon: '🔴',
+        text: `Tu as dépensé <strong>${formatCurrency(Math.abs(cashflow))}</strong> de plus que tes revenus.`,
+      })
+    }
+
+    // Taux d'épargne très faible
+    if (savingsRate >= 0 && savingsRate < 5) {
+      alerts.push({
+        level: 'warning', icon: '⚠️',
+        text: `Taux d'épargne très faible : <strong>${Math.round(savingsRate)}%</strong>. Objectif recommandé : 20%.`,
+      })
+    }
+
+    // Catégorie dominante (> 40% des dépenses réelles, hors épargne/investissement)
+    const realExp = transactions
+      .filter(tx => tx.amount < 0 && !SAVINGS_CATS.has(tx.category))
+      .reduce((s, tx) => s + Math.abs(tx.amount), 0)
+
+    if (realExp > 0) {
+      const byCat: Record<string, number> = {}
+      transactions
+        .filter(tx => tx.amount < 0 && !SAVINGS_CATS.has(tx.category))
+        .forEach(tx => { byCat[tx.category] = (byCat[tx.category] || 0) + Math.abs(tx.amount) })
+      const [topCat, topAmt] = Object.entries(byCat).sort((a, b) => b[1] - a[1])[0] || []
+      const pct = topAmt / realExp * 100
+      if (topCat && pct > 40) {
+        alerts.push({
+          level: 'info', icon: '📊',
+          text: `<strong>${CATEGORY_LABELS[topCat] || topCat}</strong> représente <strong>${Math.round(pct)}%</strong> de tes dépenses.`,
+        })
+      }
+    }
+
+    // Abonnements > 15% des revenus
+    const aboTotal = transactions
+      .filter(tx => tx.amount < 0 && tx.category === 'abonnements')
+      .reduce((s, tx) => s + Math.abs(tx.amount), 0)
+    if (income > 0 && aboTotal / income > 0.15) {
+      alerts.push({
+        level: 'warning', icon: '📱',
+        text: `Tes abonnements représentent <strong>${Math.round(aboTotal / income * 100)}%</strong> de tes revenus (${formatCurrency(aboTotal)}).`,
+      })
+    }
+
+    return alerts
+  }, [transactions, liveStats, SAVINGS_CATS])
+
   // Bar chart — exclut épargne/investissement des dépenses si confirmé
   const liveTimeline = useMemo(() => {
     const monthly: Record<string, { month: string; income: number; expense: number }> = {}
@@ -352,6 +412,25 @@ export default function DashboardPage() {
             </div>
           )
         })()}
+
+        {/* Alertes budget */}
+        {liveAlerts.length > 0 && (
+          <div className="flex flex-col gap-2 mb-5">
+            {liveAlerts.map((alert, i) => (
+              <div
+                key={i}
+                className={`flex items-start gap-3 rounded-xl px-4 py-3 text-sm border ${
+                  alert.level === 'warning'
+                    ? 'bg-[#fff8f0] dark:bg-[#2d2218] border-orange-300/40 text-orange-700 dark:text-orange-400'
+                    : 'bg-[#f0f6ff] dark:bg-[#1a2035] border-blue-300/40 text-blue-700 dark:text-blue-400'
+                }`}
+              >
+                <span className="text-base leading-tight mt-0.5 shrink-0">{alert.icon}</span>
+                <span dangerouslySetInnerHTML={{ __html: alert.text }} />
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Bannière confirmation épargne */}
         {savingsTotal > 0 && !savingsConfirmed && (
