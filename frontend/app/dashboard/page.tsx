@@ -30,7 +30,7 @@ const CATEGORY_ICONS: Record<string, string> = {
 }
 
 // 👉 Remplace ce lien par ton formulaire Tally une fois créé
-const FEEDBACK_URL = 'https://tally.so/r/PLACEHOLDER'
+const FEEDBACK_URL = 'https://tally.so/r/ODJ7op'
 
 export default function DashboardPage() {
   const router = useRouter()
