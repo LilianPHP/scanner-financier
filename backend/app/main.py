@@ -1,7 +1,18 @@
+import os
+import sentry_sdk
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import FRONTEND_URL
 from app.api import files, transactions, analytics, rules
+
+_SENTRY_DSN = os.environ.get("SENTRY_DSN")
+if _SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=_SENTRY_DSN,
+        traces_sample_rate=0.2,   # 20% des requêtes tracées (perf)
+        profiles_sample_rate=0.1,
+        environment=os.environ.get("ENVIRONMENT", "production"),
+    )
 
 app = FastAPI(
     title="Senzio API",
