@@ -24,11 +24,20 @@ from app.parsers.csv_parser import (
 
 # Pattern date FR : 01/01/2024, 01.01.24, 01-01-2024
 DATE_PATTERN = re.compile(r"^\d{1,2}[/\-\.]\d{1,2}[/\-\.](?:\d{4}|\d{2})$")
-# Même pattern mais pour chercher une date n'importe où dans une ligne
-DATE_IN_LINE  = re.compile(r"\b(\d{1,2}[/\-\.]\d{1,2}[/\-\.](?:\d{4}|\d{2}))\b")
-# Montant : 1 234,56 ou -1234.56 ou 1 234.56
+# Date FR ou EN n'importe où dans une ligne
+DATE_IN_LINE = re.compile(
+    r"\b(\d{1,2}[/\-\.]\d{1,2}[/\-\.](?:\d{4}|\d{2}))\b"
+    r"|"
+    r"\b(\d{1,2}\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?"
+    r"|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)"
+    r"\.?\s+\d{4})\b",
+    re.IGNORECASE,
+)
+# Montant : 1 234,56 ou -1234.56 ou 1 234.56 (inclut AU$, €, £, etc.)
 AMOUNT_PATTERN = re.compile(r"^[-+]?\d{1,3}(?:[\s\xa0\u202f]\d{3})*[,\.]\d{2}$")
-AMOUNT_IN_LINE = re.compile(r"[-+]?\d{1,3}(?:[\s\xa0\u202f,]\d{3})*[,\.]\d{2}")
+AMOUNT_IN_LINE = re.compile(
+    r"(?:AU\$|NZ\$|CA\$|HK\$|US\$|€|\$|£|CHF\s?)?[-+]?\d{1,3}(?:[\s\xa0\u202f]\d{3})*[,\.]\d{2}"
+)
 
 # Mots-clés à ignorer (lignes de métadonnées)
 SKIP_LABELS = {
@@ -225,43 +234,61 @@ def _parse_pdf_with_raw_text(content: bytes) -> List[Dict[str, Any]]:
                 if len(line) < 10:
                     continue
 
-                # Chercher une date dans la ligne
+                # Chercher une date (FR ou EN) dans la ligne
                 date_match = DATE_IN_LINE.search(line)
                 if not date_match:
                     continue
 
+                # Récupérer la date (groupe 1 = FR, groupe 2 = EN)
+                date_val = date_match.group(1) or date_match.group(2)
+
                 # Chercher tous les montants dans la ligne
                 amounts = AMOUNT_IN_LINE.findall(line)
-                if not amounts:
+                # Nettoyer les préfixes monétaires pour le parsing
+                amounts_clean = [
+                    re.sub(r'^(?:AU\$|NZ\$|CA\$|HK\$|US\$|€|\$|£|CHF\s?)', '', a)
+                    for a in amounts
+                ]
+                amounts_clean = [a for a in amounts_clean if a]
+                if not amounts_clean:
                     continue
 
-                date_val = date_match.group(1)
+                # Sélection intelligente du montant :
+                # - 1 montant → c'est le montant de l'opération
+                # - 2+ montants → le dernier est souvent le solde, on prend l'avant-dernier
+                if len(amounts_clean) >= 2:
+                    amount_raw = amounts_clean[-2]
+                    amount_raw_display = amounts[-2]
+                else:
+                    amount_raw = amounts_clean[-1]
+                    amount_raw_display = amounts[-1]
 
-                # Prendre le dernier montant (généralement le montant de l'opération)
-                amount_raw = amounts[-1]
                 amount = _parse_amount_str(amount_raw)
                 if amount == 0.0:
                     continue
 
-                # Label = ce qui est entre la date et le dernier montant
+                # Label = ce qui est entre la date et le premier montant
                 after_date = line[date_match.end():]
-                last_amt_idx = after_date.rfind(amount_raw)
-                if last_amt_idx > 0:
-                    label_val = after_date[:last_amt_idx].strip()
+                first_amt_idx = after_date.find(amounts[0]) if amounts else -1
+                if first_amt_idx > 0:
+                    label_val = after_date[:first_amt_idx].strip()
                 else:
-                    label_val = after_date.replace(amount_raw, "").strip()
+                    label_val = after_date.replace(amount_raw_display, "").strip()
 
                 label_val = re.sub(r"\s+", " ", label_val).strip()
+                # Nettoyer les sous-infos Revolut ("To: ...", "Card: ...")
+                label_val = re.sub(r'\s+To:.*$', '', label_val, flags=re.IGNORECASE).strip()
+                label_val = re.sub(r'\s+Card:.*$', '', label_val, flags=re.IGNORECASE).strip()
 
                 # Filtrer les lignes de métadonnées
-                if not label_val:
+                if not label_val or len(label_val) < 3:
                     continue
                 if any(skip in label_val.lower() for skip in SKIP_LABELS):
                     continue
                 if any(skip in line.lower() for skip in SKIP_LABELS):
                     continue
-                # Ignorer les lignes trop courtes ou sans vraie info
-                if len(label_val) < 3:
+                # Ignorer les en-têtes de tableau
+                if label_val.lower() in ('description', 'libellé', 'libelle', 'details'):
                     continue
 
                 rows.append({"date_raw": date_val, "label_raw": label_val, "amount": amount})

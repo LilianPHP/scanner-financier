@@ -24,6 +24,12 @@ DATE_FORMATS = [
     "%d.%m.%Y", "%d.%m.%y",
     "%Y-%m-%d",
     "%d %m %Y",
+    # Formats anglais (Revolut, Wise, banques australiennes/britanniques)
+    "%d %b %Y",   # "1 Jan 2026", "12 Apr 2026"
+    "%d %B %Y",   # "1 January 2026"
+    "%d %b %y",   # "1 Jan 26"
+    "%B %d, %Y",  # "January 1, 2026"
+    "%b %d, %Y",  # "Jan 1, 2026"
 ]
 
 
