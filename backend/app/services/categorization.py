@@ -122,8 +122,6 @@ CATEGORY_RULES: Dict[str, List[str]] = {
         "theatre", "opera", "concert", "spectacle", "musee",
         "sport ", "gym ", "salle de sport", "fitness",
         "basic fit", "neoness", "orange bleue",
-        "voyage", "hotel", "booking.com", "airbnb", "abritel",
-        "agence de voyage", "club med", "thomas cook",
         "fnac ", "cultura ", "virgin",
         "amazon ", "cdiscount ", "ebay ", "vinted ",
         "playstation", "xbox ", "steam ", "nintendo",
@@ -133,6 +131,26 @@ CATEGORY_RULES: Dict[str, List[str]] = {
         "rebel sport", "bcf ", "kathmandu", "macpac",
         "event cinema", "hoyts", "village cinema",
         "sea world", "dreamworld", "luna park",
+    ],
+    "voyage": [
+        "hotel", "booking.com", "airbnb", "abritel", "hostelworld",
+        "expedia", "hotels.com", "agence de voyage", "club med", "thomas cook",
+        "tripadvisor", "voyage", "sejour", "vacances", "circuit ", "croisiere",
+        "stayz ", "wotif ", "lastminute",
+    ],
+    "education": [
+        "universite", "fac ", "ecole ", "formation", "udemy", "coursera",
+        "openclassrooms", "skillshare", "duolingo", "babbel ", "assimil",
+        "scolarite", "frais de scolarite", "crous ", "campus",
+        "toefl", "ielts", "delf", "dalf", "librairie", "papeterie",
+        "tafe ", "university", "hecs ",
+    ],
+    "vetements": [
+        "zara", "h&m", "hm ", "uniqlo", "primark", "mango ", "kiabi",
+        "promod", "sezane", "asos ", "zalando", "shein ", "la redoute",
+        "nike ", "adidas ", "puma ", "new balance", "reebok", "decathlon",
+        "cotton on", "country road", "witchery", "the iconic", "glassons",
+        "foot locker", "hype dc",
     ],
     "frais bancaires": [
         "cotisation carte", "cotisation compte", "cotisation offre", "offre premium",
@@ -202,11 +220,24 @@ SUBCATEGORY_RULES: Dict[str, Dict[str, List[str]]] = {
             "event cinema", "hoyts", "village cinema", "sea world", "dreamworld", "luna park",
         ],
         "sport_fitness": ["gym ", "salle de sport", "fitness", "basic fit", "neoness", "orange bleue", "rebel sport", "bcf ", "kathmandu", "macpac"],
-        "voyage_hotel": ["voyage", "hotel", "booking.com", "airbnb", "abritel", "agence de voyage", "club med"],
         "shopping": [
             "fnac ", "cultura ", "amazon ", "cdiscount ", "ebay ", "vinted ",
             "kmart", "k mart", "k-mart", "target ", "big w", "myer ", "david jones", "jb hi-fi", "jb hifi", "harvey norman",
         ],
+    },
+    "voyage": {
+        "hebergement": ["hotel", "airbnb", "abritel", "hostelworld", "booking.com", "hotels.com", "stayz ", "wotif "],
+        "sejour_circuit": ["voyage", "sejour", "vacances", "circuit ", "croisiere", "club med", "agence de voyage", "expedia", "lastminute"],
+    },
+    "education": {
+        "scolarite": ["universite", "fac ", "ecole ", "scolarite", "frais de scolarite", "crous ", "campus", "tafe ", "university", "hecs "],
+        "formation_en_ligne": ["udemy", "coursera", "openclassrooms", "skillshare", "duolingo", "babbel ", "assimil", "formation"],
+        "langues_certif": ["toefl", "ielts", "delf", "dalf"],
+        "livres_papeterie": ["librairie", "papeterie"],
+    },
+    "vetements": {
+        "vetements_mode": ["zara", "h&m", "hm ", "uniqlo", "primark", "mango ", "kiabi", "promod", "sezane", "asos ", "zalando", "shein ", "la redoute", "cotton on", "country road", "witchery", "the iconic", "glassons"],
+        "sport_chaussures": ["nike ", "adidas ", "puma ", "new balance", "reebok", "decathlon", "foot locker", "hype dc"],
     },
     "abonnements": {
         "telephone_internet": ["free ", "orange ", "sfr ", "bouygues", "telstra", "optus ", "vodafone", "tpg ", "aussie broadband"],

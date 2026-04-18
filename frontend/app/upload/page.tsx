@@ -2,9 +2,10 @@
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { uploadFile, type UploadResult } from '@/lib/api'
+import { uploadFile, getProfile, type UploadResult, type UserProfile } from '@/lib/api'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { SenzioLogo } from '@/components/SenzioLogo'
+import { OnboardingModal } from '@/components/OnboardingModal'
 
 export default function UploadPage() {
   const router = useRouter()
@@ -15,11 +16,14 @@ export default function UploadPage() {
   const [step, setStep] = useState(0) // 0=idle, 1=upload, 2=analyse, 3=dashboard
   const [slowWarning, setSlowWarning] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(false)
 
-  // Vérifier l'auth
+  // Vérifier l'auth + onboarding
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) router.push('/login')
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (!data.session) { router.push('/login'); return }
+      const profile = await getProfile()
+      if (!profile || !profile.onboarding_done) setShowOnboarding(true)
     })
   }, [router])
 
@@ -104,6 +108,12 @@ export default function UploadPage() {
 
   return (
     <main className="min-h-screen bg-[#f5f5f2] dark:bg-[#111110] flex flex-col items-center justify-center px-4">
+      {showOnboarding && (
+        <OnboardingModal onDone={(profile: UserProfile) => {
+          sessionStorage.setItem('user_profile', JSON.stringify(profile))
+          setShowOnboarding(false)
+        }} />
+      )}
       <div className="w-full max-w-[480px]">
         <div className="flex items-center justify-between mb-10">
           <SenzioLogo height={36} />

@@ -9,8 +9,8 @@ import {
 import { supabase } from '@/lib/supabase'
 import {
   formatCurrency, updateCategory, saveRule,
-  CATEGORY_LABELS, CATEGORY_COLORS, SUBCATEGORY_OPTIONS,
-  type UploadResult, type Transaction, type Subscription, type ScoreResult,
+  CATEGORY_LABELS, CATEGORY_COLORS, SUBCATEGORY_OPTIONS, getActiveCategories,
+  type UploadResult, type Transaction, type Subscription, type ScoreResult, type UserProfile,
 } from '@/lib/api'
 import { exportXLSX } from '@/lib/exportXLSX'
 
@@ -51,13 +51,19 @@ export default function DashboardPage() {
     category: string
   } | null>(null)
 
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
+
   useEffect(() => {
     const raw = sessionStorage.getItem('analysis')
     if (!raw) { router.push('/upload'); return }
     const parsed: UploadResult = JSON.parse(raw)
     setData(parsed)
     setTransactions(parsed.transactions)
+    const profileRaw = sessionStorage.getItem('user_profile')
+    if (profileRaw) setUserProfile(JSON.parse(profileRaw))
   }, [router])
+
+  const activeCategories = getActiveCategories(userProfile)
 
   const SAVINGS_CATS = useMemo(() => new Set(['epargne', 'investissement']), [])
 
@@ -669,7 +675,7 @@ export default function DashboardPage() {
                             }}
                             className="text-xs border rounded px-2 py-1 focus:outline-none cursor-pointer font-medium dark:bg-[#1c1c1a]"
                           >
-                            {Object.entries(CATEGORY_LABELS).map(([val, label]) => (
+                            {Object.entries(activeCategories).map(([val, label]) => (
                               <option key={val} value={val}>{label}</option>
                             ))}
                           </select>

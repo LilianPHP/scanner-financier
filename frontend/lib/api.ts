@@ -159,6 +159,48 @@ export async function getAnalytics(fileId: string) {
   return { summary, categories, timeline }
 }
 
+// Profil utilisateur
+export type UserProfile = {
+  is_student: boolean
+  travels_often: boolean
+  has_children: boolean
+  has_pet: boolean
+  onboarding_done: boolean
+}
+
+export async function getProfile(): Promise<UserProfile | null> {
+  const { data: session } = await supabase.auth.getSession()
+  if (!session.session) return null
+  const { data } = await supabase
+    .from('user_profiles')
+    .select('*')
+    .eq('user_id', session.session.user.id)
+    .single()
+  return data as UserProfile | null
+}
+
+export async function saveProfile(profile: Omit<UserProfile, 'onboarding_done'> & { onboarding_done?: boolean }): Promise<void> {
+  const { data: session } = await supabase.auth.getSession()
+  if (!session.session) return
+  await supabase.from('user_profiles').upsert({
+    user_id: session.session.user.id,
+    ...profile,
+    onboarding_done: true,
+  })
+}
+
+export function getActiveCategories(profile: UserProfile | null): Record<string, string> {
+  const base: Record<string, string> = {
+    alimentation: 'Alimentation', logement: 'Logement', transport: 'Transport',
+    loisirs: 'Loisirs', abonnements: 'Abonnements', salaire: 'Salaire / Revenus',
+    'frais bancaires': 'Frais bancaires', sante: 'Santé', investissement: 'Investissement',
+    epargne: 'Épargne', impots: 'Impôts / Taxes', vetements: 'Vêtements', autres: 'Autres',
+  }
+  if (!profile || profile.is_student) base.education = 'Éducation'
+  if (!profile || profile.travels_often) base.voyage = 'Voyage'
+  return base
+}
+
 // Type pour l'historique des fichiers
 export type UploadedFile = {
   id: string
@@ -335,9 +377,22 @@ export const SUBCATEGORY_OPTIONS: Record<string, Array<{ value: string; label: s
   loisirs: [
     { value: 'cinema_spectacle', label: 'Cinéma / Spectacle' },
     { value: 'sport_fitness', label: 'Sport / Fitness' },
-    { value: 'voyage_hotel', label: 'Voyage / Hôtel' },
     { value: 'shopping', label: 'Shopping' },
     { value: 'jeux_video', label: 'Jeux vidéo' },
+  ],
+  voyage: [
+    { value: 'hebergement', label: 'Hébergement' },
+    { value: 'sejour_circuit', label: 'Séjour / Circuit' },
+  ],
+  education: [
+    { value: 'scolarite', label: 'Scolarité' },
+    { value: 'formation_en_ligne', label: 'Formation en ligne' },
+    { value: 'langues_certif', label: 'Langues / Certif.' },
+    { value: 'livres_papeterie', label: 'Livres / Papeterie' },
+  ],
+  vetements: [
+    { value: 'vetements_mode', label: 'Mode' },
+    { value: 'sport_chaussures', label: 'Sport / Chaussures' },
   ],
   abonnements: [
     { value: 'streaming', label: 'Streaming vidéo' },
@@ -398,6 +453,9 @@ export const CATEGORY_LABELS: Record<string, string> = {
   investissement: 'Investissement',
   epargne: 'Épargne',
   impots: 'Impôts / Taxes',
+  education: 'Éducation',
+  voyage: 'Voyage',
+  vetements: 'Vêtements',
   autres: 'Autres',
 }
 
@@ -413,5 +471,8 @@ export const CATEGORY_COLORS: Record<string, string> = {
   investissement: '#3F51B5',
   epargne: '#009688',
   impots: '#795548',
+  education: '#0097A7',
+  voyage: '#FF7043',
+  vetements: '#E91E63',
   autres: '#9E9E9E',
 }
