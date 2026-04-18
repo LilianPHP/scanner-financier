@@ -33,7 +33,7 @@ from app.parsers.csv_parser import parse_csv
 from app.parsers.xlsx_parser import parse_xlsx
 from app.parsers.pdf_parser import parse_pdf
 from app.services.normalization import normalize_transactions
-from app.services.categorization import categorize_batch
+from app.services.categorization import categorize_batch, categorize_subcategory
 from app.services.analytics import compute_summary, compute_by_category, compute_monthly_timeline, detect_subscriptions
 from app.db.client import get_supabase
 from app.auth import get_user_id as _get_user_id
@@ -116,6 +116,14 @@ async def upload_file(
         # Catégoriser (règles perso appliquées en priorité)
         transactions = categorize_batch(transactions, user_rules=user_rules)
 
+        # Sous-catégorisation (dérivée, non stockée en DB)
+        for tx in transactions:
+            label = tx.get("label_clean") or tx["label_raw"]
+            subcat = categorize_subcategory(label, tx["category"])
+            if subcat is None:
+                subcat = categorize_subcategory(tx["label_raw"], tx["category"])
+            tx["subcategory"] = subcat
+
         # Analytics
         summary = compute_summary(transactions)
         by_category = compute_by_category(transactions)
@@ -132,7 +140,7 @@ async def upload_file(
             "transaction_count": len(transactions),
         }).execute()
 
-        # Sauvegarder les transactions
+        # Sauvegarder les transactions (sans subcategory — pas de colonne en DB)
         tx_records = [
             {
                 "id": str(uuid.uuid4()),
@@ -150,6 +158,12 @@ async def upload_file(
             for tx in transactions
         ]
         sb.table("transactions").insert(tx_records).execute()
+
+        # Réponse enrichie avec subcategory (dérivé, non stocké)
+        response_transactions = [
+            {**rec, "subcategory": tx.get("subcategory")}
+            for rec, tx in zip(tx_records, transactions)
+        ]
 
         # Sauvegarder le résumé analytique
         sb.table("analysis_results").insert({
@@ -170,7 +184,7 @@ async def upload_file(
     return {
         "file_id": file_id,
         "filename": filename,
-        "transactions": tx_records,
+        "transactions": response_transactions,
         "summary": summary,
         "by_category": by_category,
         "subscriptions": subscriptions,

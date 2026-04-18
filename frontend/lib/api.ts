@@ -28,6 +28,7 @@ export type Transaction = {
   currency?: string        // code ISO ex: "AUD", "USD", "EUR"
   direction: 'debit' | 'credit'
   category: string
+  subcategory?: string
 }
 
 export type AnalysisSummary = {
@@ -299,6 +300,44 @@ export function formatCurrency(amount: number): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount)
+}
+
+export const SUBCATEGORY_LABELS: Record<string, string> = {
+  // Alimentation
+  courses: 'Courses',
+  restaurant: 'Restaurant',
+  fast_food: 'Fast food',
+  livraison: 'Livraison',
+  boulangerie: 'Boulangerie',
+  // Transport
+  transports_commun: 'Transports en commun',
+  train_avion: 'Train / Avion',
+  taxi_vtc: 'Taxi / VTC',
+  carburant: 'Carburant',
+  parking_peage: 'Parking / Péage',
+  velo_trottinette: 'Vélo / Trottinette',
+  // Logement
+  loyer: 'Loyer',
+  energie: 'Énergie',
+  eau: 'Eau',
+  assurance_hab: 'Assurance hab.',
+  electromenager: 'Équipement maison',
+  // Santé
+  pharmacie: 'Pharmacie',
+  medecin: 'Médecin',
+  dentiste_opticien: 'Dentiste / Opticien',
+  mutuelle: 'Mutuelle',
+  // Loisirs
+  cinema_spectacle: 'Cinéma / Spectacle',
+  sport_fitness: 'Sport / Fitness',
+  voyage_hotel: 'Voyage / Hôtel',
+  shopping: 'Shopping',
+  jeux_video: 'Jeux vidéo',
+  // Abonnements
+  streaming: 'Streaming vidéo',
+  streaming_musique: 'Streaming musique',
+  telephone_internet: 'Téléphone / Internet',
+  logiciel_cloud: 'Logiciels / Cloud',
 }
 
 // Labels français des catégories

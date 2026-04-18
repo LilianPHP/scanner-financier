@@ -9,7 +9,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import {
   formatCurrency, updateCategory, saveRule,
-  CATEGORY_LABELS, CATEGORY_COLORS,
+  CATEGORY_LABELS, CATEGORY_COLORS, SUBCATEGORY_LABELS,
   type UploadResult, type Transaction, type Subscription, type ScoreResult,
 } from '@/lib/api'
 import { exportXLSX } from '@/lib/exportXLSX'
@@ -645,20 +645,27 @@ export default function DashboardPage() {
                         {tx.label_clean}
                       </td>
                       <td className="py-2 pr-4">
-                        <select
-                          value={tx.category}
-                          onChange={e => handleCategoryChange(tx, e.target.value)}
-                          style={{
-                            borderColor: color,
-                            background: color + '22',
-                            color: color,
-                          }}
-                          className="text-xs border rounded px-2 py-1 focus:outline-none cursor-pointer font-medium dark:bg-[#1c1c1a]"
-                        >
-                          {Object.entries(CATEGORY_LABELS).map(([val, label]) => (
-                            <option key={val} value={val}>{label}</option>
-                          ))}
-                        </select>
+                        <div className="flex flex-col gap-1">
+                          <select
+                            value={tx.category}
+                            onChange={e => handleCategoryChange(tx, e.target.value)}
+                            style={{
+                              borderColor: color,
+                              background: color + '22',
+                              color: color,
+                            }}
+                            className="text-xs border rounded px-2 py-1 focus:outline-none cursor-pointer font-medium dark:bg-[#1c1c1a]"
+                          >
+                            {Object.entries(CATEGORY_LABELS).map(([val, label]) => (
+                              <option key={val} value={val}>{label}</option>
+                            ))}
+                          </select>
+                          {tx.subcategory && SUBCATEGORY_LABELS[tx.subcategory] && (
+                            <span className="text-[10px] text-gray-400 dark:text-gray-500 px-1.5">
+                              {SUBCATEGORY_LABELS[tx.subcategory]}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className={`py-2 text-right font-medium ${tx.amount >= 0 ? 'text-[#1D9E75]' : ''}`}>
                         {tx.currency && tx.currency !== 'EUR' && tx.amount_original != null ? (

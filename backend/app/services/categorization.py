@@ -2,7 +2,7 @@
 Catégorisation des transactions par règles déterministes.
 L'IA (Claude) est utilisée en fallback pour les transactions non catégorisées.
 """
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 
 # Règles directionnelles : certains libellés signifient des choses différentes
@@ -148,6 +148,79 @@ CATEGORY_RULES: Dict[str, List[str]] = {
 }
 
 
+SUBCATEGORY_RULES: Dict[str, Dict[str, List[str]]] = {
+    "alimentation": {
+        "livraison": ["uber eats", "deliveroo", "just eat", "dominos"],
+        "fast_food": ["mcdonald", "burger king", "kfc", "subway", "quick "],
+        "restaurant": [
+            "restaurant", "bistrot", "brasserie", "cafe ", "sushi", "pizza", "kebab",
+            "grill'd", "oporto", "hungry jack", "nando", "schnitz", "mad mex", "zambreros",
+            "twelve cafe", "yo-chi", "yo chi", "chatime", "boost juice",
+        ],
+        "boulangerie": ["boulangerie", "patisserie", "boucherie", "fromagerie", "bakers delight", "the cheesecake shop"],
+        "courses": [
+            "carrefour", "leclerc", "lidl", "aldi", "auchan", "intermarche",
+            "monoprix", "franprix", "casino ", "super u", "netto ", "biocoop", "naturalia", "picard",
+            "coles", "woolworths", "iga ", "costco", "harris farm", "countdown", "pak'nsave", "new world",
+        ],
+    },
+    "transport": {
+        "taxi_vtc": ["uber ", "bolt ", "heetch", "taxi", "vtc "],
+        "velo_trottinette": ["velib", "lime ", "bird ", "tier "],
+        "carburant": [
+            "essence", "carburant", "total ", "bp ", "shell ", "esso ", "q8 ", "station service",
+            "7-eleven", "ampol", "caltex", "united petrol", "metro petroleum",
+        ],
+        "parking_peage": ["peage", "parking", "indigo ", "q-park", "autoroutes", "vinci autoroutes", "sanef"],
+        "train_avion": [
+            "ouigo", "tgv ", "ter ", "intercites", "ouibus", "flixbus", "blablacar",
+            "qantas", "jetstar", "virgin australia", "rex airlines", "airasia", "scoot ", "tigerair",
+        ],
+        "transports_commun": [
+            "sncf", "ratp", "navigo", "transpole", "tcl ", "tan ",
+            "go card", "myki ", "opal ", "translink", "ptv ", "transperth",
+            "bus ", "tram ", "ferry ", "train ",
+        ],
+    },
+    "logement": {
+        "loyer": ["loyer", "charges locatives", "rent ", "real estate", "strata "],
+        "energie": ["edf ", "engie ", "gdf ", "origin energy", "agl ", "energex", "ausgrid", "synergy "],
+        "eau": ["eau ", "veolia ", "suez ", "saur "],
+        "assurance_hab": ["assurance habitation", "assurance logement", "maaf ", "macif ", "axa ", "allianz ", "generali ", "matmut "],
+        "electromenager": ["darty ", "boulanger ", "ikea ", "but ", "conforama", "bunnings", "mitre 10", "total tools", "diy ", "copropriete", "syndic "],
+    },
+    "sante": {
+        "pharmacie": ["pharmacie", "pharmacy", "drug store", "drugstore", "chemist warehouse", "priceline", "terry white", "blooms the chemist"],
+        "dentiste_opticien": ["dentiste", "dentist", "opticien"],
+        "mutuelle": ["mutuelle", "prevoyance", "medibank", "bupa ", "hcf ", "nib health", "australian unity"],
+        "medecin": ["medecin", "docteur", "kinesitherapeute", "osteopathe", "hopital", "clinique", "doctolib", "ameli", "cpam ", "medical centre", "bulk bill"],
+    },
+    "loisirs": {
+        "jeux_video": ["playstation", "xbox ", "steam ", "nintendo"],
+        "cinema_spectacle": [
+            "cinema", "ugc ", "pathe ", "gaumont ", "mk2 ", "theatre", "opera", "concert", "spectacle", "musee",
+            "event cinema", "hoyts", "village cinema", "sea world", "dreamworld", "luna park",
+        ],
+        "sport_fitness": ["gym ", "salle de sport", "fitness", "basic fit", "neoness", "orange bleue", "rebel sport", "bcf ", "kathmandu", "macpac"],
+        "voyage_hotel": ["voyage", "hotel", "booking.com", "airbnb", "abritel", "agence de voyage", "club med"],
+        "shopping": [
+            "fnac ", "cultura ", "amazon ", "cdiscount ", "ebay ", "vinted ",
+            "kmart", "k mart", "k-mart", "target ", "big w", "myer ", "david jones", "jb hi-fi", "jb hifi", "harvey norman",
+        ],
+    },
+    "abonnements": {
+        "telephone_internet": ["free ", "orange ", "sfr ", "bouygues", "telstra", "optus ", "vodafone", "tpg ", "aussie broadband"],
+        "streaming_musique": ["spotify", "apple music", "youtube premium", "google play"],
+        "logiciel_cloud": ["adobe", "microsoft 365", "dropbox", "google one", "apple icloud"],
+        "streaming": [
+            "netflix", "disney+", "disney plus", "canal+", "apple tv", "hulu", "dazn",
+            "bee tv", "molotov", "salto", "amazon prime", "prime video",
+            "stan ", "binge ", "kayo ", "foxtel", "paramount+",
+        ],
+    },
+}
+
+
 def _normalize(text: str) -> str:
     """Minuscule + suppression des accents."""
     text = text.lower()
@@ -162,6 +235,18 @@ def _normalize(text: str) -> str:
     for src, dst in replacements.items():
         text = text.replace(src, dst)
     return text
+
+
+def categorize_subcategory(label_raw: str, category: str):
+    """Retourne la sous-catégorie détectée ou None si non applicable."""
+    if category not in SUBCATEGORY_RULES:
+        return None
+    normalized = _normalize(label_raw)
+    for subcat, keywords in SUBCATEGORY_RULES[category].items():
+        for kw in keywords:
+            if _normalize(kw) in normalized:
+                return subcat
+    return None
 
 
 def categorize(label_raw: str, amount: float) -> str:
@@ -190,7 +275,7 @@ def categorize(label_raw: str, amount: float) -> str:
 
 def categorize_batch(
     transactions: List[Dict[str, Any]],
-    user_rules: Dict[str, str] | None = None,
+    user_rules: Optional[Dict[str, str]] = None,
 ) -> List[Dict[str, Any]]:
     """
     Catégorise une liste de transactions en trois passes :
