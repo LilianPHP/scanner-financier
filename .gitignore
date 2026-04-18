@@ -28,3 +28,14 @@ backend/.venv/
 # Logs
 *.log
 npm-debug.log*
+.claude/
+.mcp.json
+*.skill
+*-review.html
+senzio_*
+Test/
+test_*.csv
+bank-analyzer.html
+story-instagram.html
+ROADMAP.html
+project-diagnostic*.html
