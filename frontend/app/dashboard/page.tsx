@@ -9,7 +9,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import {
   formatCurrency, updateCategory, saveRule,
-  CATEGORY_LABELS, CATEGORY_COLORS, SUBCATEGORY_LABELS,
+  CATEGORY_LABELS, CATEGORY_COLORS, SUBCATEGORY_OPTIONS,
   type UploadResult, type Transaction, type Subscription, type ScoreResult,
 } from '@/lib/api'
 import { exportXLSX } from '@/lib/exportXLSX'
@@ -270,10 +270,23 @@ export default function DashboardPage() {
     )
   })
 
-  async function handleCategoryChange(tx: Transaction, newCategory: string) {
-    // Optimistic update : uniquement cette transaction (par ID)
+  async function handleSubcategoryChange(tx: Transaction, newSubcategory: string) {
     setTransactions(prev =>
-      prev.map(t => t.id === tx.id ? { ...t, category: newCategory } : t)
+      prev.map(t => t.id === tx.id ? { ...t, subcategory: newSubcategory || undefined } : t)
+    )
+    try {
+      await updateCategory(tx.id, tx.category, false, newSubcategory || null)
+    } catch {
+      setTransactions(prev =>
+        prev.map(t => t.id === tx.id ? { ...t, subcategory: tx.subcategory } : t)
+      )
+    }
+  }
+
+  async function handleCategoryChange(tx: Transaction, newCategory: string) {
+    // Optimistic update : réinitialise la sous-catégorie quand la catégorie change
+    setTransactions(prev =>
+      prev.map(t => t.id === tx.id ? { ...t, category: newCategory, subcategory: undefined } : t)
     )
     try {
       await updateCategory(tx.id, newCategory, false)
@@ -660,10 +673,17 @@ export default function DashboardPage() {
                               <option key={val} value={val}>{label}</option>
                             ))}
                           </select>
-                          {tx.subcategory && SUBCATEGORY_LABELS[tx.subcategory] && (
-                            <span className="text-[10px] text-gray-400 dark:text-gray-500 px-1.5">
-                              {SUBCATEGORY_LABELS[tx.subcategory]}
-                            </span>
+                          {SUBCATEGORY_OPTIONS[tx.category] && (
+                            <select
+                              value={tx.subcategory || ''}
+                              onChange={e => handleSubcategoryChange(tx, e.target.value)}
+                              className="text-[10px] text-gray-400 dark:text-gray-500 bg-transparent border-0 cursor-pointer focus:outline-none px-1 py-0.5 hover:text-gray-600 dark:hover:text-gray-300 w-full"
+                            >
+                              <option value="">Sous-catégorie…</option>
+                              {SUBCATEGORY_OPTIONS[tx.category].map(opt => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                              ))}
+                            </select>
                           )}
                         </div>
                       </td>

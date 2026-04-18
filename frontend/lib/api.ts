@@ -121,18 +121,19 @@ export async function getTransactions(fileId: string): Promise<Transaction[]> {
   return data.transactions
 }
 
-// Mettre à jour la catégorie d'une transaction
+// Mettre à jour la catégorie (et sous-catégorie) d'une transaction
 export async function updateCategory(
   txId: string,
   category: string,
-  propagate = false
+  propagate = false,
+  subcategory?: string | null
 ): Promise<{ total_updated: number }> {
   const headers = await getAuthHeader()
 
   const response = await apiFetch(`${BACKEND_URL}/transactions/${txId}`, {
     method: 'PATCH',
     headers: { ...headers, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ category, propagate }),
+    body: JSON.stringify({ category, propagate, subcategory: subcategory ?? null }),
   })
 
   if (!response.ok) {
@@ -300,6 +301,50 @@ export function formatCurrency(amount: number): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount)
+}
+
+export const SUBCATEGORY_OPTIONS: Record<string, Array<{ value: string; label: string }>> = {
+  alimentation: [
+    { value: 'courses', label: 'Courses' },
+    { value: 'restaurant', label: 'Restaurant' },
+    { value: 'fast_food', label: 'Fast food' },
+    { value: 'livraison', label: 'Livraison' },
+    { value: 'boulangerie', label: 'Boulangerie' },
+  ],
+  transport: [
+    { value: 'transports_commun', label: 'Transports en commun' },
+    { value: 'train_avion', label: 'Train / Avion' },
+    { value: 'taxi_vtc', label: 'Taxi / VTC' },
+    { value: 'carburant', label: 'Carburant' },
+    { value: 'parking_peage', label: 'Parking / Péage' },
+    { value: 'velo_trottinette', label: 'Vélo / Trottinette' },
+  ],
+  logement: [
+    { value: 'loyer', label: 'Loyer' },
+    { value: 'energie', label: 'Énergie' },
+    { value: 'eau', label: 'Eau' },
+    { value: 'assurance_hab', label: 'Assurance hab.' },
+    { value: 'electromenager', label: 'Équipement maison' },
+  ],
+  sante: [
+    { value: 'pharmacie', label: 'Pharmacie' },
+    { value: 'medecin', label: 'Médecin' },
+    { value: 'dentiste_opticien', label: 'Dentiste / Opticien' },
+    { value: 'mutuelle', label: 'Mutuelle' },
+  ],
+  loisirs: [
+    { value: 'cinema_spectacle', label: 'Cinéma / Spectacle' },
+    { value: 'sport_fitness', label: 'Sport / Fitness' },
+    { value: 'voyage_hotel', label: 'Voyage / Hôtel' },
+    { value: 'shopping', label: 'Shopping' },
+    { value: 'jeux_video', label: 'Jeux vidéo' },
+  ],
+  abonnements: [
+    { value: 'streaming', label: 'Streaming vidéo' },
+    { value: 'streaming_musique', label: 'Streaming musique' },
+    { value: 'telephone_internet', label: 'Téléphone / Internet' },
+    { value: 'logiciel_cloud', label: 'Logiciels / Cloud' },
+  ],
 }
 
 export const SUBCATEGORY_LABELS: Record<string, string> = {

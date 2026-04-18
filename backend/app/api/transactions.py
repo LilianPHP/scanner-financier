@@ -42,6 +42,7 @@ def get_transactions(
 
 class UpdateCategoryRequest(BaseModel):
     category: str
+    subcategory: Optional[str] = None
     propagate: bool = False  # Si True, met à jour les transactions similaires
 
 
@@ -51,7 +52,7 @@ def update_transaction(
     body: UpdateCategoryRequest = ...,
     authorization: Optional[str] = Header(None),
 ):
-    """Met à jour la catégorie d'une transaction (et optionnellement les similaires)."""
+    """Met à jour la catégorie (et sous-catégorie) d'une transaction."""
     user_id = _get_user_id(authorization)
 
     if body.category not in VALID_CATEGORIES:
@@ -62,19 +63,17 @@ def update_transaction(
 
     sb = get_supabase()
 
-    # Vérifier que la transaction appartient à l'utilisateur
     tx_result = sb.table("transactions").select("*").eq("id", tx_id).eq("user_id", user_id).execute()
     if not tx_result.data:
         raise HTTPException(status_code=404, detail="Transaction non trouvée")
 
     tx = tx_result.data[0]
 
-    # Mettre à jour la transaction
-    sb.table("transactions").update({"category": body.category}).eq("id", tx_id).execute()
+    update_payload = {"category": body.category, "subcategory": body.subcategory}
+    sb.table("transactions").update(update_payload).eq("id", tx_id).execute()
 
     updated_count = 1
 
-    # Propagation aux transactions avec EXACTEMENT le même libellé
     if body.propagate:
         similar = (
             sb.table("transactions")
@@ -86,7 +85,7 @@ def update_transaction(
         )
 
         for similar_tx in similar.data:
-            sb.table("transactions").update({"category": body.category}).eq("id", similar_tx["id"]).execute()
+            sb.table("transactions").update(update_payload).eq("id", similar_tx["id"]).execute()
             updated_count += 1
 
     return {

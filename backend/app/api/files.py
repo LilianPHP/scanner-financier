@@ -140,7 +140,6 @@ async def upload_file(
             "transaction_count": len(transactions),
         }).execute()
 
-        # Sauvegarder les transactions (sans subcategory — pas de colonne en DB)
         tx_records = [
             {
                 "id": str(uuid.uuid4()),
@@ -149,21 +148,17 @@ async def upload_file(
                 "date": tx["date"],
                 "label_raw": tx["label_raw"],
                 "label_clean": tx["label_clean"],
-                "amount": tx["amount"],           # toujours en EUR
+                "amount": tx["amount"],
                 "amount_original": tx.get("amount_original", tx["amount"]),
                 "currency": tx.get("currency", "EUR"),
                 "direction": tx["direction"],
                 "category": tx["category"],
+                "subcategory": tx.get("subcategory"),
             }
             for tx in transactions
         ]
         sb.table("transactions").insert(tx_records).execute()
-
-        # Réponse enrichie avec subcategory (dérivé, non stocké)
-        response_transactions = [
-            {**rec, "subcategory": tx.get("subcategory")}
-            for rec, tx in zip(tx_records, transactions)
-        ]
+        response_transactions = tx_records
 
         # Sauvegarder le résumé analytique
         sb.table("analysis_results").insert({
