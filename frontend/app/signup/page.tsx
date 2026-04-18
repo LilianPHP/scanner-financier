@@ -18,9 +18,15 @@ export default function SignupPage() {
     setError('')
     setLoading(true)
     try {
-      const { error } = await supabase.auth.signUp({ email, password })
+      const { data, error } = await supabase.auth.signUp({ email, password })
       if (error) throw error
-      setDone(true)
+      if (data.session) {
+        // Email confirmation disabled → connecté directement
+        router.push('/upload')
+      } else {
+        // Email confirmation active → afficher l'écran "Vérifie ta boîte"
+        setDone(true)
+      }
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la création du compte')
     } finally {
