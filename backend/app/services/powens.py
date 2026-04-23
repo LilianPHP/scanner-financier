@@ -85,19 +85,29 @@ def get_connection_info(user_token: str, connection_id: str) -> dict:
     return resp.json()
 
 
-def get_powens_transactions(user_token: str, connection_id: str, limit: int = 500) -> list:
+def get_powens_transactions(
+    user_token: str,
+    connection_id: str,
+    limit: int = 1000,
+    period_months: int = 6,
+) -> list:
     """
     Récupère les transactions d'une connexion bancaire.
+    period_months : nombre de mois d'historique à récupérer.
     Filtre les transactions à venir (coming=True).
     """
+    from datetime import date, timedelta
+    min_date = (date.today() - timedelta(days=period_months * 30)).strftime("%Y-%m-%d")
+
     resp = httpx.get(
         f"{_base_url()}/users/me/transactions",
         headers={"Authorization": f"Bearer {user_token}"},
         params={
             "id_connection": connection_id,
             "limit": limit,
+            "min_date": min_date,
         },
-        timeout=30,
+        timeout=10,
     )
     resp.raise_for_status()
     data = resp.json()

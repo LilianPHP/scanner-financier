@@ -227,9 +227,9 @@ export type BankConnection = {
   created_at: string
 }
 
-export async function getBankConnectUrl(): Promise<{ webview_url: string; state: string }> {
+export async function getBankConnectUrl(periodMonths = 6): Promise<{ webview_url: string; state: string }> {
   const headers = await getAuthHeader()
-  const res = await apiFetch(`${BACKEND_URL}/banks/connect`, { headers })
+  const res = await apiFetch(`${BACKEND_URL}/banks/connect?period_months=${periodMonths}`, { headers })
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
     throw new Error(body.detail || `Erreur ${res.status} — connexion bancaire impossible`)
@@ -275,12 +275,16 @@ export async function getBankConnections(): Promise<BankConnection[]> {
   return data.connections
 }
 
-export async function syncBankConnection(connId: string): Promise<UploadResult> {
+export async function syncBankConnection(connId: string, periodMonths?: number): Promise<UploadResult> {
   const headers = await getAuthHeader()
-  const res = await apiFetch(`${BACKEND_URL}/banks/sync/${connId}`, {
-    method: 'POST',
-    headers,
-  })
+  const url = periodMonths
+    ? `${BACKEND_URL}/banks/sync/${connId}?period_months=${periodMonths}`
+    : `${BACKEND_URL}/banks/sync/${connId}`
+  const res = await apiFetch(url, { method: 'POST', headers })
+  if (res.status === 202) {
+    const body = await res.json().catch(() => ({}))
+    throw new BankSyncingError(body.detail || 'Synchronisation en cours…')
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
     throw new Error(err.detail || `Erreur sync (${res.status})`)

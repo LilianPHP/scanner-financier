@@ -6,6 +6,14 @@ import { getBankConnectUrl, getBankConnections, syncBankConnection, type BankCon
 import { SenzioLogo } from '@/components/SenzioLogo'
 import { ThemeToggle } from '@/components/ThemeToggle'
 
+const PERIOD_OPTIONS = [
+  { value: 1,  label: '1 mois' },
+  { value: 3,  label: '3 mois' },
+  { value: 6,  label: '6 mois' },
+  { value: 12, label: '12 mois' },
+  { value: 24, label: '24 mois' },
+]
+
 export default function AccountsPage() {
   const router = useRouter()
   const [connections, setConnections] = useState<BankConnection[]>([])
@@ -13,6 +21,7 @@ export default function AccountsPage() {
   const [connecting, setConnecting] = useState(false)
   const [syncing, setSyncing] = useState<string | null>(null)
   const [error, setError] = useState('')
+  const [period, setPeriod] = useState(6)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -34,7 +43,7 @@ export default function AccountsPage() {
     setConnecting(true)
     setError('')
     try {
-      const { webview_url } = await getBankConnectUrl()
+      const { webview_url } = await getBankConnectUrl(period)
       window.location.href = webview_url
     } catch (e: any) {
       setError(e.message || 'Erreur lors de la connexion')
@@ -46,7 +55,7 @@ export default function AccountsPage() {
     setSyncing(connId)
     setError('')
     try {
-      const result = await syncBankConnection(connId)
+      const result = await syncBankConnection(connId, period)
       sessionStorage.setItem('analysis', JSON.stringify(result))
       router.push('/dashboard')
     } catch (e: any) {
@@ -138,6 +147,29 @@ export default function AccountsPage() {
           </div>
         )}
 
+        {/* Sélecteur de période */}
+        <div className="bg-white dark:bg-[#1c1c1a] border border-gray-200 dark:border-gray-700 rounded-2xl px-6 py-4 mb-4">
+          <p className="text-sm font-medium dark:text-white mb-3">Historique à récupérer</p>
+          <div className="flex gap-2 flex-wrap">
+            {PERIOD_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setPeriod(opt.value)}
+                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                  period === opt.value
+                    ? 'bg-[#1D9E75] text-white'
+                    : 'bg-gray-100 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+            PSD2 garantit au minimum 3 mois · La plupart des banques offrent jusqu'à 13 mois
+          </p>
+        </div>
+
         {/* Bouton connexion */}
         <button
           onClick={handleConnect}
@@ -149,7 +181,7 @@ export default function AccountsPage() {
           ) : (
             <>
               <span className="text-xl">🏦</span>
-              <span>Connecter ma banque</span>
+              <span>Connecter ma banque — {PERIOD_OPTIONS.find(o => o.value === period)?.label}</span>
             </>
           )}
         </button>

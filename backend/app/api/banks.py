@@ -40,10 +40,14 @@ def _check_configured():
 # ── GET /banks/connect ─────────────────────────────────────────────────────────
 
 @router.get("/connect")
-def get_connect_url(authorization: Optional[str] = Header(None)):
+def get_connect_url(
+    authorization: Optional[str] = Header(None),
+    period_months: int = Query(6, ge=1, le=24),
+):
     """
     Crée un user Powens, génère un code temporaire, retourne l'URL webview.
     Le frontend redirige l'user vers cette URL.
+    period_months : historique souhaité (1-24 mois).
     """
     _check_configured()
     user_id = _get_user_id(authorization)
@@ -62,6 +66,7 @@ def get_connect_url(authorization: Optional[str] = Header(None)):
             "powens_connection_id": "pending",
             "powens_user_token": user_token,
             "status": "pending",
+            "period_months": period_months,
         }).execute()
 
         temp_code = get_temp_code(user_token)
@@ -105,33 +110,33 @@ def process_callback(body: CallbackRequest, authorization: Optional[str] = Heade
     user_token = conn_res.data["powens_user_token"]
 
     try:
-        # Infos sur la banque connectée
-        conn_info = get_connection_info(user_token, body.connection_id)
-        connector = conn_info.get("connector") or {}
-        institution_name = connector.get("name") or conn_info.get("id_connector") or "Banque"
-        institution_logo = connector.get("logo_url") or connector.get("thumbnail_url") or ""
+        # Infos sur la banque connectée (timeout court)
+        try:
+            conn_info = get_connection_info(user_token, body.connection_id)
+            connector = conn_info.get("connector") or {}
+            institution_name = connector.get("name") or conn_info.get("id_connector") or "Banque"
+            institution_logo = connector.get("logo_url") or connector.get("thumbnail_url") or ""
+        except Exception:
+            institution_name = "Banque"
+            institution_logo = ""
 
-        # Récupérer les transactions (retry car Powens sync en arrière-plan)
+        # Sauvegarder la connexion comme "syncing" — les transactions seront récupérées via /sync
+        sb.table("bank_connections").update({
+            "powens_connection_id": body.connection_id,
+            "institution_name": institution_name,
+            "institution_logo": institution_logo,
+            "status": "syncing",
+        }).eq("id", body.state).execute()
+
+        # Tentative rapide de récupération des transactions (5s max)
         import time
-        raw_transactions = []
-        for attempt in range(4):
-            raw_transactions = get_powens_transactions(user_token, body.connection_id)
-            if raw_transactions:
-                break
-            time.sleep(3)  # attendre que Powens synchronise
+        period_months = conn_res.data.get("period_months") or 6
+        raw_transactions = get_powens_transactions(user_token, body.connection_id, period_months=period_months)
 
         if not raw_transactions:
-            # Powens sync en cours — sauvegarder la connexion comme "syncing"
-            # L'utilisateur pourra resync depuis la page Accounts
-            sb.table("bank_connections").update({
-                "powens_connection_id": body.connection_id,
-                "institution_name": institution_name,
-                "institution_logo": institution_logo,
-                "status": "syncing",
-            }).eq("id", body.state).execute()
             raise HTTPException(
                 status_code=202,
-                detail=f"Banque {institution_name} connectée ! La synchronisation est en cours côté {institution_name} — reviens dans quelques minutes pour importer tes transactions.",
+                detail=f"Banque connectée ! Les transactions sont en cours de synchronisation — clique sur ↻ Sync dans quelques minutes.",
             )
 
         transactions = normalize_powens_transactions(raw_transactions)
@@ -247,7 +252,11 @@ def list_connections(authorization: Optional[str] = Header(None)):
 # ── POST /banks/sync/{conn_id} ─────────────────────────────────────────────────
 
 @router.post("/sync/{conn_id}")
-def sync_connection(conn_id: str, authorization: Optional[str] = Header(None)):
+def sync_connection(
+    conn_id: str,
+    authorization: Optional[str] = Header(None),
+    period_months: int = Query(None, ge=1, le=24),
+):
     """Resynchronise une connexion bancaire existante."""
     _check_configured()
     user_id = _get_user_id(authorization)
@@ -264,5 +273,8 @@ def sync_connection(conn_id: str, authorization: Optional[str] = Header(None)):
         raise HTTPException(status_code=404, detail="Connexion introuvable")
 
     conn = conn_res.data
+    # Si period_months fourni, mettre à jour en DB
+    if period_months is not None:
+        sb.table("bank_connections").update({"period_months": period_months}).eq("id", conn_id).execute()
     body = CallbackRequest(connection_id=conn["powens_connection_id"], state=conn_id)
     return process_callback(body, authorization=authorization)
