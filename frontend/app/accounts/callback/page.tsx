@@ -1,10 +1,10 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { processBankCallback } from '@/lib/api'
 import { SenzioLogo } from '@/components/SenzioLogo'
 
-export default function BankCallbackPage() {
+function BankCallbackContent() {
   const router = useRouter()
   const params = useSearchParams()
   const [status, setStatus] = useState<'loading' | 'error'>('loading')
@@ -76,5 +76,17 @@ export default function BankCallbackPage() {
         )}
       </div>
     </main>
+  )
+}
+
+export default function BankCallbackPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen bg-[#f5f5f2] dark:bg-[#111110] flex items-center justify-center">
+        <div className="w-12 h-12 border-2 border-[#1D9E75] border-t-transparent rounded-full animate-spin" />
+      </main>
+    }>
+      <BankCallbackContent />
+    </Suspense>
   )
 }
