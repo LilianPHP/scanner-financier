@@ -36,14 +36,15 @@ function BankCallbackContent() {
 
         const result = await processBankCallback(connection_id!, state!)
         setMessage(`${result.transactions.length} transactions importées ✓`)
-
-        await new Promise(r => setTimeout(r, 1000))
+        await new Promise(r => setTimeout(r, 800))
         sessionStorage.setItem('analysis', JSON.stringify(result))
         router.push('/dashboard')
       } catch (e: any) {
         if (e instanceof BankSyncingError) {
           setStatus('syncing')
           setError(e.message)
+          // Rediriger vers /accounts après 3s pour que l'user puisse cliquer Sync
+          setTimeout(() => router.push('/accounts'), 3000)
         } else {
           setStatus('error')
           setError(e.message || 'Une erreur est survenue lors de l\'import.')
@@ -72,12 +73,13 @@ function BankCallbackContent() {
           <>
             <div className="text-4xl mb-4">🏦</div>
             <h2 className="font-semibold text-lg dark:text-white mb-2">Banque connectée !</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">{error}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{error}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mb-6">Redirection en cours…</p>
             <button
               onClick={() => router.push('/accounts')}
               className="bg-[#1D9E75] text-white rounded-xl px-6 py-2.5 text-sm font-medium hover:bg-[#178a65] transition-colors"
             >
-              Retour à mes comptes →
+              Mes comptes →
             </button>
           </>
         )}
