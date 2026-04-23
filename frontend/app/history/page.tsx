@@ -55,7 +55,7 @@ export default function HistoryPage() {
             <Link href="/dashboard" className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors block mb-1">
               ← Retour au dashboard
             </Link>
-            <h1 className="text-xl font-medium">Mes analyses</h1>
+            <h1 className="text-xl font-medium dark:text-white">Mes analyses</h1>
           </div>
           <div className="flex gap-2 items-center">
             <ThemeToggle />

@@ -10,7 +10,7 @@ export default function MentionsLegales() {
           </Link>
         </div>
 
-        <h1 className="text-2xl font-medium mb-8">Mentions légales</h1>
+        <h1 className="text-2xl font-medium mb-8 dark:text-white">Mentions légales</h1>
 
         <div className="bg-white dark:bg-[#1c1c1a] border border-gray-200 dark:border-gray-700/50 rounded-2xl p-8 space-y-8 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
 

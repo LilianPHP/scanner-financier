@@ -51,7 +51,7 @@ export default function LoginPage() {
           <Link href="/" className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 transition-colors">← Retour à l'accueil</Link>
         </div>
         <div className="bg-white dark:bg-[#1c1c1a] border border-gray-200 dark:border-gray-700/50 rounded-2xl p-8">
-          <h1 className="text-xl font-medium mb-6">Connexion</h1>
+          <h1 className="text-xl font-medium mb-6 dark:text-white">Connexion</h1>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="text-sm text-gray-600 dark:text-gray-400 block mb-1">Email</label>
@@ -60,7 +60,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:border-[#1D9E75] dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:focus:border-[#1D9E75]"
+                className="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 focus:outline-none focus:border-[#1D9E75] dark:text-gray-100 dark:focus:border-[#1D9E75]"
                 placeholder="ton@email.com"
               />
             </div>
@@ -71,7 +71,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:border-[#1D9E75] dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:focus:border-[#1D9E75]"
+                className="w-full border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm bg-gray-50 dark:bg-gray-800 focus:outline-none focus:border-[#1D9E75] dark:text-gray-100 dark:focus:border-[#1D9E75]"
                 placeholder="••••••••"
               />
             </div>
