@@ -96,12 +96,14 @@ def get_powens_transactions(user_token: str, connection_id: str, limit: int = 50
         params={
             "id_connection": connection_id,
             "limit": limit,
-            "coming": False,
         },
         timeout=30,
     )
     resp.raise_for_status()
-    return resp.json().get("transactions", [])
+    data = resp.json()
+    txs = data.get("transactions", [])
+    # Filtrer les transactions à venir (coming=True)
+    return [tx for tx in txs if not tx.get("coming", False)]
 
 
 # ── Normalisation vers le format interne ──────────────────────────────────────

@@ -111,10 +111,17 @@ def process_callback(body: CallbackRequest, authorization: Optional[str] = Heade
         institution_name = connector.get("name") or conn_info.get("id_connector") or "Banque"
         institution_logo = connector.get("logo_url") or connector.get("thumbnail_url") or ""
 
-        # Récupérer les transactions
-        raw_transactions = get_powens_transactions(user_token, body.connection_id)
+        # Récupérer les transactions (retry car Powens sync en arrière-plan)
+        import time
+        raw_transactions = []
+        for attempt in range(4):
+            raw_transactions = get_powens_transactions(user_token, body.connection_id)
+            if raw_transactions:
+                break
+            time.sleep(3)  # attendre que Powens synchronise
+
         if not raw_transactions:
-            raise HTTPException(status_code=422, detail="Aucune transaction récupérée depuis votre banque.")
+            raise HTTPException(status_code=422, detail="Aucune transaction récupérée depuis votre banque. La synchronisation est peut-être encore en cours — réessaie dans quelques secondes.")
 
         transactions = normalize_powens_transactions(raw_transactions)
         if not transactions:
