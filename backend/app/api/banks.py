@@ -121,7 +121,18 @@ def process_callback(body: CallbackRequest, authorization: Optional[str] = Heade
             time.sleep(3)  # attendre que Powens synchronise
 
         if not raw_transactions:
-            raise HTTPException(status_code=422, detail="Aucune transaction récupérée depuis votre banque. La synchronisation est peut-être encore en cours — réessaie dans quelques secondes.")
+            # Powens sync en cours — sauvegarder la connexion comme "syncing"
+            # L'utilisateur pourra resync depuis la page Accounts
+            sb.table("bank_connections").update({
+                "powens_connection_id": body.connection_id,
+                "institution_name": institution_name,
+                "institution_logo": institution_logo,
+                "status": "syncing",
+            }).eq("id", body.state).execute()
+            raise HTTPException(
+                status_code=202,
+                detail=f"Banque {institution_name} connectée ! La synchronisation est en cours côté {institution_name} — reviens dans quelques minutes pour importer tes transactions.",
+            )
 
         transactions = normalize_powens_transactions(raw_transactions)
         if not transactions:

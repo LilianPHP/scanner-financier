@@ -230,8 +230,19 @@ export type BankConnection = {
 export async function getBankConnectUrl(): Promise<{ webview_url: string; state: string }> {
   const headers = await getAuthHeader()
   const res = await apiFetch(`${BACKEND_URL}/banks/connect`, { headers })
-  if (!res.ok) throw new Error('Impossible de démarrer la connexion bancaire')
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail || `Erreur ${res.status} — connexion bancaire impossible`)
+  }
   return res.json()
+}
+
+// Résultat spécial : connexion réussie mais sync en cours (pas encore de transactions)
+export class BankSyncingError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'BankSyncingError'
+  }
 }
 
 export async function processBankCallback(
@@ -244,6 +255,11 @@ export async function processBankCallback(
     headers: { ...headers, 'Content-Type': 'application/json' },
     body: JSON.stringify({ connection_id, state }),
   })
+  if (res.status === 202) {
+    // Connexion OK mais sync en cours
+    const body = await res.json().catch(() => ({}))
+    throw new BankSyncingError(body.detail || 'Synchronisation en cours…')
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
     throw new Error(err.detail || `Erreur serveur (${res.status})`)

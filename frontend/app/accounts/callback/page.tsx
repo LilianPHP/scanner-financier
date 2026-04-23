@@ -1,13 +1,13 @@
 'use client'
 import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { processBankCallback } from '@/lib/api'
+import { processBankCallback, BankSyncingError } from '@/lib/api'
 import { SenzioLogo } from '@/components/SenzioLogo'
 
 function BankCallbackContent() {
   const router = useRouter()
   const params = useSearchParams()
-  const [status, setStatus] = useState<'loading' | 'error'>('loading')
+  const [status, setStatus] = useState<'loading' | 'error' | 'syncing'>('loading')
   const [message, setMessage] = useState('Import de vos transactions en cours…')
   const [error, setError] = useState('')
 
@@ -41,8 +41,13 @@ function BankCallbackContent() {
         sessionStorage.setItem('analysis', JSON.stringify(result))
         router.push('/dashboard')
       } catch (e: any) {
-        setStatus('error')
-        setError(e.message || 'Une erreur est survenue lors de l\'import.')
+        if (e instanceof BankSyncingError) {
+          setStatus('syncing')
+          setError(e.message)
+        } else {
+          setStatus('error')
+          setError(e.message || 'Une erreur est survenue lors de l\'import.')
+        }
       }
     }
 
@@ -56,12 +61,28 @@ function BankCallbackContent() {
           <SenzioLogo height={32} />
         </div>
 
-        {status === 'loading' ? (
+        {status === 'loading' && (
           <>
             <div className="w-12 h-12 border-2 border-[#1D9E75] border-t-transparent rounded-full animate-spin mx-auto mb-6" />
             <p className="text-sm text-gray-500 dark:text-gray-400">{message}</p>
           </>
-        ) : (
+        )}
+
+        {status === 'syncing' && (
+          <>
+            <div className="text-4xl mb-4">🏦</div>
+            <h2 className="font-semibold text-lg dark:text-white mb-2">Banque connectée !</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">{error}</p>
+            <button
+              onClick={() => router.push('/accounts')}
+              className="bg-[#1D9E75] text-white rounded-xl px-6 py-2.5 text-sm font-medium hover:bg-[#178a65] transition-colors"
+            >
+              Retour à mes comptes →
+            </button>
+          </>
+        )}
+
+        {status === 'error' && (
           <>
             <div className="text-4xl mb-4">⚠️</div>
             <h2 className="font-semibold text-lg dark:text-white mb-2">Connexion échouée</h2>
