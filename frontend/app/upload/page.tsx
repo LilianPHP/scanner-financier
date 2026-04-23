@@ -221,6 +221,17 @@ export default function UploadPage() {
         <p className="text-xs text-gray-400 dark:text-gray-500 text-center mt-5 leading-relaxed">
           Ton fichier est analysé puis supprimé. On ne garde rien, on ne partage rien.
         </p>
+
+        <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-6 text-center">
+          <p className="text-xs text-gray-400 dark:text-gray-500 mb-3">Tu préfères connecter ta banque directement ?</p>
+          <button
+            onClick={() => router.push('/accounts')}
+            className="inline-flex items-center gap-2 text-sm text-[#1D9E75] hover:text-[#178a65] font-medium transition-colors"
+          >
+            <span>🏦</span>
+            Connexion bancaire directe →
+          </button>
+        </div>
       </div>
     </main>
   )

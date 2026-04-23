@@ -215,6 +215,63 @@ export type UploadedFile = {
   savings_rate?: number
 }
 
+// ── Open Banking / Powens ─────────────────────────────────────────────────────
+
+export type BankConnection = {
+  id: string
+  institution_name: string
+  institution_logo: string
+  status: 'active' | 'error' | 'pending'
+  last_synced_at: string
+  file_id: string | null
+  created_at: string
+}
+
+export async function getBankConnectUrl(): Promise<{ webview_url: string; state: string }> {
+  const headers = await getAuthHeader()
+  const res = await apiFetch(`${BACKEND_URL}/banks/connect`, { headers })
+  if (!res.ok) throw new Error('Impossible de démarrer la connexion bancaire')
+  return res.json()
+}
+
+export async function processBankCallback(
+  connection_id: string,
+  state: string
+): Promise<UploadResult> {
+  const headers = await getAuthHeader()
+  const res = await apiFetch(`${BACKEND_URL}/banks/callback`, {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ connection_id, state }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.detail || `Erreur serveur (${res.status})`)
+  }
+  return res.json()
+}
+
+export async function getBankConnections(): Promise<BankConnection[]> {
+  const headers = await getAuthHeader()
+  const res = await apiFetch(`${BACKEND_URL}/banks/connections`, { headers })
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.connections
+}
+
+export async function syncBankConnection(connId: string): Promise<UploadResult> {
+  const headers = await getAuthHeader()
+  const res = await apiFetch(`${BACKEND_URL}/banks/sync/${connId}`, {
+    method: 'POST',
+    headers,
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.detail || `Erreur sync (${res.status})`)
+  }
+  return res.json()
+}
+
 // Récupérer l'historique des fichiers de l'utilisateur
 export async function getUploadHistory(): Promise<UploadedFile[]> {
   const { data: session } = await supabase.auth.getSession()
