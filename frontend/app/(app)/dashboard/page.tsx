@@ -30,10 +30,16 @@ function isoToShort(iso: string) {
 
 // ── Category icons ───────────────────────────────────────────────────
 const CAT_ICONS: Record<string, string> = {
-  alimentation: '🛒', logement: '🏠', transport: '🚇', loisirs: '🎬',
-  abonnements: '📺', salaire: '💶', 'frais bancaires': '🏦', sante: '❤️',
+  // Clés anglaises (legacy)
+  alimentation: '🛒', logement: '🏠', transport: '🚊', loisirs: '🍷',
+  abonnements: '📱', salaire: '💰', 'frais bancaires': '🏦', sante: '❤️',
   investissement: '📈', epargne: '🏦', impots: '🏛️', education: '📚',
-  voyage: '✈️', vetements: '👗', autres: '•',
+  voyage: '✈️', vetements: '🛍️', autres: '📦',
+  // Clés françaises (bank API)
+  Logement: '🏠', Courses: '🛒', Transport: '🚊', Sorties: '🍷',
+  Abonnements: '📱', Salaire: '💰', Revenus: '💰', Santé: '❤️',
+  Shopping: '🛍️', Investissement: '📈', Épargne: '💰', Impôts: '🏛️',
+  Éducation: '📚', Voyage: '✈️', Autre: '📦',
 }
 
 // ── useCountUp hook ───────────────────────────────────────────────────
@@ -691,7 +697,7 @@ export default function DashboardPage() {
             display: 'flex', justifyContent: 'space-between',
             fontSize: 11, color: C.fg3,
           }}>
-            <span>Données analysées localement · jamais partagées</span>
+            <span>Connexion sécurisée via Powens · agréé ACPR</span>
             <span style={{ fontVariantNumeric: 'tabular-nums' }}>
               {data.summary.transaction_count} opérations
             </span>

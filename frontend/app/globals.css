@@ -4,38 +4,58 @@
 
 /* ── Senzio Design Tokens ───────────────────────────────────────────── */
 :root {
+  /* Backgrounds */
   --bg-page:       #0A0A0A;
-  --bg-card:       #141414;
-  --bg-card-hi:    #1A1A1A;
-  --bg-chip:       #1F1F1F;
-  --border:        rgba(255,255,255,0.06);
-  --border-strong: rgba(255,255,255,0.12);
-  --fg:            #FAFAFA;
+  --bg-card:       #111111;
+  --bg-card-hi:    #181818;
+  --bg-chip:       #1E1E1E;
+
+  /* Borders */
+  --border:        rgba(255,255,255,0.07);
+  --border-strong: rgba(255,255,255,0.14);
+
+  /* Foreground */
+  --fg:            #F5F5F5;
   --fg-2:          rgba(255,255,255,0.60);
-  --fg-3:          rgba(255,255,255,0.40);
-  --fg-4:          rgba(255,255,255,0.24);
+  --fg-3:          rgba(255,255,255,0.38);
+  --fg-4:          rgba(255,255,255,0.22);
+
+  /* Accent (green) */
   --accent:        #1D9E75;
   --accent-hover:  #178A64;
   --accent-ghost:  rgba(29,158,117,0.12);
-  --accent-glow:   rgba(29,158,117,0.35);
+  --accent-glow:   rgba(29,158,117,0.30);
+
+  /* Semantic */
   --negative:      #F87171;
-  --neg-ghost:     rgba(248,113,113,0.12);
+  --neg-ghost:     rgba(248,113,113,0.10);
   --info:          #60A5FA;
   --warning:       #F59E0B;
+
+  /* Category palette (dark-mode friendly) */
+  --cat-logement:    #3B82F6;
+  --cat-courses:     #1D9E75;
+  --cat-abonnements: #06B6D4;
+  --cat-transport:   #F59E0B;
+  --cat-shopping:    #8B5CF6;
+  --cat-sorties:     #EC4899;
+  --cat-sante:       #F87171;
+  --cat-revenus:     #22C55E;
+  --cat-autre:       #6B7280;
 }
 
 /* Light mode overrides */
 .light {
-  --bg-page:       #f5f5f2;
-  --bg-card:       #ffffff;
-  --bg-card-hi:    #f8f8f6;
-  --bg-chip:       #f0f0ee;
-  --border:        rgba(0,0,0,0.08);
-  --border-strong: rgba(0,0,0,0.15);
-  --fg:            #1a1a1a;
-  --fg-2:          rgba(0,0,0,0.60);
-  --fg-3:          rgba(0,0,0,0.40);
-  --fg-4:          rgba(0,0,0,0.24);
+  --bg-page:       #F4F4F0;
+  --bg-card:       #FFFFFF;
+  --bg-card-hi:    #F9F9F6;
+  --bg-chip:       #EBEBЕ8;
+  --border:        rgba(0,0,0,0.07);
+  --border-strong: rgba(0,0,0,0.14);
+  --fg:            #161616;
+  --fg-2:          rgba(0,0,0,0.58);
+  --fg-3:          rgba(0,0,0,0.38);
+  --fg-4:          rgba(0,0,0,0.22);
 }
 
 html, body {

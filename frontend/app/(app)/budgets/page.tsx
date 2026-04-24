@@ -132,7 +132,7 @@ export default function BudgetsPage() {
             <span className="text-4xl mb-4">📊</span>
             <p className="text-sm font-medium mb-2">Aucune donnée</p>
             <p className="text-xs leading-relaxed mb-5" style={{ color: 'var(--fg-3)' }}>
-              Importe un relevé bancaire depuis le dashboard pour voir tes enveloppes budget.
+              Connecte ta banque depuis la page Comptes pour voir tes enveloppes budget.
             </p>
           </div>
         ) : (

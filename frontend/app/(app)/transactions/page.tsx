@@ -191,7 +191,7 @@ export default function TransactionsPage() {
           <span className="text-4xl mb-4">📊</span>
           <p className="text-sm font-medium mb-2">Aucune transaction</p>
           <p className="text-xs leading-relaxed" style={{ color: 'var(--fg-3)' }}>
-            Importe un relevé depuis le dashboard pour voir tes transactions ici.
+            Connecte ta banque depuis la page Comptes pour voir tes transactions ici.
           </p>
         </div>
       ) : (
