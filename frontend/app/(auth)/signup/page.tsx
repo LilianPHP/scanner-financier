@@ -79,9 +79,9 @@ export default function SignupPage() {
     }
   }
 
-  async function handleOAuth(provider: 'google' | 'apple') {
+  async function handleOAuth() {
     await supabase.auth.signInWithOAuth({
-      provider,
+      provider: 'google',
       options: { redirectTo: `${window.location.origin}/onboarding` },
     })
   }
@@ -203,15 +203,7 @@ export default function SignupPage() {
         </div>
 
         <div className="flex flex-col gap-3 pb-8">
-          <button onClick={() => handleOAuth('apple')}
-            className="flex items-center justify-center gap-3 rounded-xl py-3.5 text-sm font-medium transition-all active:scale-95"
-            style={{ background: 'var(--bg-card-hi)', color: 'var(--fg)', border: '1px solid var(--border)', fontFamily: 'inherit', cursor: 'pointer' }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M17 12.5c0-2.2 1.8-3.3 1.9-3.3-1-1.5-2.6-1.7-3.2-1.7-1.4-.1-2.7.8-3.3.8-.7 0-1.8-.8-2.9-.8-1.5 0-2.9.9-3.7 2.2-1.6 2.7-.4 6.8 1.1 9 .7 1.1 1.6 2.3 2.8 2.2 1.1 0 1.6-.7 2.9-.7 1.4 0 1.8.7 2.9.7 1.2 0 2-1.1 2.7-2.1.8-1.2 1.2-2.4 1.2-2.4s-2.4-.9-2.4-3.9zM15 5.8c.6-.8 1.1-1.9 1-3-1 0-2.1.6-2.8 1.4-.6.7-1.2 1.8-1 2.9 1.1.1 2.2-.6 2.8-1.3z"/>
-            </svg>
-            Continuer avec Apple
-          </button>
-          <button onClick={() => handleOAuth('google')}
+          <button onClick={() => handleOAuth()}
             className="flex items-center justify-center gap-3 rounded-xl py-3.5 text-sm font-medium transition-all active:scale-95"
             style={{ background: 'var(--bg-card-hi)', color: 'var(--fg)', border: '1px solid var(--border)', fontFamily: 'inherit', cursor: 'pointer' }}>
             <svg width="16" height="16" viewBox="0 0 48 48">
