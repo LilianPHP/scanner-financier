@@ -30,11 +30,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="fr" suppressHydrationWarning>
       <head>
         {/* No-flash script : lit localStorage avant hydration */}
-        <script dangerouslySetInnerHTML={{ __html: `(function(){var t=localStorage.getItem('theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark')}})()` }} />
+        <script dangerouslySetInnerHTML={{ __html: `(function(){var t=localStorage.getItem('theme');if(t==='light'){document.documentElement.classList.add('light')}})()` }} />
         {/* Plausible analytics — respecte la vie privée, pas de cookies */}
         <script defer data-domain="senzio.app" src="https://plausible.io/js/script.js" />
       </head>
-      <body className="bg-[#f5f5f2] dark:bg-[#111110] transition-colors">
+      <body style={{ background: 'var(--bg-page)', color: 'var(--fg)', transition: 'background 200ms, color 200ms' }}>
         <ThemeProvider>{children}</ThemeProvider>
       </body>
     </html>

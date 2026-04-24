@@ -55,7 +55,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const raw = sessionStorage.getItem('analysis')
-    if (!raw) { router.push('/upload'); return }
+    if (!raw) { router.push('/accounts'); return }
     const parsed: UploadResult = JSON.parse(raw)
     setData(parsed)
     setTransactions(parsed.transactions)

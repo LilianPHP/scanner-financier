@@ -2,13 +2,53 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  background: #f5f5f2;
-  font-family: system-ui, -apple-system, sans-serif;
-  color: #1a1a1a;
+/* ── Senzio Design Tokens ───────────────────────────────────────────── */
+:root {
+  --bg-page:       #0A0A0A;
+  --bg-card:       #141414;
+  --bg-card-hi:    #1A1A1A;
+  --bg-chip:       #1F1F1F;
+  --border:        rgba(255,255,255,0.06);
+  --border-strong: rgba(255,255,255,0.12);
+  --fg:            #FAFAFA;
+  --fg-2:          rgba(255,255,255,0.60);
+  --fg-3:          rgba(255,255,255,0.40);
+  --fg-4:          rgba(255,255,255,0.24);
+  --accent:        #1D9E75;
+  --accent-hover:  #178A64;
+  --accent-ghost:  rgba(29,158,117,0.12);
+  --accent-glow:   rgba(29,158,117,0.35);
+  --negative:      #F87171;
+  --neg-ghost:     rgba(248,113,113,0.12);
+  --info:          #60A5FA;
+  --warning:       #F59E0B;
 }
 
-.dark body, html.dark body {
-  background: #111110;
-  color: #e5e5e2;
+/* Light mode overrides */
+.light {
+  --bg-page:       #f5f5f2;
+  --bg-card:       #ffffff;
+  --bg-card-hi:    #f8f8f6;
+  --bg-chip:       #f0f0ee;
+  --border:        rgba(0,0,0,0.08);
+  --border-strong: rgba(0,0,0,0.15);
+  --fg:            #1a1a1a;
+  --fg-2:          rgba(0,0,0,0.60);
+  --fg-3:          rgba(0,0,0,0.40);
+  --fg-4:          rgba(0,0,0,0.24);
 }
+
+html, body {
+  background: var(--bg-page);
+  color: var(--fg);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-feature-settings: "ss01","cv11";
+  -webkit-font-smoothing: antialiased;
+  transition: background 200ms, color 200ms;
+}
+
+/* Tabular nums on all monetary values */
+.tabular { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+
+/* Safe area bottom padding (notch phones) */
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
