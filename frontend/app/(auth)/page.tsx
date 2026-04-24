@@ -29,7 +29,7 @@ export default function WelcomePage() {
             className="font-semibold leading-none"
             style={{ fontSize: 'clamp(38px, 10vw, 52px)', letterSpacing: '-0.025em', lineHeight: 1.02 }}
           >
-            Tes finances,<br />sans friction,<br />sans trackers.
+            Tes finances,<br />sans trackers,<br />sans banques.
           </h1>
           <p className="mt-5 text-base leading-relaxed max-w-sm" style={{ color: 'var(--fg-2)' }}>
             Connecte ta banque, fixe un objectif, regarde-le avancer.
