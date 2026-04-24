@@ -1,789 +1,708 @@
 'use client'
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { ThemeToggle } from '@/components/ThemeToggle'
-import {
-  PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend,
-} from 'recharts'
 import { supabase } from '@/lib/supabase'
 import {
-  formatCurrency, updateCategory, saveRule,
-  CATEGORY_LABELS, CATEGORY_COLORS, SUBCATEGORY_OPTIONS, getActiveCategories,
-  type UploadResult, type Transaction, type Subscription, type ScoreResult, type UserProfile,
+  formatCurrency, CATEGORY_LABELS, CATEGORY_COLORS,
+  type UploadResult, type Transaction, type Subscription,
 } from '@/lib/api'
-import { exportXLSX } from '@/lib/exportXLSX'
 
-const CATEGORY_ICONS: Record<string, string> = {
-  alimentation: '🛒',
-  logement: '🏠',
-  transport: '🚗',
-  loisirs: '🎬',
-  abonnements: '📱',
-  salaire: '💶',
-  'frais bancaires': '🏦',
-  sante: '❤️',
-  investissement: '📈',
-  epargne: '🏦',
-  impots: '🏛️',
-  autres: '📦',
+// ── Design tokens ────────────────────────────────────────────────────
+const C = {
+  bg: 'var(--bg-page)', card: 'var(--bg-card)', cardHi: 'var(--bg-card-hi)',
+  border: 'var(--border)', borderStrong: 'var(--border-strong)',
+  fg: 'var(--fg)', fg2: 'var(--fg-2)', fg3: 'var(--fg-3)', fg4: 'var(--fg-4)',
+  accent: '#1D9E75', accentGhost: 'rgba(29,158,117,0.12)', accentGlow: 'rgba(29,158,117,0.35)',
+  negative: '#F87171',
 }
 
-// 👉 Remplace ce lien par ton formulaire Tally une fois créé
-const FEEDBACK_URL = 'https://tally.so/r/ODJ7op'
+// ── Number formatting ────────────────────────────────────────────────
+const nf0 = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 })
+const fmtEur = (v: number) => `${nf0.format(Math.abs(v))} €`
+const fmtSigned = (v: number) => v >= 0 ? `+${nf0.format(v)} €` : `−${nf0.format(Math.abs(v))} €`
 
+// ── Month abbrevs ────────────────────────────────────────────────────
+const MONTH_SHORT = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc']
+function isoToShort(iso: string) {
+  const [, m] = iso.split('-')
+  return MONTH_SHORT[parseInt(m) - 1] ?? iso
+}
+
+// ── Category icons ───────────────────────────────────────────────────
+const CAT_ICONS: Record<string, string> = {
+  alimentation: '🛒', logement: '🏠', transport: '🚇', loisirs: '🎬',
+  abonnements: '📺', salaire: '💶', 'frais bancaires': '🏦', sante: '❤️',
+  investissement: '📈', epargne: '🏦', impots: '🏛️', education: '📚',
+  voyage: '✈️', vetements: '👗', autres: '•',
+}
+
+// ── useCountUp hook ───────────────────────────────────────────────────
+function useCountUp(target: number, dur = 700) {
+  const [v, setV] = useState(0)
+  useEffect(() => {
+    let raf = 0, startTs = 0, cancelled = false
+    const ease = (t: number) => 1 - Math.pow(1 - t, 3)
+    const run = (ts: number) => {
+      if (cancelled) return
+      if (!startTs) startTs = ts
+      const p = Math.min(1, (ts - startTs) / dur)
+      setV(target * ease(p))
+      if (p < 1) raf = requestAnimationFrame(run)
+      else setV(target)
+    }
+    raf = requestAnimationFrame(run)
+    return () => { cancelled = true; cancelAnimationFrame(raf) }
+  }, [target, dur])
+  return v
+}
+
+// ── Card ─────────────────────────────────────────────────────────────
+function Card({ children, style, onClick }: {
+  children: React.ReactNode; style?: React.CSSProperties; onClick?: () => void
+}) {
+  return (
+    <div onClick={onClick} style={{
+      background: C.card, border: `1px solid ${C.border}`,
+      borderRadius: 16, cursor: onClick ? 'pointer' : 'default', ...style,
+    }}>
+      {children}
+    </div>
+  )
+}
+
+function SectionHeading({ title, meta, action }: { title: string; meta?: string; action?: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+        <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, letterSpacing: '-0.01em', color: C.fg }}>
+          {title}
+        </h3>
+        {meta && <span style={{ fontSize: 11, color: C.fg3 }}>{meta}</span>}
+      </div>
+      {action}
+    </div>
+  )
+}
+
+// ── TopBar ────────────────────────────────────────────────────────────
+function TopBar({ initial, onProfile }: { initial: string; onProfile: () => void }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px 0' }}>
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ width: 26, height: 26, borderRadius: 7, background: C.accent, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <svg width="16" height="16" viewBox="0 0 32 32" fill="none">
+            <rect x="3" y="17" width="5" height="10" rx="1" fill="white" opacity="0.9"/>
+            <rect x="12" y="10" width="5" height="17" rx="1" fill="white"/>
+            <rect x="21" y="4" width="5" height="23" rx="1" fill="white" opacity="0.7"/>
+          </svg>
+        </div>
+        <span style={{ fontSize: 15, fontWeight: 700, color: C.accent, letterSpacing: '-0.02em' }}>senzio</span>
+      </div>
+      <button onClick={onProfile} style={{
+        border: 0, cursor: 'pointer', width: 32, height: 32, borderRadius: 999,
+        background: 'linear-gradient(135deg, #1D9E75, #3B82F6)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 12, fontWeight: 600, color: 'white', fontFamily: 'inherit',
+      }}>{initial}</button>
+    </div>
+  )
+}
+
+// ── Goal Hero ─────────────────────────────────────────────────────────
+type Goal = { id: string; name: string; kind: string; target: number; current: number; months: number; icon: string }
+
+function GoalHero({ goal, onTap }: { goal: Goal; onTap: () => void }) {
+  const pct = Math.min(100, (goal.current / goal.target) * 100)
+  const current = useCountUp(goal.current)
+  const pctVal = useCountUp(pct)
+  const width = useCountUp(pct)
+
+  return (
+    <div onClick={onTap} style={{ padding: '36px 24px 40px', cursor: 'pointer' }}>
+      <div style={{ fontSize: 10, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.fg3 }}>
+        Objectif en cours · {goal.kind}
+      </div>
+      <div style={{ marginTop: 10, fontSize: 20, fontWeight: 600, letterSpacing: '-0.01em', color: C.fg }}>
+        {goal.icon} {goal.name}
+      </div>
+
+      <div style={{ marginTop: 24, display: 'flex', alignItems: 'baseline', gap: 10, fontVariantNumeric: 'tabular-nums' }}>
+        <span style={{ fontSize: 'clamp(44px, 12vw, 64px)', fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1, color: C.fg }}>
+          {nf0.format(Math.round(current))}
+        </span>
+        <span style={{ fontSize: 18, color: C.fg3, fontWeight: 500 }}>
+          / {nf0.format(goal.target)} €
+        </span>
+      </div>
+
+      <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 8,
+          padding: '5px 10px 5px 8px', borderRadius: 999,
+          background: C.accentGhost, border: '1px solid rgba(29,158,117,0.25)',
+        }}>
+          <span style={{ width: 6, height: 6, borderRadius: 999, background: C.accent, boxShadow: `0 0 8px ${C.accent}`, display: 'inline-block' }} />
+          <span style={{ fontSize: 13, fontWeight: 600, color: C.accent, fontVariantNumeric: 'tabular-nums' }}>
+            {Math.round(pctVal)} %
+          </span>
+        </div>
+        <div style={{ fontSize: 12, color: C.fg2 }}>
+          {goal.months} mois restants
+        </div>
+      </div>
+
+      <div style={{ marginTop: 14, height: 10, background: 'rgba(255,255,255,0.08)', borderRadius: 999, overflow: 'hidden', position: 'relative' }}>
+        <div style={{
+          height: '100%', width: `${width}%`,
+          background: `linear-gradient(90deg, ${C.accent} 0%, #2BB88A 100%)`,
+          borderRadius: 999,
+          boxShadow: `0 0 24px ${C.accentGlow}`,
+          transition: 'width 0.7s cubic-bezier(0.22,1,0.36,1)',
+        }} />
+        {[25, 50, 75].map(m => (
+          <div key={m} style={{ position: 'absolute', top: 0, bottom: 0, left: `${m}%`, width: 1, background: 'rgba(255,255,255,0.12)' }} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function GoalHeroEmpty({ onCTA }: { onCTA: () => void }) {
+  return (
+    <div style={{ padding: '40px 24px 44px' }}>
+      <div style={{ fontSize: 10, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.fg3 }}>Objectifs</div>
+      <div style={{ marginTop: 24, fontSize: 'clamp(28px, 7vw, 38px)', fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1.1, color: C.fg }}>
+        Définis ton premier<br />objectif.
+      </div>
+      <p style={{ marginTop: 12, fontSize: 14, color: C.fg2, lineHeight: 1.5, maxWidth: 320 }}>
+        Voyage, épargne de sécurité, investir… Une barre qui avance, un rythme, des jalons.
+      </p>
+      <button onClick={onCTA} style={{
+        marginTop: 18, display: 'inline-flex', alignItems: 'center', gap: 8,
+        fontFamily: 'inherit', fontSize: 14, fontWeight: 500,
+        padding: '12px 18px', borderRadius: 12,
+        background: C.accent, color: '#062A1E', border: 0, cursor: 'pointer',
+        boxShadow: `0 0 24px ${C.accentGlow}`,
+      }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        Créer un objectif
+      </button>
+    </div>
+  )
+}
+
+// ── KPI Trio ──────────────────────────────────────────────────────────
+function KPICard({ label, value, sub, color }: { label: string; value: number; sub: string; color?: string }) {
+  const v = useCountUp(Math.abs(value))
+  return (
+    <Card style={{ padding: 14 }}>
+      <div style={{ fontSize: 10, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.fg3 }}>
+        {label}
+      </div>
+      <div style={{ marginTop: 10, fontSize: 22, fontWeight: 600, letterSpacing: '-0.01em', color: color ?? C.fg, fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
+        {nf0.format(Math.round(v))} <span style={{ fontSize: 13, color: C.fg3, fontWeight: 500 }}>€</span>
+      </div>
+      <div style={{ fontSize: 11, color: C.fg3, marginTop: 6 }}>{sub}</div>
+    </Card>
+  )
+}
+
+// ── Bar Chart ─────────────────────────────────────────────────────────
+type MonthData = { m: string; income: number; expense: number }
+
+function BarChart({ months, height = 140 }: { months: MonthData[]; height?: number }) {
+  const [hover, setHover] = useState<number | null>(null)
+  const max = Math.max(...months.flatMap(m => [m.income, m.expense]), 1)
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <div style={{ position: 'relative', display: 'flex', gap: 6, alignItems: 'flex-end', height }}>
+        {/* Grid lines */}
+        {[0.25, 0.5, 0.75, 1].map(g => (
+          <div key={g} style={{
+            position: 'absolute', left: 0, right: 0,
+            bottom: `${g * 100}%`, height: 1,
+            background: C.border, pointerEvents: 'none',
+          }} />
+        ))}
+        {months.map((m, i) => {
+          const isHover = hover === i
+          return (
+            <div key={i}
+              onMouseEnter={() => setHover(i)}
+              onMouseLeave={() => setHover(null)}
+              style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: 'pointer', height: '100%', justifyContent: 'flex-end', position: 'relative' }}
+            >
+              {isHover && (
+                <div style={{
+                  position: 'absolute', bottom: height + 8, left: '50%', transform: 'translateX(-50%)', zIndex: 10,
+                  background: C.cardHi, border: `1px solid ${C.borderStrong}`, borderRadius: 10,
+                  padding: '8px 10px', minWidth: 130, boxShadow: '0 8px 24px -12px rgba(0,0,0,0.6)',
+                  pointerEvents: 'none',
+                }}>
+                  <div style={{ fontSize: 10, color: C.fg3, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
+                    {m.m}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>
+                    <span style={{ color: C.accent }}>+{nf0.format(m.income)} €</span>
+                    <span style={{ color: C.negative }}>−{nf0.format(m.expense)} €</span>
+                  </div>
+                </div>
+              )}
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 'calc(100% - 18px)', width: '100%', justifyContent: 'center' }}>
+                <div style={{
+                  width: '44%', maxWidth: 16, height: `${(m.income / max) * 100}%`,
+                  background: C.accent, borderRadius: '4px 4px 0 0',
+                  opacity: hover != null && !isHover ? 0.4 : 1,
+                  boxShadow: isHover ? `0 0 10px ${C.accentGlow}` : 'none',
+                  transition: 'opacity 120ms',
+                }} />
+                <div style={{
+                  width: '44%', maxWidth: 16, height: `${(m.expense / max) * 100}%`,
+                  background: C.negative, borderRadius: '4px 4px 0 0',
+                  opacity: hover != null && !isHover ? 0.4 : 1,
+                  transition: 'opacity 120ms',
+                }} />
+              </div>
+              <div style={{ fontSize: 10, color: isHover ? C.fg : C.fg3, fontWeight: isHover ? 500 : 400, transition: 'color 120ms' }}>
+                {m.m}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function MonthlyCard({ timeline }: { timeline: MonthData[] }) {
+  const [range, setRange] = useState<6 | 12>(6)
+  const data = timeline.slice(-range)
+  const totalSaved = data.reduce((s, m) => s + (m.income - m.expense), 0)
+
+  return (
+    <Card style={{ padding: 16 }}>
+      <SectionHeading
+        title="Revenus vs dépenses"
+        meta={`${data.length} derniers mois`}
+        action={
+          <div style={{ display: 'flex', gap: 4 }}>
+            {([6, 12] as const).map(n => (
+              <button key={n} onClick={() => setRange(n)} style={{
+                fontFamily: 'inherit', fontSize: 11, fontWeight: 500,
+                padding: '4px 8px', borderRadius: 6, cursor: 'pointer',
+                background: range === n ? C.accentGhost : 'transparent',
+                color: range === n ? C.accent : C.fg3,
+                border: `1px solid ${range === n ? 'rgba(29,158,117,0.3)' : C.border}`,
+                transition: 'all 120ms',
+              }}>{n}M</button>
+            ))}
+          </div>
+        }
+      />
+      <BarChart months={data} height={140} />
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', marginTop: 14,
+        paddingTop: 12, borderTop: `1px solid ${C.border}`, fontSize: 11,
+      }}>
+        <span style={{ color: C.fg2, display: 'inline-flex', gap: 12 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 8, height: 8, borderRadius: 2, background: C.accent, display: 'inline-block' }} />Revenus
+          </span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 8, height: 8, borderRadius: 2, background: C.negative, display: 'inline-block' }} />Dépenses
+          </span>
+        </span>
+        <span style={{ color: C.fg3, fontVariantNumeric: 'tabular-nums' }}>
+          Épargné · <span style={{ color: C.accent, fontWeight: 500 }}>+{nf0.format(totalSaved)} €</span>
+        </span>
+      </div>
+    </Card>
+  )
+}
+
+// ── Donut ─────────────────────────────────────────────────────────────
+type DonutSegment = { key: string; label: string; value: number; color: string }
+
+function Donut({ data, size = 160, picked, onPick }: {
+  data: DonutSegment[]; size?: number; picked: string | null; onPick: (k: string | null) => void
+}) {
+  const [hover, setHover] = useState<string | null>(null)
+  const total = data.reduce((s, d) => s + d.value, 0)
+  const thickness = 22
+  const r = (size - thickness) / 2
+  const cx = size / 2; const cy = size / 2
+  const circ = 2 * Math.PI * r
+
+  let acc = 0
+  const arcs = data.map(d => {
+    const start = (acc / total) * circ
+    const len = Math.max(0, (d.value / total) * circ - 2)
+    acc += d.value
+    return { ...d, start, len }
+  })
+
+  const active = hover ?? picked
+  const pickedSeg = active ? data.find(d => d.key === active) : null
+
+  return (
+    <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
+      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={thickness} />
+        {arcs.map(a => (
+          <circle key={a.key} cx={cx} cy={cy} r={r} fill="none"
+            stroke={a.color}
+            strokeWidth={active === a.key ? thickness + 4 : thickness}
+            strokeDasharray={`${a.len} ${circ - a.len}`}
+            strokeDashoffset={-a.start}
+            style={{ transition: 'stroke-width 160ms, opacity 160ms', opacity: active && active !== a.key ? 0.25 : 1, cursor: 'pointer' }}
+            onMouseEnter={() => setHover(a.key)}
+            onMouseLeave={() => setHover(null)}
+            onClick={() => onPick(a.key === picked ? null : a.key)}
+          />
+        ))}
+      </svg>
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', pointerEvents: 'none' }}>
+        {pickedSeg ? (
+          <>
+            <div style={{ fontSize: 9, color: C.fg3, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{pickedSeg.label}</div>
+            <div style={{ fontSize: 20, fontWeight: 600, color: C.fg, fontVariantNumeric: 'tabular-nums', marginTop: 2 }}>{fmtEur(pickedSeg.value)}</div>
+            <div style={{ fontSize: 10, color: C.fg3, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
+              {Math.round((pickedSeg.value / total) * 100)} %
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ fontSize: 9, color: C.fg3, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Dépenses</div>
+            <div style={{ fontSize: 22, fontWeight: 600, color: C.fg, fontVariantNumeric: 'tabular-nums', marginTop: 2 }}>{fmtEur(total)}</div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function DonutCard({ segments }: { segments: DonutSegment[] }) {
+  const [picked, setPicked] = useState<string | null>(null)
+  const total = segments.reduce((s, d) => s + d.value, 0)
+  return (
+    <Card style={{ padding: 16 }}>
+      <SectionHeading title="Par catégorie" />
+      <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+        <Donut data={segments} size={160} picked={picked} onPick={setPicked} />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 7, minWidth: 0 }}>
+          {segments.slice(0, 6).map(d => {
+            const pct = Math.round((d.value / total) * 100)
+            const active = picked === d.key
+            return (
+              <button key={d.key}
+                onClick={() => setPicked(active ? null : d.key)}
+                style={{
+                  display: 'grid', gridTemplateColumns: '8px 1fr auto auto', gap: 7,
+                  alignItems: 'center', padding: '3px 5px', margin: '-3px -5px',
+                  borderRadius: 6, cursor: 'pointer',
+                  background: active ? 'rgba(255,255,255,0.04)' : 'transparent',
+                  border: 'none', fontFamily: 'inherit', textAlign: 'left',
+                  opacity: picked && !active ? 0.35 : 1,
+                  transition: 'opacity 120ms, background 120ms',
+                }}>
+                <span style={{ width: 8, height: 8, borderRadius: 2, background: d.color, display: 'inline-block' }} />
+                <span style={{ fontSize: 12, color: C.fg2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.label}</span>
+                <span style={{ fontSize: 11, color: C.fg3, fontVariantNumeric: 'tabular-nums' }}>{pct}%</span>
+                <span style={{ fontSize: 12, color: C.fg, fontVariantNumeric: 'tabular-nums' }}>{fmtEur(d.value)}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+// ── Subscriptions ─────────────────────────────────────────────────────
+function SubsCard({ subs }: { subs: Subscription[] }) {
+  const [expanded, setExpanded] = useState(false)
+  const list = expanded ? subs : subs.slice(0, 4)
+  const total = subs.reduce((s, x) => s + x.monthly_cost, 0)
+  const totalV = useCountUp(total)
+
+  if (subs.length === 0) return null
+
+  return (
+    <Card style={{ padding: 16 }}>
+      <SectionHeading title="Abonnements récurrents" meta={`${subs.length} détectés`} />
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontSize: 26, fontWeight: 600, letterSpacing: '-0.01em', color: C.fg, fontVariantNumeric: 'tabular-nums', lineHeight: 1.05 }}>
+            {new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(totalV)}
+            <span style={{ fontSize: 13, color: C.fg3, fontWeight: 500, marginLeft: 4 }}>€/mois</span>
+          </div>
+          <div style={{ fontSize: 11, color: C.fg3, marginTop: 4 }}>
+            soit {nf0.format(total * 12)} €/an
+          </div>
+        </div>
+      </div>
+      {list.map((s, i) => (
+        <div key={s.label} style={{
+          display: 'grid', gridTemplateColumns: '32px minmax(0,1fr) auto',
+          gap: 12, alignItems: 'center', padding: '10px 0',
+          borderTop: i === 0 ? 'none' : `1px solid ${C.border}`,
+        }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: 8,
+            background: C.accentGhost, border: `1px solid rgba(29,158,117,0.2)`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 12, fontWeight: 700, color: C.accent,
+          }}>
+            {s.label.charAt(0).toUpperCase()}
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 14, fontWeight: 500, color: C.fg, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {s.label}
+            </div>
+            <div style={{ fontSize: 11, color: C.fg3 }}>{s.occurrences}× détecté</div>
+          </div>
+          <div style={{ textAlign: 'right', flexShrink: 0, paddingLeft: 8 }}>
+            <div style={{ fontSize: 13, fontWeight: 500, color: C.fg, fontVariantNumeric: 'tabular-nums' }}>
+              {new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(s.monthly_cost)} €
+            </div>
+            <div style={{ fontSize: 11, color: C.fg3 }}>/mois</div>
+          </div>
+        </div>
+      ))}
+      {subs.length > 4 && (
+        <button onClick={() => setExpanded(e => !e)} style={{
+          marginTop: 8, width: '100%', fontFamily: 'inherit', fontSize: 12,
+          color: C.fg2, padding: '8px 0', background: 'transparent', border: 0, cursor: 'pointer',
+        }}>
+          {expanded ? 'Réduire' : `Voir tous (${subs.length}) →`}
+        </button>
+      )}
+    </Card>
+  )
+}
+
+// ── Transactions ──────────────────────────────────────────────────────
+const CHIPS = [
+  { key: null, label: 'Tout' },
+  { key: 'alimentation', label: 'Courses' },
+  { key: 'transport', label: 'Transport' },
+  { key: 'loisirs', label: 'Loisirs' },
+  { key: 'abonnements', label: 'Abos' },
+  { key: 'logement', label: 'Logement' },
+  { key: 'salaire', label: 'Revenus' },
+  { key: 'sante', label: 'Santé' },
+]
+
+function TxCard({ transactions }: { transactions: Transaction[] }) {
+  const [filter, setFilter] = useState<string | null>(null)
+  const [showAll, setShowAll] = useState(false)
+
+  const filtered = filter ? transactions.filter(t => t.category === filter) : transactions
+  const shown = showAll ? filtered : filtered.slice(0, 12)
+
+  return (
+    <Card style={{ padding: 16 }}>
+      <SectionHeading title="Transactions récentes" meta={`${filtered.length} opérations`} />
+
+      {/* Chips */}
+      <div style={{
+        display: 'flex', gap: 6, overflowX: 'auto', marginBottom: 12,
+        marginLeft: -16, marginRight: -16, padding: '0 16px 4px',
+        scrollbarWidth: 'none',
+      }}>
+        {CHIPS.map(c => {
+          const active = filter === c.key
+          return (
+            <button key={c.key ?? 'all'} onClick={() => setFilter(c.key)} style={{
+              fontFamily: 'inherit', fontSize: 12, fontWeight: 500,
+              padding: '6px 12px', borderRadius: 999, cursor: 'pointer',
+              whiteSpace: 'nowrap', flexShrink: 0,
+              background: active ? C.accent : 'rgba(255,255,255,0.05)',
+              color: active ? '#062A1E' : C.fg2,
+              border: `1px solid ${active ? 'transparent' : C.border}`,
+              transition: 'all 120ms',
+            }}>{c.label}</button>
+          )
+        })}
+      </div>
+
+      {shown.length === 0 && (
+        <div style={{ padding: '24px 0', textAlign: 'center', fontSize: 13, color: C.fg3 }}>
+          Aucune transaction dans cette catégorie.
+        </div>
+      )}
+
+      {shown.map((tx, i) => {
+        const color = CATEGORY_COLORS[tx.category] ?? '#94A3B8'
+        const icon = CAT_ICONS[tx.category] ?? '•'
+        const negative = tx.amount < 0
+        return (
+          <div key={tx.id} style={{
+            display: 'grid', gridTemplateColumns: '32px 1fr auto auto',
+            gap: 10, alignItems: 'center', padding: '11px 0',
+            borderTop: i === 0 ? 'none' : `1px solid ${C.border}`,
+          }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: 10,
+              background: color + '22', border: `1px solid ${color}33`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 13,
+            }}>{icon}</div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, color: C.fg, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {tx.label_clean || tx.label_raw}
+              </div>
+              <div style={{ fontSize: 11, color: C.fg3 }}>
+                {CATEGORY_LABELS[tx.category] ?? tx.category}
+              </div>
+            </div>
+            <div style={{ fontSize: 11, color: C.fg3, fontVariantNumeric: 'tabular-nums' }}>
+              {new Date(tx.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+            </div>
+            <div style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums', color: negative ? C.fg : C.accent }}>
+              {fmtSigned(tx.amount)}
+            </div>
+          </div>
+        )
+      })}
+
+      {filtered.length > 12 && (
+        <button onClick={() => setShowAll(s => !s)} style={{
+          marginTop: 10, width: '100%', fontFamily: 'inherit', fontSize: 13,
+          color: C.fg2, padding: '10px 0',
+          background: 'transparent', border: `1px solid ${C.border}`,
+          borderRadius: 10, cursor: 'pointer', transition: 'all 120ms',
+        }}>
+          {showAll ? 'Réduire' : `Voir toutes les transactions (${filtered.length}) →`}
+        </button>
+      )}
+    </Card>
+  )
+}
+
+// ── Main page ─────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const router = useRouter()
   const [data, setData] = useState<UploadResult | null>(null)
-  const [transactions, setTransactions] = useState<Transaction[]>([])
-  const [search, setSearch] = useState('')
-  const [toast, setToast] = useState('')
-  const [showAllTx, setShowAllTx] = useState(false)
-  const [txFilter, setTxFilter] = useState<'all' | 'income' | 'expense'>('all')
-  const [savingsConfirmed, setSavingsConfirmed] = useState(false)
-  const [propagatePrompt, setPropagatePrompt] = useState<{
-    label: string
-    category: string
-    ids: string[]
-  } | null>(null)
-  const [memorizePrompt, setMemorizePrompt] = useState<{
-    label: string
-    category: string
-  } | null>(null)
-
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
+  const [goal, setGoal] = useState<Goal | null>(null)
+  const [email, setEmail] = useState('')
 
   useEffect(() => {
     const raw = sessionStorage.getItem('analysis')
     if (!raw) { router.push('/accounts'); return }
-    const parsed: UploadResult = JSON.parse(raw)
-    setData(parsed)
-    setTransactions(parsed.transactions)
-    const profileRaw = sessionStorage.getItem('user_profile')
-    if (profileRaw) setUserProfile(JSON.parse(profileRaw))
+    setData(JSON.parse(raw))
+
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) return
+      setEmail(session.user.email ?? '')
+      const { data: goals } = await supabase
+        .from('goals')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+      if (goals && goals.length > 0) setGoal(goals[0] as Goal)
+    })
   }, [router])
 
-  const activeCategories = getActiveCategories(userProfile)
-
-  const SAVINGS_CATS = useMemo(() => new Set(['epargne', 'investissement']), [])
-
-  function handleExport() {
-    if (!data) return
-    exportXLSX({
-      filename: data.filename || 'export',
-      transactions,
-      liveStats,
-      pieData,
-      liveTimeline,
-      liveSubscriptions,
-      CATEGORY_LABELS,
-    })
-  }
-
-  // Total épargne + investissement détectés (débits)
-  const savingsTotal = useMemo(() =>
-    transactions
-      .filter(tx => tx.amount < 0 && SAVINGS_CATS.has(tx.category))
-      .reduce((s, tx) => s + Math.abs(tx.amount), 0)
-  , [transactions, SAVINGS_CATS])
-
-  // Pie chart — exclut épargne/investissement si confirmé
-  const pieData = useMemo(() => {
-    const catTotals: Record<string, number> = {}
-    transactions
-      .filter(tx => tx.amount < 0 && (!savingsConfirmed || !SAVINGS_CATS.has(tx.category)))
-      .forEach(tx => {
-        catTotals[tx.category] = (catTotals[tx.category] || 0) + Math.abs(tx.amount)
-      })
-    return Object.entries(catTotals)
-      .sort((a, b) => b[1] - a[1])
-      .map(([category, value]) => ({
-        name: CATEGORY_LABELS[category] || category,
-        category,
-        value,
-        color: CATEGORY_COLORS[category] || '#9E9E9E',
+  // Build donut segments from by_category
+  const donutData: DonutSegment[] = useMemo(() => {
+    if (!data) return []
+    return (data.by_category ?? [])
+      .filter(c => c.total > 0)
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 7)
+      .map(c => ({
+        key: c.category,
+        label: CATEGORY_LABELS[c.category] ?? c.category,
+        value: c.total,
+        color: CATEGORY_COLORS[c.category] ?? '#94A3B8',
       }))
-  }, [transactions, savingsConfirmed, SAVINGS_CATS])
+  }, [data])
 
-  // KPIs — exclut épargne/investissement si confirmé
-  const liveStats = useMemo(() => {
-    const income = transactions.filter(tx => tx.amount > 0).reduce((s, tx) => s + tx.amount, 0)
-    const expense = transactions
-      .filter(tx => tx.amount < 0 && (!savingsConfirmed || !SAVINGS_CATS.has(tx.category)))
-      .reduce((s, tx) => s + Math.abs(tx.amount), 0)
-    const cashflow = income - expense
-    const savingsRate = income > 0 ? cashflow / income * 100 : 0
-    return { income, expense, cashflow, savingsRate }
-  }, [transactions, savingsConfirmed, SAVINGS_CATS])
+  // Build timeline for bar chart
+  const timelineData: MonthData[] = useMemo(() => {
+    if (!data) return []
+    return (data.timeline ?? []).map(t => ({
+      m: isoToShort(t.month),
+      income: t.income,
+      expense: t.expense,
+    }))
+  }, [data])
 
-  // Insights automatiques
-  const insights = useMemo(() => {
-    const totalDep = liveStats.expense
-    const nbMonths = Math.max(1, new Set(transactions.map(tx => tx.date.slice(0, 7))).size)
-    const aboTotal = transactions.filter(tx => tx.amount < 0 && tx.category === 'abonnements').reduce((s, tx) => s + Math.abs(tx.amount), 0)
-    const loisirTotal = transactions.filter(tx => tx.amount < 0 && tx.category === 'loisirs').reduce((s, tx) => s + Math.abs(tx.amount), 0)
-    const aliTotal = transactions.filter(tx => tx.amount < 0 && tx.category === 'alimentation').reduce((s, tx) => s + Math.abs(tx.amount), 0)
-    // Exclut épargne/investissement du top dépense (même si non confirmé, car trompeur)
-    const topCat = pieData.find(d => !SAVINGS_CATS.has(d.category)) || pieData[0]
-    const result = []
+  const initial = email ? email[0].toUpperCase() : '?'
 
-    if (topCat) result.push({
-      icon: CATEGORY_ICONS[topCat.category] || '📦',
-      text: `Ta plus grosse dépense : <strong>${topCat.name}</strong>`,
-      sub: `${formatCurrency(topCat.value)} — ${Math.round(topCat.value / totalDep * 100)}% des dépenses`,
-    })
-    if (aboTotal > 0) result.push({
-      icon: '📱',
-      text: `Abonnements : <strong>${formatCurrency(aboTotal / nbMonths)}/mois</strong>`,
-      sub: `${formatCurrency(aboTotal)} sur la période · ${formatCurrency(aboTotal / nbMonths * 12)}/an`,
-    })
-    if (loisirTotal > 0 && totalDep > 0) result.push({
-      icon: '🍽️',
-      text: `Tu dépenses <strong>${Math.round(loisirTotal / totalDep * 100)}%</strong> de ton budget en loisirs`,
-      sub: `${formatCurrency(loisirTotal)} au total`,
-    })
-    if (aliTotal > 0 && totalDep > 0) result.push({
-      icon: '🛒',
-      text: `Alimentation : <strong>${formatCurrency(aliTotal / nbMonths)}/mois</strong>`,
-      sub: `${Math.round(aliTotal / totalDep * 100)}% de ton budget total`,
-    })
-    if (liveStats.cashflow >= 0) result.push({
-      icon: '💰',
-      text: `Tu as dépensé moins que tu n'as gagné : <strong>+${formatCurrency(liveStats.cashflow)}</strong>`,
-      sub: `Soit ${Math.round(liveStats.savingsRate)}% de tes revenus mis de côté.`,
-    })
-    else result.push({
-      icon: '⚠️',
-      text: `Tu as dépensé <strong>${formatCurrency(Math.abs(liveStats.cashflow))}</strong> de plus que tu n'as gagné`,
-      sub: 'Surveille tes prochaines dépenses.',
-    })
-    return result
-  }, [transactions, pieData, liveStats])
+  if (!data) return (
+    <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.bg }}>
+      <div style={{ width: 32, height: 32, borderRadius: '50%', border: `2px solid ${C.accent}`, borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
+    </div>
+  )
 
-  // Abonnements recalculés dynamiquement depuis l'état transactions
-  const liveSubscriptions = useMemo(() => {
-    const aboTx = transactions.filter(tx => tx.category === 'abonnements' && tx.amount < 0)
-    const byLabel: Record<string, { total: number; count: number }> = {}
-    aboTx.forEach(tx => {
-      const key = tx.label_clean
-      if (!byLabel[key]) byLabel[key] = { total: 0, count: 0 }
-      byLabel[key].total += Math.abs(tx.amount)
-      byLabel[key].count += 1
-    })
-    return Object.entries(byLabel)
-      .map(([label, { total, count }]) => ({
-        label,
-        occurrences: count,
-        monthly_cost: Math.round((total / count) * 100) / 100,
-        annual_cost: Math.round((total / count) * 12 * 100) / 100,
-      }))
-      .sort((a, b) => b.monthly_cost - a.monthly_cost)
-  }, [transactions])
-
-  // Alertes budget — recalculées dynamiquement
-  const liveAlerts = useMemo(() => {
-    const alerts: { level: 'warning' | 'info'; icon: string; text: string }[] = []
-    const { income, expense, cashflow, savingsRate } = liveStats
-
-    if (income === 0) {
-      alerts.push({ level: 'warning', icon: '⚠️', text: 'Aucun revenu détecté dans ce relevé.' })
-      return alerts
-    }
-
-    // Cashflow négatif
-    if (cashflow < 0) {
-      alerts.push({
-        level: 'warning', icon: '🔴',
-        text: `Tu as dépensé <strong>${formatCurrency(Math.abs(cashflow))}</strong> de plus que tes revenus.`,
-      })
-    }
-
-    // Taux d'épargne très faible
-    if (savingsRate >= 0 && savingsRate < 5) {
-      alerts.push({
-        level: 'warning', icon: '⚠️',
-        text: `Taux d'épargne très faible : <strong>${Math.round(savingsRate)}%</strong>. Objectif recommandé : 20%.`,
-      })
-    }
-
-    // Catégorie dominante (> 40% des dépenses réelles, hors épargne/investissement)
-    const realExp = transactions
-      .filter(tx => tx.amount < 0 && !SAVINGS_CATS.has(tx.category))
-      .reduce((s, tx) => s + Math.abs(tx.amount), 0)
-
-    if (realExp > 0) {
-      const byCat: Record<string, number> = {}
-      transactions
-        .filter(tx => tx.amount < 0 && !SAVINGS_CATS.has(tx.category))
-        .forEach(tx => { byCat[tx.category] = (byCat[tx.category] || 0) + Math.abs(tx.amount) })
-      const [topCat, topAmt] = Object.entries(byCat).sort((a, b) => b[1] - a[1])[0] || []
-      const pct = topAmt / realExp * 100
-      if (topCat && pct > 40) {
-        alerts.push({
-          level: 'info', icon: '📊',
-          text: `<strong>${CATEGORY_LABELS[topCat] || topCat}</strong> représente <strong>${Math.round(pct)}%</strong> de tes dépenses.`,
-        })
-      }
-    }
-
-    // Abonnements > 15% des revenus
-    const aboTotal = transactions
-      .filter(tx => tx.amount < 0 && tx.category === 'abonnements')
-      .reduce((s, tx) => s + Math.abs(tx.amount), 0)
-    if (income > 0 && aboTotal / income > 0.15) {
-      alerts.push({
-        level: 'warning', icon: '📱',
-        text: `Tes abonnements représentent <strong>${Math.round(aboTotal / income * 100)}%</strong> de tes revenus (${formatCurrency(aboTotal)}).`,
-      })
-    }
-
-    return alerts
-  }, [transactions, liveStats, SAVINGS_CATS])
-
-  // Bar chart — exclut épargne/investissement des dépenses si confirmé
-  const liveTimeline = useMemo(() => {
-    const monthly: Record<string, { month: string; income: number; expense: number }> = {}
-    transactions.forEach(tx => {
-      const month = tx.date.slice(0, 7)
-      if (!monthly[month]) monthly[month] = { month, income: 0, expense: 0 }
-      if (tx.amount > 0) monthly[month].income += tx.amount
-      else if (!savingsConfirmed || !SAVINGS_CATS.has(tx.category))
-        monthly[month].expense += Math.abs(tx.amount)
-    })
-    const sorted = Object.values(monthly).sort((a, b) => a.month.localeCompare(b.month))
-    return sorted.map((m, i) => {
-      const prev = sorted[i - 1]
-      const expenseChange = prev && prev.expense > 0
-        ? Math.round(((m.expense - prev.expense) / prev.expense) * 100)
-        : null
-      const incomeChange = prev && prev.income > 0
-        ? Math.round(((m.income - prev.income) / prev.income) * 100)
-        : null
-      return { ...m, expenseChange, incomeChange }
-    })
-  }, [transactions, savingsConfirmed, SAVINGS_CATS])
-
-  if (!data) return null
-
-  // Filtre transactions
-  const filtered = transactions.filter(tx => {
-    if (txFilter === 'income' && tx.amount <= 0) return false
-    if (txFilter === 'expense' && tx.amount >= 0) return false
-    return (
-      tx.label_clean.toLowerCase().includes(search.toLowerCase()) ||
-      tx.label_raw.toLowerCase().includes(search.toLowerCase()) ||
-      CATEGORY_LABELS[tx.category]?.toLowerCase().includes(search.toLowerCase())
-    )
-  })
-
-  async function handleSubcategoryChange(tx: Transaction, newSubcategory: string) {
-    setTransactions(prev =>
-      prev.map(t => t.id === tx.id ? { ...t, subcategory: newSubcategory || undefined } : t)
-    )
-    try {
-      await updateCategory(tx.id, tx.category, false, newSubcategory || null)
-    } catch {
-      setTransactions(prev =>
-        prev.map(t => t.id === tx.id ? { ...t, subcategory: tx.subcategory } : t)
-      )
-    }
-  }
-
-  async function handleCategoryChange(tx: Transaction, newCategory: string) {
-    // Optimistic update : réinitialise la sous-catégorie quand la catégorie change
-    setTransactions(prev =>
-      prev.map(t => t.id === tx.id ? { ...t, category: newCategory, subcategory: undefined } : t)
-    )
-    try {
-      await updateCategory(tx.id, newCategory, false)
-
-      // Chercher les transactions avec EXACTEMENT le même libellé et une catégorie différente
-      const duplicates = transactions.filter(
-        t => t.id !== tx.id &&
-          t.label_clean.toLowerCase() === tx.label_clean.toLowerCase() &&
-          t.category !== newCategory
-      )
-
-      if (duplicates.length > 0) {
-        // Proposer à l'utilisateur de reclasser les doublons
-        setPropagatePrompt({
-          label: tx.label_clean,
-          category: newCategory,
-          ids: duplicates.map(t => t.id),
-        })
-      } else {
-        setMemorizePrompt({ label: tx.label_clean, category: newCategory })
-      }
-    } catch (err: any) {
-      // Rollback uniquement cette transaction
-      setTransactions(prev =>
-        prev.map(t => t.id === tx.id ? { ...t, category: tx.category } : t)
-      )
-      const msg = err?.message?.includes('401') ? 'Session expirée, reconnecte-toi' : 'Erreur réseau — réessaie'
-      setToast(msg)
-      setTimeout(() => setToast(''), 4000)
-    }
-  }
-
-  async function handlePropagate() {
-    if (!propagatePrompt) return
-    const { ids, category } = propagatePrompt
-    setPropagatePrompt(null)
-
-    // Optimistic update de tous les doublons
-    setTransactions(prev =>
-      prev.map(t => ids.includes(t.id) ? { ...t, category } : t)
-    )
-
-    // Mise à jour en base pour chacun
-    await Promise.all(ids.map(id => updateCategory(id, category, false).catch(() => {})))
-
-    setMemorizePrompt({ label: propagatePrompt.label, category: category })
-  }
+  const gap = 12
 
   return (
-    <main className="min-h-screen bg-[#f5f5f2] dark:bg-[#111110] px-4 py-6">
-      <div className="max-w-4xl mx-auto">
+    <div style={{ minHeight: '100dvh', background: C.bg, color: C.fg, paddingBottom: 100, fontFamily: "'Inter', -apple-system, sans-serif" }}>
+      <div style={{ maxWidth: 480, margin: '0 auto', position: 'relative' }}>
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-          <div>
-            <h1 className="text-xl font-medium">Voilà où va ton argent</h1>
-            {data?.filename && (
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate max-w-[240px]">{data.filename}</p>
-            )}
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            <span className="text-sm bg-white dark:bg-[#1c1c1a] border border-gray-200 dark:border-gray-700/50 rounded-lg px-3 py-1.5 text-gray-500 dark:text-gray-400">
-              {transactions.length} transactions
-            </span>
-            <button onClick={handleExport} className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50 flex items-center gap-1.5">
-              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" />
-              </svg>
-              Exporter
-            </button>
-            <ThemeToggle />
-            <button onClick={() => router.push('/regles')} className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50">Mes règles</button>
-            <button onClick={() => router.push('/history')} className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50">Historique</button>
-            <button onClick={() => router.push('/upload')} className="text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700/50">Nouveau fichier</button>
-            <a href={FEEDBACK_URL} target="_blank" rel="noopener noreferrer" className="text-sm bg-[#1D9E75] text-white rounded-lg px-3 py-1.5 hover:bg-[#178a64] transition-colors">💬 Donner mon avis</a>
-            <button onClick={async () => { await supabase.auth.signOut(); router.push('/login') }} className="text-sm text-gray-400 dark:text-gray-500 hover:text-gray-600 px-1.5 py-1.5">Déconnexion</button>
-          </div>
-        </div>
+        <TopBar initial={initial} onProfile={() => router.push('/profile')} />
 
-        {/* KPIs */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-          {[
-            { label: 'Revenus', value: formatCurrency(liveStats.income), cls: 'text-[#1D9E75]' },
-            { label: 'Dépenses', value: formatCurrency(liveStats.expense), cls: 'text-[#E24B4A]' },
-            {
-              label: liveStats.cashflow >= 0 ? 'Ce qu\'il te reste' : 'Tu as dépensé en trop',
-              value: formatCurrency(Math.abs(liveStats.cashflow)),
-              cls: liveStats.cashflow >= 0 ? 'text-[#1D9E75]' : 'text-[#E24B4A]',
-            },
-            {
-              label: 'Mis de côté',
-              value: `${Math.max(0, Math.round(liveStats.savingsRate))}%`,
-              cls: liveStats.savingsRate > 0 ? 'text-[#1D9E75]' : 'text-gray-400',
-            },
-          ].map(kpi => (
-            <div key={kpi.label} className="bg-white dark:bg-[#1c1c1a] border border-gray-200 dark:border-gray-700/50 rounded-xl p-4">
-              <p className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1.5">{kpi.label}</p>
-              <p className={`text-2xl font-medium ${kpi.cls}`}>{kpi.value}</p>
-            </div>
-          ))}
-        </div>
+        {/* Hero goal */}
+        {goal
+          ? <GoalHero goal={goal} onTap={() => router.push('/goals')} />
+          : <GoalHeroEmpty onCTA={() => router.push('/goals')} />
+        }
 
-        {/* Score financier */}
-        {data?.score && (() => {
-          const s = data.score
-          const COLOR_MAP: Record<string, { bg: string; border: string; text: string; bar: string }> = {
-            green:  { bg: 'bg-[#f0faf5] dark:bg-[#1a2e25]', border: 'border-[#1D9E75]/30', text: 'text-[#1D9E75]', bar: 'bg-[#1D9E75]' },
-            lime:   { bg: 'bg-[#f4faf0] dark:bg-[#1e2d1a]', border: 'border-[#6abf54]/30', text: 'text-[#6abf54]', bar: 'bg-[#6abf54]' },
-            orange: { bg: 'bg-[#fff8f0] dark:bg-[#2d2218]', border: 'border-orange-300/40', text: 'text-orange-500', bar: 'bg-orange-400' },
-            red:    { bg: 'bg-[#fff5f5] dark:bg-[#2d1a1a]', border: 'border-[#E24B4A]/30', text: 'text-[#E24B4A]', bar: 'bg-[#E24B4A]' },
-          }
-          const c = COLOR_MAP[s.color] || COLOR_MAP.orange
-          const bars = [
-            { label: 'Cashflow', val: s.details.cashflow, max: 35 },
-            { label: 'Épargne', val: s.details.savings_rate, max: 35 },
-            { label: 'Investissement', val: s.details.investment, max: 20 },
-            { label: 'Diversification', val: s.details.diversification, max: 10 },
-          ]
-          return (
-            <div className={`${c.bg} border ${c.border} rounded-xl px-5 py-4 mb-5 flex items-center gap-5 flex-wrap`}>
-              {/* Big score */}
-              <div className="flex flex-col items-center min-w-[72px]">
-                <span className={`text-5xl font-bold ${c.text} leading-none`}>{s.score}</span>
-                <span className="text-xs text-gray-400 dark:text-gray-500 mt-1 uppercase tracking-wide">/100</span>
-              </div>
-              <div className="flex-1 min-w-[200px]">
-                <p className={`text-sm font-semibold ${c.text} mb-2.5`}>Score de santé financière · {s.label}</p>
-                <div className="space-y-1.5">
-                  {bars.map(b => (
-                    <div key={b.label} className="flex items-center gap-2">
-                      <span className="text-xs text-gray-400 dark:text-gray-500 w-28 shrink-0">{b.label}</span>
-                      <div className="flex-1 bg-gray-200 dark:bg-gray-700/50 rounded-full h-1.5 overflow-hidden">
-                        <div className={`h-full ${c.bar} rounded-full transition-all`} style={{ width: `${Math.round(b.val / b.max * 100)}%` }} />
-                      </div>
-                      <span className="text-xs text-gray-400 dark:text-gray-500 w-12 text-right">{b.val}/{b.max}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )
-        })()}
+        {/* Content */}
+        <div style={{ padding: `0 16px`, display: 'flex', flexDirection: 'column', gap }}>
 
-        {/* Alertes budget */}
-        {liveAlerts.length > 0 && (
-          <div className="flex flex-col gap-2 mb-5">
-            {liveAlerts.map((alert, i) => (
-              <div
-                key={i}
-                className={`flex items-start gap-3 rounded-xl px-4 py-3 text-sm border ${
-                  alert.level === 'warning'
-                    ? 'bg-[#fff8f0] dark:bg-[#2d2218] border-orange-300/40 text-orange-700 dark:text-orange-400'
-                    : 'bg-[#f0f6ff] dark:bg-[#1a2035] border-blue-300/40 text-blue-700 dark:text-blue-400'
-                }`}
-              >
-                <span className="text-base leading-tight mt-0.5 shrink-0">{alert.icon}</span>
-                <span dangerouslySetInnerHTML={{ __html: alert.text }} />
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Bannière confirmation épargne */}
-        {savingsTotal > 0 && !savingsConfirmed && (
-          <div className="bg-[#f0faf5] dark:bg-[#1a2e25] border border-[#1D9E75]/30 dark:border-[#1D9E75]/20 rounded-xl px-4 py-3.5 mb-5">
-            <div className="flex items-start justify-between gap-4 flex-wrap">
-              <div>
-                <p className="text-sm font-medium text-[#1D9E75]">
-                  💰 {formatCurrency(savingsTotal)} mis de côté détectés
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  On a classé ces virements comme épargne ou investissement. Si c'est bien le cas,
-                  on les sort des dépenses pour un tableau de bord plus juste.
-                </p>
-              </div>
-              <div className="flex gap-2 flex-shrink-0 mt-0.5">
-                <button
-                  onClick={() => setSavingsConfirmed(true)}
-                  className="text-sm bg-[#1D9E75] text-white px-3 py-1.5 rounded-lg hover:bg-[#178a64] transition-colors"
-                >
-                  Oui, c'est de l'épargne
-                </button>
-                <button
-                  onClick={() => {
-                    const el = document.getElementById('transactions-section')
-                    el?.scrollIntoView({ behavior: 'smooth' })
-                  }}
-                  className="text-sm border border-gray-200 dark:border-gray-700/50 bg-white dark:bg-[#1c1c1a] px-3 py-1.5 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-                >
-                  Revoir ↗
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Charts */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-          {/* Pie chart */}
-          <div className="bg-white dark:bg-[#1c1c1a] border border-gray-200 dark:border-gray-700/50 rounded-xl p-5">
-            <p className="text-sm font-medium mb-4">Dépenses par catégorie</p>
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart key={pieData.map(d => `${d.category}:${Math.round(d.value)}`).join(',')}>
-                <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={90}>
-                  {pieData.map((entry, i) => (
-                    <Cell key={i} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(v: number) => formatCurrency(v)} />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="flex flex-wrap gap-x-3 gap-y-1.5 mt-3">
-              {pieData.slice(0, 8).map(d => (
-                <span key={d.name} className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400">
-                  <span className="w-2 h-2 rounded-sm inline-block" style={{ background: d.color }} />
-                  {d.name}
-                </span>
-              ))}
-            </div>
+          {/* KPI trio */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+            <KPICard label="Revenus" value={data.summary.income_total} sub="ce mois" color={C.accent} />
+            <KPICard label="Dépenses" value={data.summary.expense_total} sub="ce mois" />
+            <KPICard
+              label="Épargné"
+              value={data.summary.cashflow}
+              sub="revenus − dép."
+              color={data.summary.cashflow >= 0 ? C.accent : C.negative}
+            />
           </div>
 
           {/* Bar chart */}
-          <div className="bg-white dark:bg-[#1c1c1a] border border-gray-200 dark:border-gray-700/50 rounded-xl p-5">
-            <p className="text-sm font-medium mb-4">Revenus et dépenses par mois</p>
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={liveTimeline} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} />
-                <Tooltip formatter={(v: number) => formatCurrency(v)} />
-                <Legend />
-                <Bar dataKey="income" name="Revenus" fill="#1D9E75" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="expense" name="Dépenses" fill="#E24B4A" radius={[3, 3, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-            {liveTimeline.length > 1 && (
-              <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700/50">
-                <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Variation mois / mois</p>
-                <div className="flex gap-3 flex-wrap">
-                  {liveTimeline.filter(m => m.expenseChange !== null || m.incomeChange !== null).map(m => {
-                    const monthLabel = new Date(m.month + '-01').toLocaleDateString('fr-FR', { month: 'short' })
-                    return (
-                      <div key={m.month} className="flex flex-col gap-1">
-                        <span className="text-[10px] text-gray-400 dark:text-gray-500 text-center">{monthLabel}</span>
-                        <div className="flex gap-1">
-                          {m.incomeChange !== null && (
-                            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${m.incomeChange >= 0 ? 'bg-[#f0faf5] dark:bg-[#1a2e25] text-[#1D9E75]' : 'bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400'}`}>
-                              Rev. {m.incomeChange >= 0 ? '+' : ''}{m.incomeChange}%
-                            </span>
-                          )}
-                          {m.expenseChange !== null && (
-                            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${m.expenseChange <= 0 ? 'bg-[#f0faf5] dark:bg-[#1a2e25] text-[#1D9E75]' : 'bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400'}`}>
-                              Dép. {m.expenseChange >= 0 ? '+' : ''}{m.expenseChange}%
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
+          {timelineData.length > 0 && <MonthlyCard timeline={timelineData} />}
+
+          {/* Donut */}
+          {donutData.length > 0 && <DonutCard segments={donutData} />}
+
+          {/* Subscriptions */}
+          {data.subscriptions && data.subscriptions.length > 0 && (
+            <SubsCard subs={data.subscriptions} />
+          )}
+
+          {/* Transactions */}
+          <TxCard transactions={data.transactions} />
+
+          {/* Footer */}
+          <div style={{
+            marginTop: 4, paddingTop: 14, borderTop: `1px solid ${C.border}`,
+            display: 'flex', justifyContent: 'space-between',
+            fontSize: 11, color: C.fg3,
+          }}>
+            <span>Données analysées localement · jamais partagées</span>
+            <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+              {data.summary.transaction_count} opérations
+            </span>
           </div>
         </div>
-
-        {/* Insights */}
-        <div className="bg-white dark:bg-[#1c1c1a] border border-gray-200 dark:border-gray-700/50 rounded-xl p-5 mb-5">
-          <p className="text-sm font-medium mb-4">Points clés</p>
-          <div className="divide-y divide-gray-100 dark:divide-gray-700/50">
-            {insights.map((ins, i) => (
-              <div key={i} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
-                <div className="w-9 h-9 rounded-lg bg-gray-50 dark:bg-gray-800/50 flex items-center justify-center text-lg flex-shrink-0">
-                  {ins.icon}
-                </div>
-                <div>
-                  <p className="text-sm" dangerouslySetInnerHTML={{ __html: ins.text }} />
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{ins.sub}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Abonnements */}
-        {liveSubscriptions.length > 0 && (
-          <div className="bg-white dark:bg-[#1c1c1a] border border-gray-200 dark:border-gray-700/50 rounded-xl p-5 mb-5">
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-sm font-medium">Abonnements détectés</p>
-              <span className="text-xs text-gray-400 dark:text-gray-500">
-                {formatCurrency(liveSubscriptions.reduce((s, a) => s + a.monthly_cost, 0))}/mois
-                · {formatCurrency(liveSubscriptions.reduce((s, a) => s + a.annual_cost, 0))}/an
-              </span>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr className="text-xs text-gray-400 dark:text-gray-500 text-left">
-                    <th className="pb-2 pr-4 font-medium">Service</th>
-                    <th className="pb-2 pr-4 font-medium text-right">Mensuel</th>
-                    <th className="pb-2 pr-4 font-medium text-right">Annuel</th>
-                    <th className="pb-2 font-medium text-right">Fois détectées</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {liveSubscriptions.map((sub) => (
-                    <tr key={sub.label} className="border-t border-gray-100 dark:border-gray-700/50">
-                      <td className="py-2 pr-4 font-medium">{sub.label}</td>
-                      <td className="py-2 pr-4 text-right text-[#E24B4A]">{formatCurrency(sub.monthly_cost)}</td>
-                      <td className="py-2 pr-4 text-right text-gray-500 dark:text-gray-400">{formatCurrency(sub.annual_cost)}</td>
-                      <td className="py-2 text-right text-gray-400 dark:text-gray-500">{sub.occurrences}×</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {/* Transactions */}
-        <div id="transactions-section" className="bg-white dark:bg-[#1c1c1a] border border-gray-200 dark:border-gray-700/50 rounded-xl p-5 mb-6">
-          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-            <p className="text-sm font-medium">Transactions <span className="text-gray-400 dark:text-gray-500 font-normal">({filtered.length})</span></p>
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden text-xs">
-                {([['all', 'Tous'], ['income', 'Revenus ↑'], ['expense', 'Dépenses ↓']] as const).map(([val, label]) => (
-                  <button
-                    key={val}
-                    onClick={() => { setTxFilter(val); setShowAllTx(false) }}
-                    className={`px-3 py-1.5 transition-colors ${
-                      txFilter === val
-                        ? val === 'income'
-                          ? 'bg-[#1D9E75] text-white'
-                          : val === 'expense'
-                          ? 'bg-[#E24B4A] text-white'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200'
-                        : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <input
-                type="text"
-                placeholder="Rechercher…"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-[#1c1c1a] dark:text-gray-200 focus:outline-none w-48"
-              />
-            </div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm border-collapse">
-              <thead>
-                <tr className="text-xs text-gray-400 dark:text-gray-500 text-left">
-                  <th className="pb-2 pr-4 font-medium">Date</th>
-                  <th className="pb-2 pr-4 font-medium">Description</th>
-                  <th className="pb-2 pr-4 font-medium">Catégorie</th>
-                  <th className="pb-2 text-right font-medium">Montant</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(showAllTx ? filtered : filtered.slice(0, 100)).map(tx => {
-                  const color = CATEGORY_COLORS[tx.category] || '#9E9E9E'
-                  return (
-                    <tr key={tx.id} className="border-t border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-800/50">
-                      <td className="py-2 pr-4 text-gray-400 dark:text-gray-500 text-xs whitespace-nowrap">{tx.date}</td>
-                      <td className="py-2 pr-4 max-w-[200px] truncate">
-                        {tx.label_clean}
-                      </td>
-                      <td className="py-2 pr-4">
-                        <div className="flex flex-col gap-1">
-                          <select
-                            value={tx.category}
-                            onChange={e => handleCategoryChange(tx, e.target.value)}
-                            style={{
-                              borderColor: color,
-                              background: color + '22',
-                              color: color,
-                            }}
-                            className="text-xs border rounded px-2 py-1 focus:outline-none cursor-pointer font-medium dark:bg-[#1c1c1a]"
-                          >
-                            {Object.entries(activeCategories).map(([val, label]) => (
-                              <option key={val} value={val}>{label}</option>
-                            ))}
-                          </select>
-                          {SUBCATEGORY_OPTIONS[tx.category] && (
-                            <select
-                              value={tx.subcategory || ''}
-                              onChange={e => handleSubcategoryChange(tx, e.target.value)}
-                              className="text-[10px] text-gray-400 dark:text-gray-500 bg-transparent border-0 cursor-pointer focus:outline-none px-1 py-0.5 hover:text-gray-600 dark:hover:text-gray-300 w-full"
-                            >
-                              <option value="">Sous-catégorie…</option>
-                              {SUBCATEGORY_OPTIONS[tx.category].map(opt => (
-                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                              ))}
-                            </select>
-                          )}
-                        </div>
-                      </td>
-                      <td className={`py-2 text-right font-medium ${tx.amount >= 0 ? 'text-[#1D9E75]' : ''}`}>
-                        {tx.currency && tx.currency !== 'EUR' && tx.amount_original != null ? (
-                          <span className="flex flex-col items-end gap-0.5">
-                            <span className="text-xs text-gray-400 dark:text-gray-500 font-normal">
-                              {tx.currency} {Math.abs(tx.amount_original).toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
-                            </span>
-                            <span>{formatCurrency(tx.amount)}</span>
-                          </span>
-                        ) : formatCurrency(tx.amount)}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-            {filtered.length > 100 && !showAllTx && (
-              <div className="text-center mt-4">
-                <button
-                  onClick={() => setShowAllTx(true)}
-                  className="text-sm text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700/50 rounded-lg px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                >
-                  Voir les {filtered.length - 100} transactions suivantes
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-
       </div>
 
-      {/* Toast simple */}
-      {toast && !propagatePrompt && !memorizePrompt && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#1a1a1a] dark:bg-gray-800 text-white text-sm px-5 py-2.5 rounded-xl shadow-lg">
-          {toast}
-        </div>
-      )}
-
-      {/* Toast mémorisation */}
-      {memorizePrompt && !propagatePrompt && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#1a1a1a] dark:bg-gray-800 text-white text-sm px-5 py-3.5 rounded-xl shadow-lg flex items-center gap-4 max-w-sm w-full">
-          <span className="flex-1">Catégorie mise à jour</span>
-          <div className="flex gap-2 flex-shrink-0">
-            <button
-              onClick={() => setMemorizePrompt(null)}
-              className="text-gray-400 hover:text-white text-xs"
-            >
-              Ignorer
-            </button>
-            <button
-              onClick={async () => {
-                try {
-                  await saveRule(memorizePrompt.label, memorizePrompt.category)
-                  setMemorizePrompt(null)
-                  setToast('Règle mémorisée ✓')
-                  setTimeout(() => setToast(''), 2500)
-                } catch {
-                  setMemorizePrompt(null)
-                  setToast('Erreur — réessaie')
-                  setTimeout(() => setToast(''), 2500)
-                }
-              }}
-              className="bg-[#1D9E75] text-white font-medium text-xs px-3 py-1.5 rounded-lg hover:bg-[#178a64]"
-            >
-              Mémoriser →
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Toast de propagation — proposer de reclasser les doublons exacts */}
-      {propagatePrompt && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-[#1a1a1a] dark:bg-gray-800 text-white text-sm px-5 py-3.5 rounded-xl shadow-lg flex items-center gap-4 max-w-sm">
-          <span>
-            <span className="font-medium">{propagatePrompt.ids.length}</span> transaction{propagatePrompt.ids.length > 1 ? 's' : ''} identique{propagatePrompt.ids.length > 1 ? 's' : ''} trouvée{propagatePrompt.ids.length > 1 ? 's' : ''}. Reclasser aussi ?
-          </span>
-          <div className="flex gap-2 flex-shrink-0">
-            <button
-              onClick={() => setPropagatePrompt(null)}
-              className="text-gray-400 hover:text-white text-xs"
-            >
-              Non
-            </button>
-            <button
-              onClick={handlePropagate}
-              className="bg-white dark:bg-gray-700/50 text-[#1a1a1a] dark:text-gray-200 font-medium text-xs px-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50"
-            >
-              Oui
-            </button>
-          </div>
-        </div>
-      )}
-    </main>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        ::-webkit-scrollbar { display: none; }
+      `}</style>
+    </div>
   )
 }
