@@ -108,7 +108,7 @@ export default function GoalsPage() {
   return (
     <div className="min-h-dvh" style={{ background: 'var(--bg-page)', color: 'var(--fg)' }}>
       {/* Header */}
-      <div className="px-5 pt-12 pb-2 flex items-center justify-between">
+      <div className="px-5 pt-4 pb-2 flex items-center justify-between">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-widest mb-1" style={{ color: '#1D9E75' }}>
             Épargne

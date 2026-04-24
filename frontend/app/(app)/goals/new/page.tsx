@@ -66,7 +66,7 @@ export default function NewGoalPage() {
   return (
     <div className="min-h-dvh flex flex-col" style={{ background: 'var(--bg-page)', color: 'var(--fg)' }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-5 pt-12 pb-6">
+      <div className="flex items-center justify-between px-5 pt-4 pb-6">
         <button
           onClick={() => step > 1 ? setStep(s => s - 1) : router.push('/goals')}
           className="flex items-center gap-1.5 text-sm"
@@ -80,7 +80,7 @@ export default function NewGoalPage() {
         <span className="text-xs tabular" style={{ color: 'var(--fg-3)' }}>{step} / 3</span>
       </div>
 
-      <div className="flex-1 flex flex-col px-5 max-w-sm mx-auto w-full">
+      <div className="flex-1 flex flex-col px-5 max-w-[520px] mx-auto w-full">
 
         {/* ── STEP 1 : Type picker ── */}
         {step === 1 && (

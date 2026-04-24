@@ -131,7 +131,7 @@ export default function ProfilePage() {
   return (
     <div className="min-h-dvh" style={{ background: 'var(--bg-page)', color: 'var(--fg)' }}>
       {/* TopBar */}
-      <div className="flex items-center justify-between px-5 pt-12 pb-5">
+      <div className="flex items-center justify-between px-5 pt-4 pb-5">
         <button
           onClick={() => router.back()}
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}

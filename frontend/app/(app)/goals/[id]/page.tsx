@@ -251,7 +251,7 @@ export default function GoalDetailPage() {
   return (
     <div className="min-h-dvh" style={{ background: 'var(--bg-page)', color: 'var(--fg)' }}>
       {/* TopBar */}
-      <div className="flex items-center justify-between px-5 pt-12 pb-4">
+      <div className="flex items-center justify-between px-5 pt-4 pb-4">
         <button
           onClick={() => router.push('/goals')}
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
