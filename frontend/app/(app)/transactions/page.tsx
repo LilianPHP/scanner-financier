@@ -2,6 +2,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { TabHeader } from '@/components/TabHeader'
 
 type Transaction = {
   date: string
@@ -100,25 +101,8 @@ export default function TransactionsPage() {
   }, [transactions, filter, search])
 
   return (
-    <div className="min-h-dvh" style={{ background: 'var(--bg-page)', color: 'var(--fg)' }}>
-      {/* TopBar */}
-      <div className="flex items-center justify-between px-5 pt-4 pb-4">
-        <button
-          onClick={() => router.back()}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--fg-2)' }}>
-            <path d="M15 18l-6-6 6-6"/>
-          </svg>
-        </button>
-        <h1 className="text-base font-semibold" style={{ letterSpacing: '-0.01em' }}>Transactions</h1>
-        <div
-          className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0"
-          style={{ background: 'linear-gradient(135deg, #1D9E75, #28c48f)', color: '#062A1E' }}
-        >
-          {userInit}
-        </div>
-      </div>
+    <>
+      <TabHeader eyebrow="Mouvement" title="Transactions" />
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 px-5 mb-4">
@@ -230,6 +214,6 @@ export default function TransactionsPage() {
       )}
 
       <div className="h-8" />
-    </div>
+    </>
   )
 }

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { SubHeader } from '@/components/SubHeader'
 import { getBankConnectUrl, getBankConnections, syncBankConnection, type BankConnection, BankSyncingError } from '@/lib/api'
 
 const PERIOD_OPTIONS = [
@@ -142,8 +143,7 @@ export default function AccountsPage() {
   }
 
   return (
-    <div className="min-h-dvh" style={{ background: 'var(--bg-page)', color: 'var(--fg)' }}>
-
+    <>
       {/* Toast */}
       {toast && (
         <div
@@ -154,29 +154,9 @@ export default function AccountsPage() {
         </div>
       )}
 
-      {/* Header */}
-      <div className="px-5 pt-5 pb-2 flex items-start justify-between">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-widest mb-1" style={{ color: '#1D9E75' }}>
-            Open Banking
-          </p>
-          <h1 className="text-2xl font-semibold" style={{ letterSpacing: '-0.02em' }}>
-            Mes comptes
-          </h1>
-        </div>
-        <button
-          onClick={loadConnections}
-          className="w-9 h-9 rounded-xl flex items-center justify-center transition-all active:scale-95"
-          style={{ background: 'var(--bg-card-hi)', border: '1px solid var(--border)', color: 'var(--fg-2)', cursor: 'pointer' }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M23 4v6h-6M1 20v-6h6"/>
-            <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
-          </svg>
-        </button>
-      </div>
+      <SubHeader title="Mes comptes" />
 
-      <div className="px-5 max-w-sm mx-auto w-full">
+      <div className="px-5">
 
         {/* Error */}
         {error && (
@@ -305,6 +285,6 @@ export default function AccountsPage() {
         </div>
 
       </div>
-    </div>
+    </>
   )
 }

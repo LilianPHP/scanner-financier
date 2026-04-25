@@ -72,7 +72,7 @@ export function BottomNav() {
         borderTop: '1px solid rgba(255,255,255,0.06)',
       }}
     >
-      <div className="flex items-center max-w-lg mx-auto px-2">
+      <div className="flex items-center mx-auto px-2" style={{ maxWidth: 520 }}>
         {TABS.map((tab) => {
           const active = pathname.startsWith(tab.href)
           return (

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import { TabHeader } from '@/components/TabHeader'
 
 type Goal = {
   id: string
@@ -106,30 +107,25 @@ export default function GoalsPage() {
   const done = goals.filter(g => g.status === 'done')
 
   return (
-    <div className="min-h-dvh" style={{ background: 'var(--bg-page)', color: 'var(--fg)' }}>
-      {/* Header */}
-      <div className="px-5 pt-4 pb-2 flex items-center justify-between">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-widest mb-1" style={{ color: '#1D9E75' }}>
-            Épargne
-          </p>
-          <h1 className="text-2xl font-semibold" style={{ letterSpacing: '-0.02em' }}>
-            Objectifs
-          </h1>
-        </div>
-        <button
-          onClick={() => router.push('/goals/new')}
-          className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-all active:scale-95"
-          style={{ background: '#1D9E75', color: '#062A1E', border: 'none', cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 0 16px rgba(29,158,117,0.3)' }}
-        >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-            <path d="M12 5v14M5 12h14"/>
-          </svg>
-          Nouveau
-        </button>
-      </div>
+    <>
+      <TabHeader
+        eyebrow="Épargne"
+        title="Objectifs"
+        action={
+          <button
+            onClick={() => router.push('/goals/new')}
+            className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-all active:scale-95"
+            style={{ background: '#1D9E75', color: '#062A1E', border: 'none', cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 0 16px rgba(29,158,117,0.3)' }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            Nouveau
+          </button>
+        }
+      />
 
-      <div className="px-5 mt-4">
+      <div className="px-5 mt-2">
 
         {loading ? (
           <div className="flex flex-col gap-3">
@@ -182,6 +178,6 @@ export default function GoalsPage() {
 
         <div className="h-8" />
       </div>
-    </div>
+    </>
   )
 }

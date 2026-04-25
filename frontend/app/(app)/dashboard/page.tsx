@@ -6,6 +6,7 @@ import {
   formatCurrency, CATEGORY_LABELS, CATEGORY_COLORS,
   type UploadResult, type Transaction, type Subscription,
 } from '@/lib/api'
+import { TabHeader } from '@/components/TabHeader'
 
 // ── Design tokens ────────────────────────────────────────────────────
 const C = {
@@ -651,10 +652,10 @@ export default function DashboardPage() {
   const gap = 12
 
   return (
-    <div style={{ minHeight: '100dvh', background: C.bg, color: C.fg, paddingBottom: 100, fontFamily: "'Inter', -apple-system, sans-serif" }}>
-      <div style={{ maxWidth: 480, margin: '0 auto', position: 'relative' }}>
+    <div style={{ background: C.bg, color: C.fg, fontFamily: "'Inter', -apple-system, sans-serif" }}>
+      <div style={{ position: 'relative' }}>
 
-        <TopBar initial={initial} onProfile={() => router.push('/profile')} />
+        <TabHeader eyebrow="Vue d'ensemble" title="Accueil" />
 
         {/* Hero goal */}
         {goal

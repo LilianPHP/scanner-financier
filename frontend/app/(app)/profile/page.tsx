@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useTheme } from '@/lib/theme'
+import { TabHeader } from '@/components/TabHeader'
 
 const BUILD_VERSION = 'v0.9.2 · Build 24.04.26'
 
@@ -129,25 +130,8 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-dvh" style={{ background: 'var(--bg-page)', color: 'var(--fg)' }}>
-      {/* TopBar */}
-      <div className="flex items-center justify-between px-5 pt-4 pb-5">
-        <button
-          onClick={() => router.back()}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--fg-2)' }}>
-            <path d="M15 18l-6-6 6-6"/>
-          </svg>
-        </button>
-        <h1 className="text-base font-semibold" style={{ letterSpacing: '-0.01em' }}>Profil</h1>
-        <div
-          className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold"
-          style={{ background: 'linear-gradient(135deg, #1D9E75, #28c48f)', color: '#062A1E' }}
-        >
-          {initial}
-        </div>
-      </div>
+    <>
+      <TabHeader eyebrow="Mon compte" title="Profil" />
 
       <div className="px-5 flex flex-col gap-4">
         {/* Avatar card */}
@@ -260,6 +244,6 @@ export default function ProfilePage() {
           Senzio · {BUILD_VERSION}
         </p>
       </div>
-    </div>
+    </>
   )
 }

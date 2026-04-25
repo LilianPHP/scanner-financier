@@ -64,7 +64,7 @@ export default function NewGoalPage() {
   }
 
   return (
-    <div className="min-h-dvh flex flex-col" style={{ background: 'var(--bg-page)', color: 'var(--fg)' }}>
+    <div className="min-h-dvh flex flex-col" style={{ color: 'var(--fg)' }}>
       {/* Header */}
       <div className="flex items-center justify-between px-5 pt-4 pb-6">
         <button
@@ -80,7 +80,7 @@ export default function NewGoalPage() {
         <span className="text-xs tabular" style={{ color: 'var(--fg-3)' }}>{step} / 3</span>
       </div>
 
-      <div className="flex-1 flex flex-col px-5 max-w-[520px] mx-auto w-full">
+      <div className="flex-1 flex flex-col px-5 w-full">
 
         {/* ── STEP 1 : Type picker ── */}
         {step === 1 && (
