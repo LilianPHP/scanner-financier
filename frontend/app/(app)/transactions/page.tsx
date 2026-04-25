@@ -47,6 +47,19 @@ function formatDate(d: string) {
   } catch { return d }
 }
 
+// Returns YYYY-MM
+function monthKey(d: string): string {
+  return (d || '').slice(0, 7)
+}
+
+// Returns "Avr 2026"
+function monthLabel(key: string): string {
+  if (!key || key.length < 7) return key
+  const [y, m] = key.split('-')
+  const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc']
+  return `${months[parseInt(m) - 1] ?? m} ${y}`
+}
+
 function CatIcon({ cat }: { cat: string }) {
   const color = CAT_COLORS[cat] ?? '#6B7280'
   const icon = CAT_ICONS[cat] ?? '📦'
@@ -69,6 +82,7 @@ export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('Tout')
+  const [selectedMonth, setSelectedMonth] = useState<string>('')
   const [userInit, setUserInit] = useState('J')
 
   useEffect(() => {
@@ -85,24 +99,122 @@ export default function TransactionsPage() {
     } catch {}
   }, [router])
 
-  const entrees = transactions.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0)
-  const sorties = transactions.filter(t => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0)
-
-  const categories = useMemo(() => {
-    const set = new Set(transactions.map(t => t.category).filter(Boolean))
-    return ['Tout', ...Array.from(set)]
+  // Available months (most recent first)
+  const months = useMemo(() => {
+    const set = new Set(transactions.map(t => monthKey(t.date)).filter(Boolean))
+    return Array.from(set).sort().reverse()
   }, [transactions])
 
+  // Default to most recent month
+  useEffect(() => {
+    if (!selectedMonth && months.length > 0) setSelectedMonth(months[0])
+  }, [months, selectedMonth])
+
+  // Transactions for the selected month
+  const monthTransactions = useMemo(() => {
+    if (!selectedMonth) return transactions
+    return transactions.filter(t => monthKey(t.date) === selectedMonth)
+  }, [transactions, selectedMonth])
+
+  const entrees = monthTransactions.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0)
+  const sorties = monthTransactions.filter(t => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0)
+
+  const categories = useMemo(() => {
+    const set = new Set(monthTransactions.map(t => t.category).filter(Boolean))
+    return ['Tout', ...Array.from(set)]
+  }, [monthTransactions])
+
   const filtered = useMemo(() => {
-    let list = [...transactions]
+    let list = [...monthTransactions]
     if (filter !== 'Tout') list = list.filter(t => t.category === filter)
     if (search) list = list.filter(t => t.description.toLowerCase().includes(search.toLowerCase()))
     return list
-  }, [transactions, filter, search])
+  }, [monthTransactions, filter, search])
+
+  // Month navigation
+  const monthIdx = months.indexOf(selectedMonth)
+  const prevMonth = monthIdx >= 0 && monthIdx < months.length - 1 ? months[monthIdx + 1] : null
+  const nextMonth = monthIdx > 0 ? months[monthIdx - 1] : null
 
   return (
     <>
       <TabHeader eyebrow="Mouvement" title="Transactions" />
+
+      {/* Month selector */}
+      {months.length > 0 && (
+        <div className="px-5 mb-4">
+          <div
+            className="flex items-center justify-between rounded-2xl px-2 py-2"
+            style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+          >
+            <button
+              onClick={() => prevMonth && setSelectedMonth(prevMonth)}
+              disabled={!prevMonth}
+              className="w-9 h-9 rounded-xl flex items-center justify-center transition-all active:scale-95"
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: prevMonth ? 'pointer' : 'default',
+                color: prevMonth ? 'var(--fg-2)' : 'var(--fg-4)',
+                opacity: prevMonth ? 1 : 0.4,
+              }}
+              aria-label="Mois précédent"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 18l-6-6 6-6"/>
+              </svg>
+            </button>
+            <div className="flex flex-col items-center">
+              <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--fg-3)' }}>
+                Mois sélectionné
+              </span>
+              <span className="text-sm font-semibold mt-0.5" style={{ letterSpacing: '-0.01em' }}>
+                {monthLabel(selectedMonth)}
+              </span>
+            </div>
+            <button
+              onClick={() => nextMonth && setSelectedMonth(nextMonth)}
+              disabled={!nextMonth}
+              className="w-9 h-9 rounded-xl flex items-center justify-center transition-all active:scale-95"
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: nextMonth ? 'pointer' : 'default',
+                color: nextMonth ? 'var(--fg-2)' : 'var(--fg-4)',
+                opacity: nextMonth ? 1 : 0.4,
+              }}
+              aria-label="Mois suivant"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 18l6-6-6-6"/>
+              </svg>
+            </button>
+          </div>
+          {months.length > 1 && (
+            <div className="flex gap-1.5 overflow-x-auto pt-2.5 pb-1" style={{ scrollbarWidth: 'none' }}>
+              {months.map(m => {
+                const active = m === selectedMonth
+                return (
+                  <button
+                    key={m}
+                    onClick={() => setSelectedMonth(m)}
+                    className="flex-shrink-0 rounded-full px-3 py-1 text-[11px] font-medium transition-all"
+                    style={{
+                      background: active ? 'rgba(29,158,117,0.15)' : 'transparent',
+                      color: active ? '#1D9E75' : 'var(--fg-3)',
+                      border: active ? '1px solid rgba(29,158,117,0.3)' : '1px solid var(--border)',
+                      fontFamily: 'inherit',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {monthLabel(m)}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 px-5 mb-4">
@@ -145,6 +257,13 @@ export default function TransactionsPage() {
           )}
         </div>
       </div>
+
+      {/* Tx count for selected month */}
+      {selectedMonth && monthTransactions.length > 0 && (
+        <p className="px-5 text-[11px] font-medium uppercase tracking-widest mb-2" style={{ color: 'var(--fg-3)' }}>
+          {monthTransactions.length} transaction{monthTransactions.length > 1 ? 's' : ''} · {monthLabel(selectedMonth)}
+        </p>
+      )}
 
       {/* Chips */}
       <div className="px-5 flex gap-2 overflow-x-auto pb-2 mb-1" style={{ scrollbarWidth: 'none' }}>
@@ -207,7 +326,11 @@ export default function TransactionsPage() {
           ))}
           {filtered.length === 0 && (
             <div className="py-10 text-center">
-              <p className="text-sm" style={{ color: 'var(--fg-3)' }}>Aucun résultat pour "{search}"</p>
+              <p className="text-sm" style={{ color: 'var(--fg-3)' }}>
+                {search
+                  ? `Aucun résultat pour "${search}"`
+                  : `Aucune transaction pour ${monthLabel(selectedMonth)}`}
+              </p>
             </div>
           )}
         </div>
