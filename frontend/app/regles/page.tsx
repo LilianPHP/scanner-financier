@@ -73,10 +73,10 @@ export default function ReglesPage() {
               Recatégorise une transaction sur le dashboard et clique "Mémoriser →" pour créer ta première règle.
             </p>
             <Link
-              href="/upload"
+              href="/accounts"
               className="inline-block text-sm bg-[#1D9E75] text-white px-5 py-2.5 rounded-lg hover:bg-[#178a64] transition-colors"
             >
-              Analyser un relevé
+              Connecter ma banque
             </Link>
           </div>
         ) : (

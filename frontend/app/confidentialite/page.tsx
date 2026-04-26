@@ -19,7 +19,7 @@ export default function Confidentialite() {
             <p>Pour utiliser Senzio, nous collectons uniquement :</p>
             <ul className="mt-2 space-y-1 list-disc list-inside text-gray-500 dark:text-gray-400">
               <li>Ton adresse email (pour la connexion)</li>
-              <li>Les transactions extraites de ton relevé bancaire (date, libellé, montant, catégorie)</li>
+              <li>Les transactions synchronisées depuis ta banque via Powens (date, libellé, montant, catégorie)</li>
               <li>Tes règles de catégorisation personnalisées si tu choisis de les mémoriser</li>
             </ul>
           </section>
@@ -27,8 +27,8 @@ export default function Confidentialite() {
           <section>
             <h2 className="text-base font-medium text-gray-900 dark:text-gray-200 mb-3">Ce qu'on ne collecte pas</h2>
             <ul className="mt-2 space-y-1 list-disc list-inside text-gray-500 dark:text-gray-400">
-              <li>Ton fichier bancaire original — il est analysé puis immédiatement supprimé</li>
-              <li>Ton numéro de compte, IBAN ou données bancaires sensibles</li>
+              <li>Tes identifiants bancaires — la connexion passe par Powens (agréé ACPR), Senzio ne les voit jamais</li>
+              <li>Ton numéro de compte complet, IBAN ou données bancaires sensibles</li>
               <li>Données de navigation, cookies publicitaires</li>
             </ul>
           </section>

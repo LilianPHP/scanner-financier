@@ -133,7 +133,7 @@ export default function ProfilePage() {
     <>
       <TabHeader eyebrow="Mon compte" title="Profil" />
 
-      <div className="px-5 flex flex-col gap-4">
+      <div className="px-5 lg:px-8 flex flex-col gap-4 lg:max-w-[680px]">
         {/* Avatar card */}
         <div
           className="rounded-2xl px-4 py-4 flex items-center gap-3"

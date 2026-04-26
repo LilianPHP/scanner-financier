@@ -64,7 +64,7 @@ function BankCard({ conn, onSync, syncing }: { conn: BankConnection; onSync: () 
         <button
           onClick={onSync}
           disabled={syncing}
-          className="text-xs font-medium px-3 py-1.5 rounded-lg transition-all active:scale-95"
+          className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all active:scale-95"
           style={{
             background: syncing ? 'rgba(29,158,117,0.06)' : 'rgba(29,158,117,0.12)',
             color: '#1D9E75',
@@ -73,8 +73,13 @@ function BankCard({ conn, onSync, syncing }: { conn: BankConnection; onSync: () 
             fontFamily: 'inherit',
             opacity: syncing ? 0.6 : 1,
           }}
+          aria-label="Synchroniser"
         >
-          {syncing ? '…' : '↻'}
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={syncing ? 'animate-spin' : ''}>
+            <path d="M23 4v6h-6M1 20v-6h6"/>
+            <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+          </svg>
+          <span className="hidden sm:inline">{syncing ? 'Sync…' : 'Synchroniser'}</span>
         </button>
       </div>
     </div>
@@ -156,7 +161,7 @@ export default function AccountsPage() {
 
       <SubHeader title="Mes comptes" />
 
-      <div className="px-5">
+      <div className="px-5 lg:px-8">
 
         {/* Error */}
         {error && (
@@ -207,8 +212,8 @@ export default function AccountsPage() {
               🏦
             </div>
             <p className="text-sm font-medium mb-1" style={{ color: 'var(--fg)' }}>Aucune banque connectée</p>
-            <p className="text-xs leading-relaxed" style={{ color: 'var(--fg-3)' }}>
-              Connecte ta banque pour importer tes transactions automatiquement.
+            <p className="text-xs leading-relaxed max-w-sm" style={{ color: 'var(--fg-3)' }}>
+              Connecte ta banque via Powens pour synchroniser tes transactions automatiquement. Lecture seule, aucun accès à tes identifiants.
             </p>
           </div>
         )}

@@ -125,7 +125,7 @@ export default function GoalsPage() {
         }
       />
 
-      <div className="px-5 mt-2">
+      <div className="px-5 lg:px-8 mt-2">
 
         {loading ? (
           <div className="flex flex-col gap-3">

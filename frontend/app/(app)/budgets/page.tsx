@@ -106,7 +106,7 @@ export default function BudgetsPage() {
     <>
       <TabHeader eyebrow="Ce mois-ci" title="Budgets" />
 
-      <div className="px-5">
+      <div className="px-5 lg:px-8">
         {budgets.length === 0 ? (
           /* Empty state */
           <div

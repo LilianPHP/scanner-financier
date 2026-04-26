@@ -3,16 +3,16 @@ import './globals.css'
 import { ThemeProvider } from '@/lib/theme'
 
 export const metadata: Metadata = {
-  title: 'Senzio — Analyse tes dépenses en un clic',
-  description: 'Dépose ton relevé bancaire et découvre instantanément où part ton argent. Analyse automatique, dashboard clair, 100% privé.',
+  title: 'Senzio — Connecte ta banque, comprends ton argent',
+  description: 'Synchronise tes transactions bancaires via Powens (agréé ACPR), catégorise tes dépenses et suis tes objectifs financiers. Lecture seule. Aucun accès à tes identifiants.',
   icons: {
     icon: '/favicon.svg',
     shortcut: '/favicon.svg',
     apple: '/favicon.svg',
   },
   openGraph: {
-    title: 'Senzio — Dépose ton relevé, découvre où part ton argent',
-    description: 'Analyse instantanée de ton relevé bancaire. Catégories, graphiques, abonnements détectés. Gratuit et 100% privé.',
+    title: 'Senzio — Connecte ta banque, comprends ton argent',
+    description: 'Synchronisation bancaire sécurisée via Powens. Catégorisation automatique, dashboard, budgets et objectifs.',
     url: 'https://senzio.app',
     siteName: 'Senzio',
     locale: 'fr_FR',
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary',
     title: 'Senzio',
-    description: 'Analyse ton relevé bancaire en 30 secondes. Gratuit, privé, sans connexion bancaire.',
+    description: 'Connecte ta banque. Comprends ton argent. Atteins tes objectifs.',
   },
 }
 

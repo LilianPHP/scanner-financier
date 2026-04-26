@@ -6,7 +6,7 @@ import {
   formatCurrency, CATEGORY_LABELS, CATEGORY_COLORS,
   type UploadResult, type Transaction, type Subscription,
 } from '@/lib/api'
-import { TabHeader } from '@/components/TabHeader'
+import { DashboardHeader } from '@/components/DashboardHeader'
 
 // ── Design tokens ────────────────────────────────────────────────────
 const C = {
@@ -196,6 +196,21 @@ function GoalHeroEmpty({ onCTA }: { onCTA: () => void }) {
         </svg>
         Créer un objectif
       </button>
+    </div>
+  )
+}
+
+// ── KPI Stat (desktop, vertical layout inside Santé du mois card) ─────
+function KPIStat({ label, value, color, sub }: { label: string; value: number; color?: string; sub?: string }) {
+  return (
+    <div className="flex items-baseline justify-between">
+      <span className="text-xs" style={{ color: C.fg3 }}>{label}{sub && <span className="ml-1.5" style={{ color: C.fg4, fontSize: 10 }}>· {sub}</span>}</span>
+      <span style={{
+        fontSize: 18, fontWeight: 600, letterSpacing: '-0.01em',
+        color: color ?? C.fg, fontVariantNumeric: 'tabular-nums',
+      }}>
+        {nf0.format(Math.round(Math.abs(value)))} <span style={{ fontSize: 11, color: C.fg3, fontWeight: 500 }}>€</span>
+      </span>
     </div>
   )
 }
@@ -655,16 +670,18 @@ export default function DashboardPage() {
     <div style={{ background: C.bg, color: C.fg, fontFamily: "'Inter', -apple-system, sans-serif" }}>
       <div style={{ position: 'relative' }}>
 
-        <TabHeader eyebrow="Vue d'ensemble" title="Accueil" />
+        <DashboardHeader onSync={() => router.push('/accounts')} />
 
-        {/* Hero goal */}
-        {goal
-          ? <GoalHero goal={goal} onTap={() => router.push('/goals')} />
-          : <GoalHeroEmpty onCTA={() => router.push('/goals')} />
-        }
+        {/* Hero goal — full width on mobile, 2/3 on desktop (handled by grid below) */}
+        <div className="lg:hidden">
+          {goal
+            ? <GoalHero goal={goal} onTap={() => router.push('/goals')} />
+            : <GoalHeroEmpty onCTA={() => router.push('/goals')} />
+          }
+        </div>
 
-        {/* Content */}
-        <div style={{ padding: `0 16px`, display: 'flex', flexDirection: 'column', gap }}>
+        {/* MOBILE flow: stacked cards, original behaviour */}
+        <div className="lg:hidden" style={{ padding: `0 16px`, display: 'flex', flexDirection: 'column', gap }}>
 
           {/* KPI trio */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
@@ -678,21 +695,11 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* Bar chart */}
           {timelineData.length > 0 && <MonthlyCard timeline={timelineData} />}
-
-          {/* Donut */}
           {donutData.length > 0 && <DonutCard segments={donutData} />}
-
-          {/* Subscriptions */}
-          {data.subscriptions && data.subscriptions.length > 0 && (
-            <SubsCard subs={data.subscriptions} />
-          )}
-
-          {/* Transactions */}
+          {data.subscriptions && data.subscriptions.length > 0 && <SubsCard subs={data.subscriptions} />}
           <TxCard transactions={data.transactions} />
 
-          {/* Footer */}
           <div style={{
             marginTop: 4, paddingTop: 14, borderTop: `1px solid ${C.border}`,
             display: 'flex', justifyContent: 'space-between',
@@ -701,6 +708,67 @@ export default function DashboardPage() {
             <span>Connexion sécurisée via Powens · agréé ACPR</span>
             <span style={{ fontVariantNumeric: 'tabular-nums' }}>
               {data.summary.transaction_count} opérations
+            </span>
+          </div>
+        </div>
+
+        {/* DESKTOP cockpit: 12-col grid */}
+        <div className="hidden lg:grid grid-cols-12 gap-5 px-8 pb-10">
+          {/* Row 1 — Goal hero (8 cols) + KPI stack (4 cols) */}
+          <div className="col-span-8">
+            {goal
+              ? <GoalHero goal={goal} onTap={() => router.push('/goals')} />
+              : <GoalHeroEmpty onCTA={() => router.push('/goals')} />
+            }
+          </div>
+          <div className="col-span-4 flex flex-col gap-3">
+            <div
+              className="rounded-2xl px-5 py-5"
+              style={{ background: C.card, border: `1px solid ${C.border}` }}
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: C.fg3 }}>
+                Santé du mois
+              </p>
+              <div className="flex flex-col gap-3">
+                <KPIStat label="Revenus" value={data.summary.income_total} color={C.accent} />
+                <KPIStat label="Dépenses" value={data.summary.expense_total} />
+                <KPIStat
+                  label="Épargné"
+                  value={data.summary.cashflow}
+                  color={data.summary.cashflow >= 0 ? C.accent : C.negative}
+                  sub="revenus − dépenses"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Row 2 — Bar chart (7) + Donut (5) */}
+          {timelineData.length > 0 && (
+            <div className="col-span-7">
+              <MonthlyCard timeline={timelineData} />
+            </div>
+          )}
+          {donutData.length > 0 && (
+            <div className={timelineData.length > 0 ? 'col-span-5' : 'col-span-12'}>
+              <DonutCard segments={donutData} />
+            </div>
+          )}
+
+          {/* Row 3 — Subs (5) + Tx (7) */}
+          {data.subscriptions && data.subscriptions.length > 0 && (
+            <div className="col-span-5">
+              <SubsCard subs={data.subscriptions} />
+            </div>
+          )}
+          <div className={data.subscriptions && data.subscriptions.length > 0 ? 'col-span-7' : 'col-span-12'}>
+            <TxCard transactions={data.transactions} />
+          </div>
+
+          {/* Footer */}
+          <div className="col-span-12 flex justify-between items-center pt-4 mt-2" style={{ borderTop: `1px solid ${C.border}`, fontSize: 11, color: C.fg3 }}>
+            <span>Connexion sécurisée via Powens · agréé ACPR</span>
+            <span style={{ fontVariantNumeric: 'tabular-nums' }}>
+              {data.summary.transaction_count} opérations synchronisées
             </span>
           </div>
         </div>

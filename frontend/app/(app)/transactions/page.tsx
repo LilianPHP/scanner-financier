@@ -142,7 +142,7 @@ export default function TransactionsPage() {
 
       {/* Month selector */}
       {months.length > 0 && (
-        <div className="px-5 mb-4">
+        <div className="px-5 lg:px-8 mb-4">
           <div
             className="flex items-center justify-between rounded-2xl px-2 py-2"
             style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
@@ -217,7 +217,7 @@ export default function TransactionsPage() {
       )}
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 gap-3 px-5 mb-4">
+      <div className="grid grid-cols-2 gap-3 px-5 lg:px-8 mb-4">
         <div className="rounded-2xl p-4" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
           <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--fg-3)' }}>ENTRÉES</p>
           <p className="text-2xl font-semibold tabular" style={{ color: '#1D9E75', letterSpacing: '-0.02em' }}>
@@ -233,7 +233,7 @@ export default function TransactionsPage() {
       </div>
 
       {/* Search */}
-      <div className="px-5 mb-3">
+      <div className="px-5 lg:px-8 mb-3">
         <div
           className="flex items-center gap-2 rounded-2xl px-4 py-3"
           style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
@@ -260,13 +260,13 @@ export default function TransactionsPage() {
 
       {/* Tx count for selected month */}
       {selectedMonth && monthTransactions.length > 0 && (
-        <p className="px-5 text-[11px] font-medium uppercase tracking-widest mb-2" style={{ color: 'var(--fg-3)' }}>
+        <p className="px-5 lg:px-8 text-[11px] font-medium uppercase tracking-widest mb-2" style={{ color: 'var(--fg-3)' }}>
           {monthTransactions.length} transaction{monthTransactions.length > 1 ? 's' : ''} · {monthLabel(selectedMonth)}
         </p>
       )}
 
       {/* Chips */}
-      <div className="px-5 flex gap-2 overflow-x-auto pb-2 mb-1" style={{ scrollbarWidth: 'none' }}>
+      <div className="px-5 lg:px-8 flex gap-2 overflow-x-auto pb-2 mb-1" style={{ scrollbarWidth: 'none' }}>
         {categories.map(cat => {
           const active = filter === cat
           return (
@@ -299,7 +299,7 @@ export default function TransactionsPage() {
         </div>
       ) : (
         <div
-          className="mx-5 rounded-2xl overflow-hidden"
+          className="mx-5 lg:mx-8 rounded-2xl overflow-hidden"
           style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
         >
           {filtered.map((tx, i) => (
