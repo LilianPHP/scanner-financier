@@ -3,7 +3,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { TabHeader } from '@/components/TabHeader'
-import { CATEGORY_LABELS, CATEGORY_COLORS } from '@/lib/api'
+import { CATEGORY_LABELS, CATEGORY_COLORS, updateCategory } from '@/lib/api'
 
 type Transaction = {
   id?: string
@@ -74,6 +74,10 @@ export default function TransactionsPage() {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('Tout')
   const [selectedMonth, setSelectedMonth] = useState<string>('')
+  const [pickerTx, setPickerTx] = useState<Transaction | null>(null)
+  const [propagate, setPropagate] = useState(true)
+  const [toast, setToast] = useState('')
+  const [updating, setUpdating] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -132,6 +136,44 @@ export default function TransactionsPage() {
   const monthIdx = months.indexOf(selectedMonth)
   const prevMonth = monthIdx >= 0 && monthIdx < months.length - 1 ? months[monthIdx + 1] : null
   const nextMonth = monthIdx > 0 ? months[monthIdx - 1] : null
+
+  async function handleCategoryChange(tx: Transaction, newCategory: string) {
+    if (!tx.id || newCategory === tx.category) { setPickerTx(null); return }
+    setUpdating(true)
+    try {
+      const res = await updateCategory(tx.id, newCategory, propagate)
+      const txLabel = (tx.label_clean || tx.label_raw || '').toLowerCase()
+      const labelKey = txLabel.split(/\s+/).find(w => w.length >= 4) ?? ''
+      setTransactions(prev => {
+        const next = prev.map(t => {
+          if (t.id === tx.id) return { ...t, category: newCategory }
+          if (propagate && labelKey) {
+            const otherLabel = (t.label_clean || t.label_raw || '').toLowerCase()
+            if (otherLabel.includes(labelKey)) return { ...t, category: newCategory }
+          }
+          return t
+        })
+        try {
+          const raw = sessionStorage.getItem('analysis')
+          if (raw) {
+            const parsed = JSON.parse(raw)
+            parsed.transactions = next
+            sessionStorage.setItem('analysis', JSON.stringify(parsed))
+          }
+        } catch {}
+        return next
+      })
+      const n = res.total_updated ?? 1
+      setToast(`${n} transaction${n > 1 ? 's' : ''} reclassée${n > 1 ? 's' : ''}`)
+      setTimeout(() => setToast(''), 2500)
+    } catch {
+      setToast('Erreur — réessaie')
+      setTimeout(() => setToast(''), 2500)
+    } finally {
+      setUpdating(false)
+      setPickerTx(null)
+    }
+  }
 
   return (
     <>
@@ -300,10 +342,18 @@ export default function TransactionsPage() {
           style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
         >
           {filtered.map((tx, i) => (
-            <div
+            <button
               key={tx.id ?? `${tx.date}-${getLabel(tx)}-${tx.amount}-${i}`}
-              className="flex items-center gap-3 px-4 py-3.5"
-              style={{ borderBottom: i < filtered.length - 1 ? '1px solid var(--border)' : 'none' }}
+              onClick={() => tx.id && setPickerTx(tx)}
+              disabled={!tx.id}
+              className="w-full flex items-center gap-3 px-4 py-3.5 text-left transition-colors"
+              style={{
+                borderBottom: i < filtered.length - 1 ? '1px solid var(--border)' : 'none',
+                background: 'none',
+                cursor: tx.id ? 'pointer' : 'default',
+                fontFamily: 'inherit',
+                color: 'var(--fg)',
+              }}
             >
               <CatIcon cat={tx.category} />
               <div className="flex-1 min-w-0">
@@ -319,7 +369,7 @@ export default function TransactionsPage() {
                 </p>
                 <p className="text-xs mt-0.5" style={{ color: 'var(--fg-3)' }}>{formatDate(tx.date)}</p>
               </div>
-            </div>
+            </button>
           ))}
           {filtered.length === 0 && (
             <div className="py-10 text-center">
@@ -334,6 +384,113 @@ export default function TransactionsPage() {
       )}
 
       <div className="h-8" />
+
+      {/* Toast */}
+      {toast && (
+        <div
+          className="fixed left-1/2 z-[60] px-4 py-2.5 rounded-xl text-sm font-medium pointer-events-none"
+          style={{
+            bottom: 'calc(env(safe-area-inset-bottom, 0) + 90px)',
+            transform: 'translateX(-50%)',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
+            color: 'var(--fg)',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+          }}
+        >
+          {toast}
+        </div>
+      )}
+
+      {/* Category picker — bottom sheet (mobile) / centered modal (desktop) */}
+      {pickerTx && (
+        <div
+          className="fixed inset-0 z-50 flex items-end lg:items-center justify-center"
+          style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}
+          onClick={() => !updating && setPickerTx(null)}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            className="w-full lg:max-w-lg lg:m-4 rounded-t-3xl lg:rounded-3xl p-5"
+            style={{
+              background: 'var(--bg-page)',
+              border: '1px solid var(--border)',
+              maxHeight: '85vh',
+              overflowY: 'auto',
+              paddingBottom: 'calc(env(safe-area-inset-bottom, 0) + 20px)',
+            }}
+          >
+            <div className="flex items-start justify-between mb-1 gap-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--fg-3)' }}>Reclasser</p>
+                <h3 className="text-base font-semibold mt-1 truncate" style={{ letterSpacing: '-0.01em' }}>
+                  {getLabel(pickerTx)}
+                </h3>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--fg-3)' }}>
+                  Actuellement : {CATEGORY_LABELS[pickerTx.category] ?? pickerTx.category}
+                </p>
+              </div>
+              <button
+                onClick={() => setPickerTx(null)}
+                disabled={updating}
+                className="px-2 py-1 rounded-lg"
+                style={{ color: 'var(--fg-3)', background: 'none', border: 'none', cursor: updating ? 'default' : 'pointer' }}
+                aria-label="Fermer"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 mt-4 mb-4">
+              {Object.entries(CATEGORY_LABELS).map(([key, label]) => {
+                const isCurrent = key === pickerTx.category
+                const color = CATEGORY_COLORS[key] ?? '#6B7280'
+                const icon = CAT_ICONS[key] ?? '📦'
+                return (
+                  <button
+                    key={key}
+                    onClick={() => handleCategoryChange(pickerTx, key)}
+                    disabled={updating}
+                    className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition-all active:scale-95"
+                    style={{
+                      background: isCurrent ? color + '20' : 'var(--bg-card)',
+                      border: `1px solid ${isCurrent ? color + '60' : 'var(--border)'}`,
+                      cursor: updating ? 'default' : 'pointer',
+                      fontFamily: 'inherit',
+                      color: 'var(--fg)',
+                      opacity: updating ? 0.6 : 1,
+                    }}
+                  >
+                    <span style={{ fontSize: 18 }}>{icon}</span>
+                    <span className="text-sm font-medium truncate flex-1">{label}</span>
+                    {isCurrent && (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+
+            <label
+              className="flex items-center justify-between gap-3 rounded-xl px-3 py-3"
+              style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', cursor: 'pointer' }}
+            >
+              <span className="text-sm" style={{ color: 'var(--fg-2)' }}>
+                Appliquer aux libellés similaires
+              </span>
+              <input
+                type="checkbox"
+                checked={propagate}
+                onChange={e => setPropagate(e.target.checked)}
+                disabled={updating}
+                style={{ width: 18, height: 18, accentColor: '#1D9E75', cursor: updating ? 'default' : 'pointer' }}
+              />
+            </label>
+          </div>
+        </div>
+      )}
     </>
   )
 }
