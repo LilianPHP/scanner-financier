@@ -142,14 +142,12 @@ export default function TransactionsPage() {
     setUpdating(true)
     try {
       const res = await updateCategory(tx.id, newCategory, propagate)
-      const txLabel = (tx.label_clean || tx.label_raw || '').toLowerCase()
-      const labelKey = txLabel.split(/\s+/).find(w => w.length >= 4) ?? ''
+      // Mirror backend's strict equality on label_clean (api/transactions.py)
       setTransactions(prev => {
         const next = prev.map(t => {
           if (t.id === tx.id) return { ...t, category: newCategory }
-          if (propagate && labelKey) {
-            const otherLabel = (t.label_clean || t.label_raw || '').toLowerCase()
-            if (otherLabel.includes(labelKey)) return { ...t, category: newCategory }
+          if (propagate && tx.label_clean && t.label_clean === tx.label_clean) {
+            return { ...t, category: newCategory }
           }
           return t
         })
