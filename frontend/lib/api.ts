@@ -275,6 +275,18 @@ export async function getBankConnections(): Promise<BankConnection[]> {
   return data.connections
 }
 
+export async function deleteBankConnection(connId: string): Promise<void> {
+  const headers = await getAuthHeader()
+  const res = await apiFetch(`${BACKEND_URL}/banks/connections/${connId}`, {
+    method: 'DELETE',
+    headers,
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.detail || `Erreur suppression (${res.status})`)
+  }
+}
+
 export async function syncBankConnection(connId: string, periodMonths?: number): Promise<UploadResult> {
   const headers = await getAuthHeader()
   const url = periodMonths

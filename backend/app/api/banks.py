@@ -278,3 +278,33 @@ def sync_connection(
         sb.table("bank_connections").update({"period_months": period_months}).eq("id", conn_id).execute()
     body = CallbackRequest(connection_id=conn["powens_connection_id"], state=conn_id)
     return process_callback(body, authorization=authorization)
+
+
+# ── DELETE /banks/connections/{conn_id} ──────────────────────────────────────
+
+@router.delete("/connections/{conn_id}")
+def delete_connection(
+    conn_id: str,
+    authorization: Optional[str] = Header(None),
+):
+    """
+    Supprime une connexion bancaire de Senzio.
+    On supprime uniquement l'entrée locale dans bank_connections — Powens
+    garde la connexion side de leur API tant que l'user ne révoque pas
+    explicitement (ce qui se fait depuis leur webview, pas exposé ici).
+    """
+    user_id = _get_user_id(authorization)
+    sb = get_supabase()
+
+    # Vérifie que la connexion appartient bien à l'user
+    res = sb.table("bank_connections") \
+        .select("id") \
+        .eq("id", conn_id) \
+        .eq("user_id", user_id) \
+        .single() \
+        .execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Connexion introuvable")
+
+    sb.table("bank_connections").delete().eq("id", conn_id).execute()
+    return {"ok": True}

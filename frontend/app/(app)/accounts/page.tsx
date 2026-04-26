@@ -3,15 +3,11 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { SubHeader } from '@/components/SubHeader'
-import { getBankConnectUrl, getBankConnections, syncBankConnection, type BankConnection, BankSyncingError } from '@/lib/api'
+import { getBankConnectUrl, getBankConnections, syncBankConnection, deleteBankConnection, type BankConnection, BankSyncingError } from '@/lib/api'
 
-const PERIOD_OPTIONS = [
-  { value: 1,  label: '1 m' },
-  { value: 3,  label: '3 m' },
-  { value: 6,  label: '6 m' },
-  { value: 12, label: '12 m' },
-  { value: 24, label: '24 m' },
-]
+// Période par défaut pour la connexion initiale + resync. 6 mois est un
+// bon équilibre entre profondeur d'analyse et temps de chargement.
+const DEFAULT_PERIOD_MONTHS = 6
 
 function StatusDot({ status }: { status: string }) {
   const color = status === 'active' ? '#1D9E75' : status === 'syncing' ? '#F59E0B' : '#F87171'
@@ -24,7 +20,16 @@ function StatusDot({ status }: { status: string }) {
   )
 }
 
-function BankCard({ conn, onSync, syncing, isLast }: { conn: BankConnection; onSync: () => void; syncing: boolean; isLast: boolean }) {
+function BankCard({
+  conn, onSync, onDelete, syncing, deleting, isLast,
+}: {
+  conn: BankConnection
+  onSync: () => void
+  onDelete: () => void
+  syncing: boolean
+  deleting: boolean
+  isLast: boolean
+}) {
   const syncDate = conn.last_synced_at
     ? new Date(conn.last_synced_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
     : '—'
@@ -32,7 +37,7 @@ function BankCard({ conn, onSync, syncing, isLast }: { conn: BankConnection; onS
   return (
     <div
       className="flex items-center gap-3 px-4 py-3.5"
-      style={{ borderBottom: isLast ? 'none' : '1px solid var(--border)' }}
+      style={{ borderBottom: isLast ? 'none' : '1px solid var(--border)', opacity: deleting ? 0.5 : 1 }}
     >
       {conn.institution_logo ? (
         <img
@@ -59,11 +64,11 @@ function BankCard({ conn, onSync, syncing, isLast }: { conn: BankConnection; onS
         </p>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <StatusDot status={conn.status} />
         <button
           onClick={onSync}
-          disabled={syncing}
+          disabled={syncing || deleting}
           className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-all active:scale-95"
           style={{
             background: syncing ? 'rgba(29,158,117,0.06)' : 'rgba(29,158,117,0.12)',
@@ -81,6 +86,24 @@ function BankCard({ conn, onSync, syncing, isLast }: { conn: BankConnection; onS
           </svg>
           <span className="hidden sm:inline">{syncing ? 'Sync…' : 'Synchroniser'}</span>
         </button>
+        <button
+          onClick={onDelete}
+          disabled={syncing || deleting}
+          className="w-8 h-8 rounded-lg flex items-center justify-center transition-all active:scale-95"
+          style={{
+            background: 'transparent',
+            color: 'var(--fg-3)',
+            border: '1px solid var(--border)',
+            cursor: deleting ? 'default' : 'pointer',
+          }}
+          aria-label="Déconnecter"
+          title="Déconnecter cette banque"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="3 6 5 6 21 6"/>
+            <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+          </svg>
+        </button>
       </div>
     </div>
   )
@@ -92,9 +115,9 @@ export default function AccountsPage() {
   const [loading, setLoading] = useState(true)
   const [connecting, setConnecting] = useState(false)
   const [syncing, setSyncing] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
-  const [period, setPeriod] = useState(6)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -121,7 +144,7 @@ export default function AccountsPage() {
     setConnecting(true)
     setError('')
     try {
-      const { webview_url } = await getBankConnectUrl(period)
+      const { webview_url } = await getBankConnectUrl(DEFAULT_PERIOD_MONTHS)
       window.location.href = webview_url
     } catch (e: any) {
       setError(e.message || 'Erreur lors de la connexion')
@@ -133,7 +156,7 @@ export default function AccountsPage() {
     setSyncing(connId)
     setError('')
     try {
-      const result = await syncBankConnection(connId, period)
+      const result = await syncBankConnection(connId, DEFAULT_PERIOD_MONTHS)
       sessionStorage.setItem('analysis', JSON.stringify(result))
       showToast(`${result.transactions.length} transactions importées ✓`)
       router.push('/dashboard')
@@ -144,6 +167,21 @@ export default function AccountsPage() {
         setError(e.message || 'Erreur lors de la synchronisation')
       }
       setSyncing(null)
+    }
+  }
+
+  async function handleDelete(connId: string, name: string) {
+    if (!confirm(`Déconnecter ${name} de Senzio ?\n\nTes transactions déjà synchronisées resteront analysées tant que tu ne fais pas de nouvelle synchro. Tu peux te reconnecter à tout moment.`)) return
+    setDeleting(connId)
+    setError('')
+    try {
+      await deleteBankConnection(connId)
+      setConnections(prev => prev.filter(c => c.id !== connId))
+      showToast(`${name} déconnectée ✓`)
+    } catch (e: any) {
+      setError(e.message || 'Erreur lors de la suppression')
+    } finally {
+      setDeleting(null)
     }
   }
 
@@ -195,7 +233,9 @@ export default function AccountsPage() {
                 key={conn.id}
                 conn={conn}
                 onSync={() => handleSync(conn.id)}
+                onDelete={() => handleDelete(conn.id, conn.institution_name)}
                 syncing={syncing === conn.id}
+                deleting={deleting === conn.id}
                 isLast={i === connections.length - 1}
               />
             ))}
@@ -218,40 +258,11 @@ export default function AccountsPage() {
           </div>
         )}
 
-        {/* Period selector */}
-        <div className="mt-5 rounded-2xl px-4 py-4" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-          <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: 'var(--fg-3)' }}>
-            Historique à importer
-          </p>
-          <div className="flex gap-2">
-            {PERIOD_OPTIONS.map(opt => (
-              <button
-                key={opt.value}
-                onClick={() => setPeriod(opt.value)}
-                className="flex-1 py-2 rounded-xl text-xs font-semibold transition-all active:scale-95"
-                style={{
-                  background: period === opt.value ? '#1D9E75' : 'var(--bg-card-hi)',
-                  color: period === opt.value ? '#062A1E' : 'var(--fg-3)',
-                  border: period === opt.value ? 'none' : '1px solid var(--border)',
-                  cursor: 'pointer',
-                  fontFamily: 'inherit',
-                  boxShadow: period === opt.value ? '0 0 16px rgba(29,158,117,0.3)' : 'none',
-                }}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-          <p className="text-[10px] mt-2.5" style={{ color: 'var(--fg-4)' }}>
-            PSD2 garantit 3 mois min · La plupart des banques offrent jusqu'à 13 mois
-          </p>
-        </div>
-
         {/* Connect CTA */}
         <button
           onClick={handleConnect}
           disabled={connecting}
-          className="w-full mt-4 rounded-2xl py-4 text-sm font-semibold transition-all active:scale-95 flex items-center justify-center gap-2.5"
+          className="w-full mt-5 rounded-2xl py-4 text-sm font-semibold transition-all active:scale-95 flex items-center justify-center gap-2.5"
           style={{
             background: '#1D9E75',
             color: '#062A1E',
@@ -274,7 +285,7 @@ export default function AccountsPage() {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 5v14M5 12h14"/>
               </svg>
-              Connecter ma banque — {PERIOD_OPTIONS.find(o => o.value === period)?.label.replace(' m', ' mois')}
+              {connections.length > 0 ? 'Ajouter une autre banque' : 'Connecter ma banque'}
             </>
           )}
         </button>

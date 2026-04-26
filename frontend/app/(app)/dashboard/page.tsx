@@ -680,8 +680,11 @@ export default function DashboardPage() {
           }
         </div>
 
-        {/* MOBILE flow: stacked cards, original behaviour */}
-        <div className="lg:hidden" style={{ padding: `0 16px`, display: 'flex', flexDirection: 'column', gap }}>
+        {/* MOBILE flow: stacked cards, original behaviour.
+            NOTE: do NOT use inline display:flex here — it would beat
+            Tailwind's `lg:hidden` (display:none) and make this block
+            show on desktop too, causing duplicate sections. */}
+        <div className="lg:hidden flex flex-col px-4" style={{ gap }}>
 
           {/* KPI trio */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>

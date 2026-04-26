@@ -94,8 +94,8 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-dvh flex flex-col" style={{ background: 'var(--bg-page)', color: 'var(--fg)' }}>
-      <div className="px-5 pt-5">
+    <div className="min-h-dvh flex flex-col lg:items-center lg:justify-center" style={{ background: 'var(--bg-page)', color: 'var(--fg)' }}>
+      <div className="px-5 pt-5 lg:absolute lg:top-0 lg:left-0 lg:p-8">
         <Link href="/" className="flex items-center gap-2 text-sm" style={{ color: 'var(--fg-2)' }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M15 18l-6-6 6-6"/>
@@ -104,7 +104,7 @@ export default function LoginPage() {
         </Link>
       </div>
 
-      <div className="flex-1 flex flex-col px-6 pt-8 max-w-sm mx-auto w-full">
+      <div className="flex-1 lg:flex-none flex flex-col px-6 pt-8 lg:pt-0 lg:p-10 max-w-sm lg:max-w-md mx-auto w-full lg:rounded-3xl" style={{ background: 'transparent' }}>
         <SenzioMark size={40} />
         <h1 className="mt-5 text-2xl font-semibold" style={{ letterSpacing: '-0.02em' }}>Bon retour.</h1>
         <p className="mt-2 text-sm" style={{ color: 'var(--fg-2)' }}>Connecte-toi pour retrouver tes finances.</p>

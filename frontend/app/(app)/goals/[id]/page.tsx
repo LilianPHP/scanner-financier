@@ -202,6 +202,7 @@ export default function GoalDetailPage() {
   const [goal, setGoal] = useState<Goal | null>(null)
   const [loading, setLoading] = useState(true)
   const [sheet, setSheet] = useState<Sheet>(null)
+  const [deleting, setDeleting] = useState(false)
   const [userInit, setUserInit] = useState('J')
 
   useEffect(() => {
@@ -434,6 +435,31 @@ export default function GoalDetailPage() {
               style={{ background: 'var(--bg-card-hi)', color: 'var(--fg)', border: '1px solid var(--border)', cursor: 'pointer', fontFamily: 'inherit' }}
             >
               + Nouvel objectif
+            </button>
+            <button
+              onClick={async () => {
+                if (!confirm(`Supprimer "${goal.name}" ?\n\nCette action est définitive.`)) return
+                setDeleting(true)
+                const { error: dbErr } = await supabase.from('goals').delete().eq('id', goal.id)
+                setDeleting(false)
+                if (dbErr) {
+                  alert('Erreur lors de la suppression. Réessaie.')
+                  return
+                }
+                router.push('/goals')
+              }}
+              disabled={deleting}
+              className="rounded-xl px-4 py-2.5 text-sm font-medium transition-all active:scale-95 ml-auto"
+              style={{
+                background: 'transparent',
+                color: '#F87171',
+                border: '1px solid rgba(248,113,113,0.25)',
+                cursor: deleting ? 'default' : 'pointer',
+                fontFamily: 'inherit',
+                opacity: deleting ? 0.6 : 1,
+              }}
+            >
+              {deleting ? 'Suppression…' : 'Supprimer'}
             </button>
           </div>
         </div>
