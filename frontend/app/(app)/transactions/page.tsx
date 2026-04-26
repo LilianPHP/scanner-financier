@@ -3,6 +3,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { TabHeader } from '@/components/TabHeader'
+import { CATEGORY_LABELS, CATEGORY_COLORS } from '@/lib/api'
 
 type Transaction = {
   id?: string
@@ -20,30 +21,11 @@ function getLabel(t: Transaction): string {
   return t.label_clean || t.description || t.label_raw || ''
 }
 
-const CAT_COLORS: Record<string, string> = {
-  Logement: '#3B82F6',
-  Courses: '#1D9E75',
-  Abonnements: '#06B6D4',
-  Transport: '#F59E0B',
-  Shopping: '#8B5CF6',
-  Sorties: '#EC4899',
-  Santé: '#F87171',
-  Revenus: '#22C55E',
-  Salaire: '#22C55E',
-  Autre: '#6B7280',
-}
-
 const CAT_ICONS: Record<string, string> = {
-  Logement: '🏠',
-  Courses: '🛒',
-  Abonnements: '📱',
-  Transport: '🚊',
-  Shopping: '🛍️',
-  Sorties: '🍷',
-  Santé: '❤️',
-  Revenus: '💰',
-  Salaire: '💰',
-  Autre: '📦',
+  alimentation: '🛒', logement: '🏠', transport: '🚊', loisirs: '🍷',
+  abonnements: '📱', salaire: '💰', 'frais bancaires': '🏦', sante: '❤️',
+  investissement: '📈', epargne: '🏦', impots: '🏛️', education: '📚',
+  voyage: '✈️', vetements: '🛍️', autres: '📦',
 }
 
 function fmt(n: number) {
@@ -70,7 +52,7 @@ function monthLabel(key: string): string {
 }
 
 function CatIcon({ cat }: { cat: string }) {
-  const color = CAT_COLORS[cat] ?? '#6B7280'
+  const color = CATEGORY_COLORS[cat] ?? '#6B7280'
   const icon = CAT_ICONS[cat] ?? '📦'
   return (
     <div
@@ -83,7 +65,7 @@ function CatIcon({ cat }: { cat: string }) {
 }
 
 const CHIP_LABELS: Record<string, string> = {
-  Abonnements: 'Abos',
+  abonnements: 'Abos',
 }
 
 export default function TransactionsPage() {
@@ -297,7 +279,7 @@ export default function TransactionsPage() {
                 cursor: 'pointer',
               }}
             >
-              {CHIP_LABELS[cat] ?? cat}
+              {cat === 'Tout' ? 'Tout' : (CHIP_LABELS[cat] ?? CATEGORY_LABELS[cat] ?? cat)}
             </button>
           )
         })}
@@ -326,7 +308,7 @@ export default function TransactionsPage() {
               <CatIcon cat={tx.category} />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate" style={{ color: 'var(--fg)' }}>{getLabel(tx)}</p>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--fg-3)' }}>{tx.category}</p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--fg-3)' }}>{CATEGORY_LABELS[tx.category] ?? tx.category}</p>
               </div>
               <div className="text-right flex-shrink-0">
                 <p
