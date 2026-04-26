@@ -335,8 +335,15 @@ def categorize_batch(
             cat = categorize(tx["label_raw"], tx["amount"])
         tx["category"] = cat
 
-    # Passe 2 : fallback IA — crédits ET débits non catégorisés
-    uncategorized = [tx for tx in transactions if tx["category"] == "autres"]
+    # Passe 2 : fallback IA — uniquement les transactions non catégorisées
+    # ET dont le montant est suffisant pour justifier l'appel API.
+    # Seuil 5€ : sous ce montant, l'erreur de catégorisation est négligeable
+    # vs. le coût d'un round-trip Claude (~$0.0002 / label avec Haiku).
+    AI_MIN_AMOUNT = 5.0
+    uncategorized = [
+        tx for tx in transactions
+        if tx["category"] == "autres" and abs(tx.get("amount", 0)) >= AI_MIN_AMOUNT
+    ]
 
     if uncategorized:
         from app.services.ai_categorization import categorize_with_ai

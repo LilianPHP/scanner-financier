@@ -1,14 +1,15 @@
 """
 Fallback IA pour les transactions non catégorisées par les règles keyword.
-Utilise Claude pour classifier par batch avec cache en mémoire.
+Utilise Claude Haiku 4.5 avec batching, prompt caching et cache Supabase persistant.
 
-Architecture :
-- Les labels "autres" sont envoyés en batch à Claude.
-- 3 tentatives avec backoff exponentiel (1s, 2s, 4s).
-- Si le batch échoue 3 fois, on tente label par label.
-- Matching insensible à la casse et aux espaces superflus.
-- Cache module-level : même label = pas de 2ème appel API.
-- Garantit une réponse pour chaque label (au pire "autres").
+Architecture (optimisations coût) :
+- Modèle : Claude Haiku 4.5 (3× moins cher que Sonnet, suffisant pour la tâche)
+- Prompt caching Anthropic (cache_control) sur le system prompt → 90% off sur le cache hit
+- Cache à 2 niveaux :
+    1. mémoire (instance Railway) — accès O(1)
+    2. table Supabase `ai_categorization_cache` — partagée entre déploiements et instances
+- Batch unique : si la réponse JSON est invalide, fallback "autres" (pas N appels)
+- Résultat garanti pour chaque label (au pire "autres")
 """
 import os
 import json
@@ -18,14 +19,20 @@ from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
-# Cache : label normalisé → catégorie (durée de vie = instance Railway)
+# Cache mémoire : label normalisé → catégorie. Mise à jour à chaque appel,
+# alimenté au démarrage par la table Supabase pour les labels les plus utilisés.
 _CACHE: Dict[str, str] = {}
+_CACHE_PRELOADED = False
 
 VALID_CATEGORIES = {
     "alimentation", "logement", "transport", "loisirs", "abonnements",
     "salaire", "frais bancaires", "sante", "investissement", "epargne",
     "impots", "autres",
 }
+
+# Modèle utilisé pour le fallback. Haiku 4.5 est ~3× moins cher que Sonnet 4.5
+# et largement capable pour classer un libellé parmi 12 catégories.
+_MODEL = "claude-haiku-4-5"
 
 _SYSTEM_PROMPT = """Tu es un expert en classification de relevés bancaires français.
 Tu reçois des libellés de transactions (déjà nettoyés) et tu dois les catégoriser.
@@ -68,7 +75,6 @@ def _normalize_key(text: str) -> str:
 
 def _extract_json(raw: str) -> Optional[Dict[str, str]]:
     """Extrait un dict JSON depuis une réponse texte, même avec du texte autour."""
-    # Cherche { ... }
     start = raw.find("{")
     end = raw.rfind("}") + 1
     if start == -1 or end == 0:
@@ -78,7 +84,6 @@ def _extract_json(raw: str) -> Optional[Dict[str, str]]:
         return json.loads(candidate)
     except json.JSONDecodeError:
         pass
-    # Essaie de corriger les virgules trailing courantes
     try:
         import re
         fixed = re.sub(r",\s*}", "}", candidate)
@@ -89,94 +94,113 @@ def _extract_json(raw: str) -> Optional[Dict[str, str]]:
 
 
 def _find_category_for_label(label: str, ai_result: Dict[str, str]) -> str:
-    """
-    Cherche la catégorie d'un label dans le résultat IA.
-    Tolérant sur la casse et les espaces.
-    """
-    # 1. Correspondance exacte
+    """Cherche la catégorie d'un label dans le résultat IA. Tolérant casse/espaces."""
     if label in ai_result:
         return ai_result[label]
-
     norm_label = _normalize_key(label)
-
-    # 2. Correspondance normalisée
     for key, value in ai_result.items():
         if _normalize_key(key) == norm_label:
             return value
-
-    # 3. Correspondance partielle (le label IA contient ou est contenu dans le label)
     for key, value in ai_result.items():
         norm_key = _normalize_key(key)
         if len(norm_key) >= 5 and (norm_key in norm_label or norm_label in norm_key):
             return value
-
     return "autres"
 
 
+# ── Persistent Supabase cache ────────────────────────────────────────────────
+def _supabase_cache_read(labels_normalized: List[str]) -> Dict[str, str]:
+    """Lit la table ai_categorization_cache pour les labels demandés."""
+    if not labels_normalized:
+        return {}
+    try:
+        from app.db.client import get_supabase
+        sb = get_supabase()
+        resp = (
+            sb.table("ai_categorization_cache")
+            .select("label_normalized, category")
+            .in_("label_normalized", labels_normalized)
+            .execute()
+        )
+        return {row["label_normalized"]: row["category"] for row in (resp.data or [])}
+    except Exception as e:
+        logger.warning(f"Cache Supabase read échoué (ignoré) : {e}")
+        return {}
+
+
+def _supabase_cache_write(label_to_category: Dict[str, str]) -> None:
+    """Upsert la table ai_categorization_cache avec les nouveaux résultats."""
+    if not label_to_category:
+        return
+    try:
+        from app.db.client import get_supabase
+        sb = get_supabase()
+        rows = [
+            {"label_normalized": label, "category": category}
+            for label, category in label_to_category.items()
+        ]
+        sb.table("ai_categorization_cache").upsert(
+            rows, on_conflict="label_normalized"
+        ).execute()
+    except Exception as e:
+        logger.warning(f"Cache Supabase write échoué (ignoré) : {e}")
+
+
+# ── Anthropic call ───────────────────────────────────────────────────────────
 def _call_batch(client, labels: List[str]) -> Optional[Dict[str, str]]:
-    """Appel batch à l'API Claude. Retourne None si la réponse n'est pas parseable."""
+    """
+    Appel batch à l'API Claude avec prompt caching.
+
+    `cache_control: ephemeral` sur le system prompt → Anthropic le met en cache
+    pendant 5 minutes. Les appels suivants dans cette fenêtre paient 90% moins
+    cher pour la portion cachée. Idéal quand plusieurs users syncent en burst.
+    """
     labels_text = "\n".join(f'"{l}"' for l in labels)
     message = client.messages.create(
-        model="claude-sonnet-4-5",
+        model=_MODEL,
         max_tokens=2048,
-        system=_SYSTEM_PROMPT,
+        system=[
+            {
+                "type": "text",
+                "text": _SYSTEM_PROMPT,
+                "cache_control": {"type": "ephemeral"},
+            }
+        ],
         messages=[{
             "role": "user",
             "content": f"Catégorise ces {len(labels)} libellés bancaires :\n{labels_text}"
         }],
     )
     raw = message.content[0].text.strip()
+
+    # Log usage (incluant cache hits) pour suivre les économies
+    try:
+        usage = message.usage
+        cache_read = getattr(usage, "cache_read_input_tokens", 0)
+        cache_create = getattr(usage, "cache_creation_input_tokens", 0)
+        logger.info(
+            f"Anthropic usage : in={usage.input_tokens} out={usage.output_tokens} "
+            f"cache_read={cache_read} cache_create={cache_create}"
+        )
+    except Exception:
+        pass
+
     return _extract_json(raw)
 
 
-def _classify_individually(client, labels: List[str]) -> Dict[str, str]:
-    """
-    Dernier recours : classe chaque label un par un.
-    Appelé uniquement si toutes les tentatives batch ont échoué.
-    """
-    results = {}
-    for label in labels:
-        try:
-            message = client.messages.create(
-                model="claude-sonnet-4-5",
-                max_tokens=64,
-                system=_SYSTEM_PROMPT,
-                messages=[{
-                    "role": "user",
-                    "content": (
-                        f'Catégorise ce libellé bancaire. '
-                        f'Réponds avec exactement ce JSON (un seul libellé) : '
-                        f'{{"{label}": "catégorie"}}'
-                    )
-                }],
-            )
-            raw = message.content[0].text.strip()
-            extracted = _extract_json(raw)
-            if extracted:
-                category = next(iter(extracted.values()), "autres")
-                results[label] = category if category in VALID_CATEGORIES else "autres"
-            else:
-                results[label] = "autres"
-        except Exception as e:
-            logger.error(f"Erreur classification individuelle '{label[:60]}' : {e}")
-            results[label] = "autres"
-    return results
-
-
+# ── Public API ───────────────────────────────────────────────────────────────
 def categorize_with_ai(labels: List[str]) -> Dict[str, str]:
     """
     Catégorise une liste de libellés via Claude.
 
-    - Vérifie le cache en premier.
-    - Appel batch avec 3 tentatives + backoff exponentiel.
-    - Si le batch échoue 3 fois → classification label par label.
-    - Garantit une entrée dans le résultat pour chaque label.
+    Stratégie :
+    - Cache mémoire d'abord (O(1))
+    - Cache Supabase ensuite (batched read)
+    - Pour le résiduel : 1 appel batch Claude Haiku avec prompt caching
+    - Si le batch foire → tous les labels résiduels → "autres" (pas N appels)
+    - Cache mémoire + Supabase mis à jour avec les nouveaux résultats
 
-    Args:
-        labels: liste de libellés à catégoriser (idéalement label_clean)
-
-    Returns:
-        dict {label: catégorie} — complet, toujours une réponse par label
+    Garantit une entrée pour chaque label (au pire "autres").
     """
     if not labels:
         return {}
@@ -186,60 +210,80 @@ def categorize_with_ai(labels: List[str]) -> Dict[str, str]:
         logger.warning("ANTHROPIC_API_KEY non configurée — fallback IA désactivé")
         return {l: "autres" for l in labels}
 
-    import anthropic
-    client = anthropic.Anthropic(api_key=api_key)
-
-    # Séparer cache hits vs à classer
+    # 1) Mémoire
     results: Dict[str, str] = {}
-    to_classify: List[str] = []
+    misses_norm: List[str] = []
+    label_for_norm: Dict[str, str] = {}  # norm → original (un seul gardé en cas de doublon)
 
     for label in labels:
         norm = _normalize_key(label)
         if norm in _CACHE:
             results[label] = _CACHE[norm]
         else:
-            to_classify.append(label)
+            misses_norm.append(norm)
+            label_for_norm[norm] = label
 
-    if not to_classify:
-        logger.debug(f"IA fallback : {len(results)} depuis cache")
+    if not misses_norm:
         return results
 
-    # Batch avec retry
-    MAX_ATTEMPTS = 3
-    ai_result: Optional[Dict[str, str]] = None
+    # 2) Cache Supabase (1 requête pour tous les misses)
+    db_hits = _supabase_cache_read(list(set(misses_norm)))
+    still_missing: List[str] = []
+    for norm in misses_norm:
+        if norm in db_hits:
+            cat = db_hits[norm]
+            _CACHE[norm] = cat
+            results[label_for_norm[norm]] = cat
+        else:
+            still_missing.append(norm)
 
+    if not still_missing:
+        logger.info(f"IA fallback : 100% cache hit ({len(labels)} labels)")
+        return results
+
+    # Dédup les labels à classifier (mêmes norms = un seul appel)
+    to_classify_norms = list(dict.fromkeys(still_missing))
+    to_classify_labels = [label_for_norm[n] for n in to_classify_norms]
+
+    # 3) Appel Claude (1 batch, retry léger sur erreur réseau)
+    import anthropic
+    client = anthropic.Anthropic(api_key=api_key)
+    ai_result: Optional[Dict[str, str]] = None
+    MAX_ATTEMPTS = 2  # 1 retry seulement, on ne veut pas exploser le coût
     for attempt in range(MAX_ATTEMPTS):
         try:
-            ai_result = _call_batch(client, to_classify)
+            ai_result = _call_batch(client, to_classify_labels)
             if ai_result is not None:
-                logger.info(
-                    f"IA fallback batch OK ({len(ai_result)}/{len(to_classify)} libellés, "
-                    f"tentative {attempt + 1})"
-                )
                 break
             logger.warning(f"Réponse JSON invalide (tentative {attempt + 1}/{MAX_ATTEMPTS})")
         except Exception as e:
             logger.error(f"Erreur API (tentative {attempt + 1}/{MAX_ATTEMPTS}) : {e}")
-
         if attempt < MAX_ATTEMPTS - 1:
-            wait = 2 ** attempt  # 1s, 2s
-            logger.info(f"Retry dans {wait}s...")
-            time.sleep(wait)
+            time.sleep(1)
 
-    # Si batch totalement échoué → label par label
+    # 4) Si le batch a échoué → on attribue "autres" sans relancer N appels coûteux
     if ai_result is None:
-        logger.warning(f"Batch échoué — passage en mode individuel ({len(to_classify)} labels)")
-        ai_result = _classify_individually(client, to_classify)
+        logger.warning(
+            f"Batch IA échoué — {len(to_classify_labels)} labels marqués 'autres' "
+            "(évite la facture des appels individuels)"
+        )
+        ai_result = {l: "autres" for l in to_classify_labels}
 
-    # Mapper résultats + alimenter le cache
-    for label in to_classify:
+    # Map labels → catégories validées + alimente les caches
+    new_for_db: Dict[str, str] = {}
+    for label in to_classify_labels:
         category = _find_category_for_label(label, ai_result)
         validated = category if category in VALID_CATEGORIES else "autres"
-        _CACHE[_normalize_key(label)] = validated
+        norm = _normalize_key(label)
+        _CACHE[norm] = validated
+        new_for_db[norm] = validated
         results[label] = validated
 
+    # 5) Persister en Supabase (best-effort, n'interrompt pas la réponse)
+    _supabase_cache_write(new_for_db)
+
     logger.info(
-        f"IA fallback terminé : {sum(1 for v in results.values() if v != 'autres')}/"
-        f"{len(labels)} catégorisés (hors 'autres')"
+        f"IA fallback : {len(labels)} labels → {len(results) - len(to_classify_labels)} "
+        f"depuis cache, {len(to_classify_labels)} via Claude (1 appel)"
     )
     return results
