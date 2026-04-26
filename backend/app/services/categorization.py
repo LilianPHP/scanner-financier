@@ -5,6 +5,30 @@ L'IA (Claude) est utilisée en fallback pour les transactions non catégorisées
 from typing import List, Dict, Any, Optional
 
 
+# PRIORITY_RULES : patterns qui doivent gagner même si un mot-clé moins spécifique
+# d'une autre catégorie matche. Tournent AVANT CATEGORY_RULES.
+# Cas typiques : "Uber Eats" doit gagner sur "Uber" générique → transport;
+# "TotalEnergies station" doit aller en transport (carburant) plutôt que
+# logement (électricité).
+PRIORITY_RULES: List[tuple[str, str]] = [
+    # Livraison de repas — sinon "uber " transport gagnerait
+    ("uber eats",   "alimentation"),
+    ("deliveroo",   "alimentation"),
+    ("just eat",    "alimentation"),
+    ("frichti",     "alimentation"),
+    ("foodcheri",   "alimentation"),
+    ("stuart ",     "alimentation"),
+    # TotalEnergies à la pompe — sinon "totalenergies" logement gagnerait
+    ("totalenergies station", "transport"),
+    ("totalenergies access",  "transport"),
+    # Carrefour Banque (frais) ne doit pas finir en alimentation
+    ("carrefour banque",  "frais bancaires"),
+    # Amazon Prime (abonnement) ne doit pas finir en loisirs (Amazon générique)
+    ("amazon prime",      "abonnements"),
+    ("prime video",       "abonnements"),
+]
+
+
 # Règles directionnelles : certains libellés signifient des choses différentes
 # selon que c'est un crédit ou un débit.
 DIRECTION_RULES: Dict[str, Dict[str, str]] = {
@@ -14,59 +38,292 @@ DIRECTION_RULES: Dict[str, Dict[str, str]] = {
     # CPAM : remboursement (crédit) = santé, prélèvement (débit) = santé aussi
     "cpam remboursement": {"credit": "sante"},
     "remboursement securite sociale": {"credit": "sante"},
+    # Remboursements génériques (mutuelle, employeur, etc.) → santé/salaire selon direction
+    "remboursement mutuelle": {"credit": "sante"},
+    "remb mutuelle":          {"credit": "sante"},
+    # Caf : allocations (crédit) → salaire, prélèvement (débit) → impots
+    "caf ":                   {"credit": "salaire"},
+    "caf-":                   {"credit": "salaire"},
+    "caisse allocations":     {"credit": "salaire"},
 }
 
+# NOTE on order: Python dicts preserve insertion order, and the matcher returns
+# the first hit. Highly-specific categories MUST come first so e.g.
+# "CARREFOUR BANQUE COTISATION" lands in `frais bancaires`, not `alimentation`.
 CATEGORY_RULES: Dict[str, List[str]] = {
+    # ── 1. Frais bancaires (very specific patterns) ─────────────────────────
+    "frais bancaires": [
+        # Cotisations cartes & offres
+        "cotisation carte", "cotisation compte", "cotisation offre", "offre premium",
+        "cotisation visa", "cotisation mastercard", "cotisation amex",
+        "carrefour banque", "boursorama frais", "lcl frais", "ing frais",
+        # Frais & commissions
+        "commission", "frais de tenue", "frais bancaires", "agios",
+        "interet debiteur", "interets debiteurs",
+        "frais virement", "frais sepa", "frais change", "frais cb",
+        "frais retrait", "frais decouvert", "frais incident",
+        "frais paiement etranger", "frais commerce etranger",
+        "decouvert non autorise", "rejet prelevement",
+        # Transferts P2P (libellé reconnaissable, montant variable)
+        "lydia ", "lydia*", "lydia-", "paylib", "pumpkin",
+        # Australie / International
+        "wise ", "transferwise", "western union", "worldremit", "remitly",
+        "osko ", "payid", "bpay ",
+        "atm fee", "atm withdrawal", "international fee", "foreign transaction",
+    ],
+
+    # ── 2. Salaire ──────────────────────────────────────────────────────────
     "salaire": [
-        "salaire", " paie ", "remuneration", "virement employeur",
+        "salaire", " paie ", "remuneration", "virement employeur", "vir employeur",
+        "vir sepa salaire", "salaires", "bulletin de paie",
         "france travail revenu", "are ", "indemnite chomage",
-        "allocations familiales", "caf ", "cpam versement", "retraite", "pension retraite",
+        "allocations familiales", "caf ", "caf-", "caisse allocations",
+        "cpam versement", "retraite", "pension retraite", "carsat ", "agirc-arrco",
         "alloca",          # FRANCE TRAVAIL DR IDF ALLOCA...
         "chomage",
+        # Indemnités
+        "indemnite stage", "gratification stage", "stage ", "ags ",
+        "prime ", "13e mois", "interessement", "participation",
+        "bourse crous", "bourse etudiante", "bourse etude",
+        # Remboursements employeur (pris en charge transport, télétravail)
+        "remb employeur", "remboursement employeur",
     ],
-    "investissement": [
-        "bitstack", "crypto", "bitcoin", "ethereum", "bourse",
-        "trading", " pea ", "cto ", "coinbase", "binance", "kraken",
-        "degiro", "trade republic", "boursorama courtage",
-    ],
-    "epargne": [
-        "livret a", "ldds", "ldd ", "pel ", "cel ", "livret jeune",
-        "livret epargne", "emis web",   # "VIREMENT EMIS WEB M." → épargne perso
-        "virement a moi", "virement perso", "epargne",
-    ],
+
+    # ── 3. Impôts & administratif ───────────────────────────────────────────
     "impots": [
-        "france travail prelevement", "france travail idf",  # prelevement avant france travail dans le libelle CA
-        "impots", "dgfip", "tva",
-        "taxe fonciere", "taxe habitation", "urssaf", "cotisation sociale",
+        "france travail prelevement", "france travail idf",
+        "impot", "dgfip", "tva", "tipi ",
+        "taxe fonciere", "taxe habitation", "taxe d'habitation",
+        "redevance audiovisuelle", "contribution audiovisuelle",
+        "urssaf", "cotisation sociale", "cotisations sociales",
         "rsi ", "cipav", "sip ", "tresor public",
-        # Australie / International — frais administratifs et visas
+        "amende", "fps ", "antai ", "infraction",
+        "carte grise", "ants ", "permis de conduire",
+        # Australie / International
         "working holiday visa", "tourist visa", "student visa", "visa fee",
         "ato ", "australian tax", "medicare levy",
         "service nsw", "service vic", "service qld", "vicroads", "transport nsw",
     ],
+
+    # ── 4. Investissement ───────────────────────────────────────────────────
+    "investissement": [
+        # Crypto exchanges
+        "bitstack", "crypto", "bitcoin", "ethereum",
+        "coinbase", "binance", "kraken", "bitvavo", "bitpanda",
+        "crypto.com", "swissborg", "bitfinex", "gemini",
+        # Bourse / courtiers
+        "bourse", "trading", " pea ", "cto ", "compte titres",
+        "degiro", "trade republic", "boursorama courtage",
+        "bforbank invest", "fortuneo bourse", "saxo bank", "interactive brokers",
+        # Robo-advisors / assurance-vie
+        "yomoni", "nalo ", "linxea", "spirica", "ramify", "goodvest",
+        # Plateformes UK/AU
+        "etoro", "freetrade", "vanguard ", "blackrock",
+    ],
+
+    # ── 5. Épargne ──────────────────────────────────────────────────────────
+    "epargne": [
+        "livret a", "ldds", "ldd ", "pel ", "cel ", "livret jeune",
+        "livret epargne", "livret bleu", "livret developpement",
+        "emis web",   # "VIREMENT EMIS WEB M." → épargne perso
+        "virement a moi", "virement perso", "epargne",
+        "alimentation epargne", "transfert epargne",
+        # Australie : Mighty/Spaceship/Up Saver
+        "savings account", "spaceship", "mighty save",
+    ],
+
+    # ── 6. Logement ─────────────────────────────────────────────────────────
+    "logement": [
+        "loyer", "charges locatives", "charges copropriete",
+        # Énergie FR
+        "edf ", "engie ", "gdf ", "totalenergies", "total energies",
+        "vattenfall", "plum energie", "octopus energy", "eni gas",
+        "mint energie", "ekwateur", "alterna ", "ohm energie",
+        "carrefour energie",  # fournisseur d'électricité Carrefour
+        # Eau
+        "eau ", "veolia ", "suez ", "saur ", "lyonnaise des eaux",
+        # Assurance habitation
+        "assurance habitation", "assurance logement", "assurance mrh",
+        "maaf ", "macif ", "axa ", "allianz ", "generali ", "matmut ",
+        "groupama", "gmf ", "maif ", "luko ", "lemonade",
+        "april ", "swiss life", "harmonie mutuelle",
+        # Syndic / immobilier
+        "copropriete", "syndic ", "gardien", "foncia", "nexity", "citya",
+        "sci ", "agence immobiliere", "loueur ",
+        # Maison / déco
+        "darty ", "boulanger ", "ikea ", "but ", "conforama",
+        "leroy merlin", "castorama", "brico depot", "mr bricolage",
+        "maisons du monde", "la redoute interieur", "alinea ",
+        "amazon basics", "ali express maison",
+        # Australie
+        "bunnings", "mitre 10", "total tools", "diy ",
+        "origin energy", "agl ", "energex", "ausgrid", "synergy ",
+        "real estate", "domain.com", "rent ", "strata ",
+    ],
+
+    # ── 7. Santé ────────────────────────────────────────────────────────────
+    "sante": [
+        "pharmacie", "pharmacy", "drug store", "drugstore",
+        # Marques pharma FR
+        "lafayette ", "pharmavie", "univers pharmacie", "leadersante",
+        # Médecins / spé
+        "medecin", "docteur", "dr ", "dentiste", "dentist", "orthodontiste",
+        "opticien", "optic 2000", "krys ", "atol ", "afflelou", "grandvision",
+        "kinesitherapeute", "kine ", "osteopathe", "osteo ", "chiropracteur",
+        "podologue", "orthophoniste", "sage femme", "sage-femme",
+        "infirmier", "infirmiere", "sophrologue", "naturopathe",
+        "psychologue", "psychiatre", "psychotherapeute",
+        "dermatologue", "dermato ", "ophtalmologue", "ophtalmo ",
+        "cardiologue", "gynecologue", "gyneco ", "pediatre",
+        # Établissements
+        "hopital", "clinique", "centre medical", "maison medicale",
+        # Téléconsult
+        "doctolib", "maiia ", "qare ", "livi ", "mesdocteurs",
+        # Mutuelles & remboursements
+        "mutuelle", "prevoyance", "harmonie ", "alan ", "april sante",
+        "ameli", "cpam ", "msa ", "ramsay sante",
+        # Australie
+        "chemist warehouse", "priceline", "terry white", "blooms the chemist",
+        "medical centre", "bulk bill", "medibank", "bupa ", "hcf ",
+        "nib health", "australian unity",
+    ],
+
+    # ── 8. Abonnements (telco, streaming, SaaS) ─────────────────────────────
     "abonnements": [
-        # France
-        "free ", "orange ", "sfr ", "bouygues",
-        "netflix", "spotify", "amazon prime", "disney+", "disney plus",
-        "canal+", "apple tv", "hulu", "dazn",
-        "google play", "google one", "apple icloud", "apple music",
-        "adobe", "microsoft 365", "dropbox", "youtube premium",
-        "bee tv", "molotov", "salto",
+        # Telco FR
+        "free mobile", "free telecom", "free fix",
+        "orange ", "sosh ", "sfr ", "red by sfr", "bouygues", "bbox ", "bytel ",
+        "prixtel", "la poste mobile", "coriolis", "lebara", "lycamobile",
+        # Streaming vidéo
+        "netflix", "amazon prime", "disney+", "disney plus", "canal+",
+        "apple tv", "hulu", "dazn", "youtube premium", "molotov", "salto",
+        "crunchyroll", "twitch", "vimeo ",
+        # Streaming musique
+        "spotify", "apple music", "deezer", "tidal ", "soundcloud",
+        # SaaS / Cloud / Logiciels
+        "google play", "google one", "google workspace", "google storage",
+        "apple icloud", "icloud ", "apple one",
+        "adobe", "microsoft 365", "office 365", "ms office",
+        "dropbox", "notion ", "linear ", "figma ", "miro ",
+        "openai", "chatgpt", "anthropic", "claude.ai",
+        "github", "gitlab", "vercel", "netlify", "cloudflare",
+        "slack ", "zoom ", "loom ", "calendly",
+        "wordpress", "shopify", "wix ", "squarespace",
+        "presse ", "le monde ", "le figaro", "liberation", "mediapart",
+        "lefigaro", "lemonde", "premium",
         # Australie / International
         "telstra", "optus ", "vodafone", "tpg ", "aussie broadband",
         "stan ", "binge ", "kayo ", "foxtel", "paramount+",
         "amazon au", "prime video",
     ],
+
+    # ── 9. Transport ────────────────────────────────────────────────────────
+    "transport": [
+        # VTC / taxi
+        "uber ", "bolt ", "heetch", "taxi", "vtc ", "kapten ", "freenow",
+        "lyft ", "didi ",
+        # Train FR
+        "sncf", "trainline", "omio ", "ouigo", "tgv ", "ter ", "intercites",
+        "eurostar", "thalys", "thello", "renfe ",
+        # Bus longue distance
+        "blablacar", "ouibus", "flixbus", "isilines", "eurolines",
+        # Transports en commun FR
+        "ratp", "navigo", "transpole", "tcl ", "tan ", "tisseo",
+        "tbm ", "stas ", "star ", "bibus", "tag ", "twisto",
+        "ile-de-france mobilites", "idf mobilites", "idfm ",
+        # Carburant / stations FR
+        "essence", "carburant", "total ", "totalenergies station",
+        "bp ", "shell ", "esso ", "q8 ", "station service", "avia ",
+        "leclerc energie",  # carte carburant Leclerc
+        # Péage / parking / autoroutes
+        "peage", "parking", "indigo ", "q-park", "saemes",
+        "autoroutes", "vinci autoroutes", "sanef", "apr ",
+        # Mobilités douces
+        "velib", "lime ", "bird ", "tier ", "voi ", "dott ",
+        # Aérien FR/EU
+        "air france", "airfrance", "transavia", "easyjet", "ryanair",
+        "lufthansa", "klm ", "british airways", "vueling", "wizz air",
+        # Location voiture
+        "europcar", "hertz ", "avis ", "sixt ", "enterprise rent",
+        "getaround ", "drivy ", "ouicar ",
+        # Australie / International
+        "7-eleven", "ampol", "caltex", "united petrol", "metro petroleum",
+        "go card", "myki ", "opal ", "translink", "ptv ", "transperth",
+        "qantas", "jetstar", "virgin australia", "rex airlines",
+        "airasia", "scoot ", "tigerair",
+        "bus ", "tram ", "ferry ", "train ",
+    ],
+
+    # ── 10. Voyage (hébergement & séjours) ──────────────────────────────────
+    "voyage": [
+        "hotel", "booking.com", "airbnb", "abritel", "hostelworld",
+        "expedia", "hotels.com", "agence de voyage", "club med", "thomas cook",
+        "tripadvisor", "voyage", "sejour", "vacances", "circuit ", "croisiere",
+        "getyourguide", "civitatis", "viator", "klook ",
+        "ibis ", "novotel", "mercure ", "accor", "campanile", "f1 ", "premiere classe",
+        "hilton", "marriott", "best western", "ihg ",
+        "stayz ", "wotif ", "lastminute",
+    ],
+
+    # ── 11. Éducation ───────────────────────────────────────────────────────
+    "education": [
+        "universite", "university", "fac ", "ecole ", "ecole de ",
+        "polytechnique", "sciences po", "hec ", "essec ", "edhec", "em lyon",
+        "sorbonne", "dauphine", "neoma", "skema", "audencia", "ipag ",
+        "scolarite", "frais de scolarite", "crous ", "campus", "tafe ", "hecs ",
+        "udemy", "coursera", "openclassrooms", "skillshare",
+        "duolingo", "babbel ", "assimil", "memrise", "rosetta stone",
+        "formation", "elephorm", "ladigitale",
+        "toefl", "ielts", "delf", "dalf", "tcf ", "tef ",
+        "librairie", "papeterie", "fnac scolaire",
+        "tafe ", "university", "hecs ",
+    ],
+
+    # ── 12. Vêtements & mode ────────────────────────────────────────────────
+    "vetements": [
+        # Fast fashion
+        "zara", "h&m", "hm ", "uniqlo", "primark", "mango ", "bershka",
+        "pull&bear", "stradivarius", "kiabi", "promod",
+        "shein ", "asos ", "zalando", "la redoute", "boohoo ", "pretty little",
+        # Fashion FR
+        "sezane", "rouje", "ami paris", "isabel marant", "maje ", "sandro ",
+        "the kooples", "celio ", "jules ", "brice ",
+        "lacoste", "petit bateau", "agnes b", "comptoir des cotonniers",
+        "etam ", "darjeeling", "princesse tam", "intimissimi",
+        # Sport-style
+        "nike ", "adidas ", "puma ", "new balance", "reebok", "asics ",
+        "decathlon", "go sport", "intersport", "courir ", "foot locker",
+        "jd sports", "snipes ", "size?", "vans ", "converse",
+        "carhartt", "levis ", "levi's", "wrangler",
+        # Grands magasins (mode)
+        "galeries lafayette", "printemps haussmann", "bhv ", "le bon marche",
+        # Australie
+        "cotton on", "country road", "witchery", "the iconic", "glassons",
+        "hype dc",
+    ],
+
+    # ── 13. Alimentation ────────────────────────────────────────────────────
     "alimentation": [
-        # France
+        # Supermarchés FR
         "carrefour", "leclerc", "lidl", "aldi", "auchan", "intermarche",
-        "monoprix", "franprix", "casino ", "super u", "netto ",
-        "biocoop", "naturalia", "picard",
-        "uber eats", "deliveroo", "just eat", "dominos",
-        "mcdonald", "burger king", "kfc", "subway", "quick ",
-        "boulangerie", "patisserie", "boucherie", "fromagerie",
-        "restaurant", "cafe ", "bistrot", "brasserie",
-        "sushi", "pizza", "kebab",
+        "monoprix", "franprix", "casino ", "super u", "marche u", "u express",
+        "netto ", "cora ", "g20 ", "spar ", "diagonal ", "petit casino",
+        "biocoop", "naturalia", "la vie claire", "bio c bon", "picard",
+        "grand frais", "marche frais", "primeur",
+        # Livraison repas
+        "uber eats", "deliveroo", "just eat", "stuart ", "frichti", "foodcheri",
+        "dominos", "pizza hut", "sushi shop", "class'croute",
+        # Fast-food chaînes
+        "mcdonald", "mc do", "burger king", "kfc", "subway", "quick ",
+        "five guys", "popeyes", "leon de bruxelles", "buffalo grill",
+        "bagelstein", "exki ", "pomme de pain", "brioche doree",
+        "paul ", "eric kayser", "marie blachere", "ange ",
+        # Cafés / coffee
+        "starbucks", "columbus cafe", "pret a manger", "costa coffee",
+        # Restaurants génériques
+        "boulangerie", "patisserie", "boucherie", "fromagerie", "caviste",
+        "restaurant", "cafe ", "bistrot", "brasserie", "bar a ",
+        "sushi", "pizza", "kebab", "tacos", "burger ", "wok ",
         # Australie / International
         "coles", "woolworths", "iga ", "costco", "harris farm",
         "countdown", "pak'nsave", "new world",
@@ -75,93 +332,37 @@ CATEGORY_RULES: Dict[str, List[str]] = {
         "the cheesecake shop", "bakers delight",
         "twelve cafe", "yo-chi", "yo chi",
     ],
-    "transport": [
-        # France
-        "uber ", "bolt ", "heetch", "taxi", "vtc ",
-        "sncf", "ratp", "navigo", "transpole", "tcl ", "tan ",
-        "ouigo", "tgv ", "ter ", "intercites",
-        "blablacar", "ouibus", "flixbus",
-        "essence", "carburant", "total ", "bp ", "shell ",
-        "esso ", "q8 ", "station service",
-        "peage", "parking", "indigo ", "q-park",
-        "autoroutes", "vinci autoroutes", "sanef",
-        "velib", "lime ", "bird ", "tier ",
-        # Australie / International
-        "7-eleven", "ampol", "caltex", "united petrol", "metro petroleum",
-        "go card", "myki ", "opal ", "translink", "ptv ", "transperth",
-        "qantas", "jetstar", "virgin australia", "rex airlines",
-        "airasia", "scoot ", "tigerair",
-        "bus ", "tram ", "ferry ", "train ",
-    ],
-    "logement": [
-        "loyer", "charges locatives", "edf ", "engie ", "gdf ",
-        "eau ", "veolia ", "suez ", "saur ",
-        "assurance habitation", "assurance logement", "maaf ",
-        "macif ", "axa ", "allianz ", "generali ", "matmut ",
-        "copropriete", "syndic ", "gardien",
-        "darty ", "boulanger ", "ikea ", "but ", "conforama",
-        # Australie
-        "bunnings", "mitre 10", "total tools", "diy ",
-        "origin energy", "agl ", "energex", "ausgrid", "synergy ",
-        "real estate", "domain.com", "rent ", "strata ",
-    ],
-    "sante": [
-        "pharmacie", "pharmacy", "drug store", "drugstore",  # labels FR et EN
-        "medecin", "docteur", "dentiste", "dentist", "opticien",
-        "kinesitherapeute", "osteopathe", "hopital", "clinique",
-        "mutuelle", "prevoyance",
-        "doctolib", "ameli", "cpam ",
-        # Australie
-        "chemist warehouse", "priceline", "terry white", "blooms the chemist",
-        "medical centre", "bulk bill", "medibank", "bupa ", "hcf ",
-        "nib health", "australian unity",
-    ],
+
+    # ── 14. Loisirs (catch-all en dernier) ──────────────────────────────────
     "loisirs": [
-        # France
-        "cinema", "ugc ", "pathe ", "gaumont ", "mk2 ",
-        "theatre", "opera", "concert", "spectacle", "musee",
+        # Cinéma FR
+        "cinema", "ugc ", "pathe ", "gaumont ", "mk2 ", "cgr ", "kinepolis",
+        # Spectacle vivant
+        "theatre", "opera", "concert", "spectacle", "festival",
+        "musee", "exposition", "fnac spectacles", "ticketmaster", "see tickets",
+        "shotgun", "dice ",
+        # Sport / fitness
         "sport ", "gym ", "salle de sport", "fitness",
-        "basic fit", "neoness", "orange bleue",
-        "fnac ", "cultura ", "virgin",
-        "amazon ", "cdiscount ", "ebay ", "vinted ",
-        "playstation", "xbox ", "steam ", "nintendo",
-        # Australie / International — grande distribution & shopping
+        "basic fit", "neoness", "orange bleue", "fitness park",
+        "keep cool", "vita liberte", "on air fitness", "magic form",
+        "club med gym", "moving ", "l'orange bleue", "anytime fitness",
+        # Culture & livres
+        "fnac", "cultura ", "virgin", "gibert ", "decitre", "amazon kindle",
+        "audible", "scribd ", "storytel",
+        # Marketplace généralistes (catch tardif après alimentation)
+        "amazon ", "cdiscount ", "ebay ", "vinted ", "leboncoin",
+        "rakuten", "back market", "boulanger.com",
+        # Jeux vidéo
+        "playstation", "xbox ", "steam ", "nintendo", "epic games",
+        "blizzard", "ea ", "ubisoft", "riot games",
+        # Enfants / parc d'attractions
+        "disneyland", "parc asterix", "futuroscope", "puy du fou", "vulcania",
+        # Australie / International
         "kmart", "k mart", "k-mart", "target ", "big w", "myer ",
         "david jones", "jb hi-fi", "jb hifi", "harvey norman",
         "rebel sport", "bcf ", "kathmandu", "macpac",
         "event cinema", "hoyts", "village cinema",
         "sea world", "dreamworld", "luna park",
-    ],
-    "voyage": [
-        "hotel", "booking.com", "airbnb", "abritel", "hostelworld",
-        "expedia", "hotels.com", "agence de voyage", "club med", "thomas cook",
-        "tripadvisor", "voyage", "sejour", "vacances", "circuit ", "croisiere",
-        "stayz ", "wotif ", "lastminute",
-    ],
-    "education": [
-        "universite", "fac ", "ecole ", "formation", "udemy", "coursera",
-        "openclassrooms", "skillshare", "duolingo", "babbel ", "assimil",
-        "scolarite", "frais de scolarite", "crous ", "campus",
-        "toefl", "ielts", "delf", "dalf", "librairie", "papeterie",
-        "tafe ", "university", "hecs ",
-    ],
-    "vetements": [
-        "zara", "h&m", "hm ", "uniqlo", "primark", "mango ", "kiabi",
-        "promod", "sezane", "asos ", "zalando", "shein ", "la redoute",
-        "nike ", "adidas ", "puma ", "new balance", "reebok", "decathlon",
-        "cotton on", "country road", "witchery", "the iconic", "glassons",
-        "foot locker", "hype dc",
-    ],
-    "frais bancaires": [
-        "cotisation carte", "cotisation compte", "cotisation offre", "offre premium",
-        "commission", "frais de tenue", "frais bancaires", "agios", "interet debiteur",
-        "frais virement", "frais change", "frais cb",
-        # Transferts P2P (libellé reconnaissable, montant variable)
-        "lydia ", "lydia*", "paylib",
-        # Australie
-        "wise ", "transferwise", "western union", "worldremit",
-        "osko ", "payid", "bpay ",
-        "atm fee", "atm withdrawal", "international fee",
     ],
 }
 
@@ -288,7 +489,12 @@ def categorize(label_raw: str, amount: float) -> str:
     normalized = _normalize(label_raw)
     direction = "credit" if amount > 0 else "debit"
 
-    # Passe 0 : règles directionnelles (crédit vs débit)
+    # Passe 0a : règles prioritaires (résolvent les ambiguïtés)
+    for kw, category in PRIORITY_RULES:
+        if _normalize(kw) in normalized:
+            return category
+
+    # Passe 0b : règles directionnelles (crédit vs débit)
     for kw, mapping in DIRECTION_RULES.items():
         if _normalize(kw) in normalized:
             cat = mapping.get(direction)
