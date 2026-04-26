@@ -227,9 +227,12 @@ export type BankConnection = {
   created_at: string
 }
 
-export async function getBankConnectUrl(periodMonths = 6): Promise<{ webview_url: string; state: string }> {
+export async function getBankConnectUrl(targetMonth?: string): Promise<{ webview_url: string; state: string }> {
   const headers = await getAuthHeader()
-  const res = await apiFetch(`${BACKEND_URL}/banks/connect?period_months=${periodMonths}`, { headers })
+  // period_months=13 → max PSD2 access; user can pick any month later via target_month
+  const params = new URLSearchParams({ period_months: '13' })
+  if (targetMonth) params.set('target_month', targetMonth)
+  const res = await apiFetch(`${BACKEND_URL}/banks/connect?${params}`, { headers })
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
     throw new Error(body.detail || `Erreur ${res.status} — connexion bancaire impossible`)
@@ -287,11 +290,13 @@ export async function deleteBankConnection(connId: string): Promise<void> {
   }
 }
 
-export async function syncBankConnection(connId: string, periodMonths?: number): Promise<UploadResult> {
+export async function syncBankConnection(connId: string, opts?: { targetMonth?: string; periodMonths?: number }): Promise<UploadResult> {
   const headers = await getAuthHeader()
-  const url = periodMonths
-    ? `${BACKEND_URL}/banks/sync/${connId}?period_months=${periodMonths}`
-    : `${BACKEND_URL}/banks/sync/${connId}`
+  const params = new URLSearchParams()
+  if (opts?.targetMonth) params.set('target_month', opts.targetMonth)
+  if (opts?.periodMonths) params.set('period_months', String(opts.periodMonths))
+  const qs = params.toString()
+  const url = qs ? `${BACKEND_URL}/banks/sync/${connId}?${qs}` : `${BACKEND_URL}/banks/sync/${connId}`
   const res = await apiFetch(url, { method: 'POST', headers })
   if (res.status === 202) {
     const body = await res.json().catch(() => ({}))

@@ -5,9 +5,30 @@ import { supabase } from '@/lib/supabase'
 import { SubHeader } from '@/components/SubHeader'
 import { getBankConnectUrl, getBankConnections, syncBankConnection, deleteBankConnection, type BankConnection, BankSyncingError } from '@/lib/api'
 
-// Période par défaut pour la connexion initiale + resync. 6 mois est un
-// bon équilibre entre profondeur d'analyse et temps de chargement.
-const DEFAULT_PERIOD_MONTHS = 6
+// ── Month helpers ────────────────────────────────────────────────────────
+const MONTH_LABELS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc']
+
+function currentMonthKey(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+function monthLabel(key: string): string {
+  if (!key || key.length < 7) return key
+  const [y, m] = key.split('-')
+  return `${MONTH_LABELS[parseInt(m) - 1] ?? m} ${y}`
+}
+
+/** Returns the last 13 month keys (current first, oldest last) */
+function recentMonths(count = 13): string[] {
+  const out: string[] = []
+  const now = new Date()
+  for (let i = 0; i < count; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    out.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`)
+  }
+  return out
+}
 
 function StatusDot({ status }: { status: string }) {
   const color = status === 'active' ? '#1D9E75' : status === 'syncing' ? '#F59E0B' : '#F87171'
@@ -118,6 +139,7 @@ export default function AccountsPage() {
   const [deleting, setDeleting] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
+  const [targetMonth, setTargetMonth] = useState(currentMonthKey())
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -144,7 +166,7 @@ export default function AccountsPage() {
     setConnecting(true)
     setError('')
     try {
-      const { webview_url } = await getBankConnectUrl(DEFAULT_PERIOD_MONTHS)
+      const { webview_url } = await getBankConnectUrl(targetMonth)
       window.location.href = webview_url
     } catch (e: any) {
       setError(e.message || 'Erreur lors de la connexion')
@@ -156,9 +178,9 @@ export default function AccountsPage() {
     setSyncing(connId)
     setError('')
     try {
-      const result = await syncBankConnection(connId, DEFAULT_PERIOD_MONTHS)
+      const result = await syncBankConnection(connId, { targetMonth })
       sessionStorage.setItem('analysis', JSON.stringify(result))
-      showToast(`${result.transactions.length} transactions importées ✓`)
+      showToast(`${result.transactions.length} transactions · ${monthLabel(targetMonth)} ✓`)
       router.push('/dashboard')
     } catch (e: any) {
       if (e instanceof BankSyncingError) {
@@ -258,11 +280,43 @@ export default function AccountsPage() {
           </div>
         )}
 
+        {/* Month picker — sync target */}
+        <div className="mt-5 rounded-2xl px-4 py-4" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+          <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--fg-3)' }}>
+            Mois à analyser
+          </p>
+          <p className="text-sm mb-3" style={{ color: 'var(--fg-2)' }}>
+            La sync ne récupère que ce mois — plus rapide, moins de bruit.
+          </p>
+          <div className="flex gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+            {recentMonths(13).map(m => {
+              const active = m === targetMonth
+              return (
+                <button
+                  key={m}
+                  onClick={() => setTargetMonth(m)}
+                  className="flex-shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium transition-all active:scale-95"
+                  style={{
+                    background: active ? '#1D9E75' : 'var(--bg-card-hi)',
+                    color: active ? '#062A1E' : 'var(--fg-2)',
+                    border: active ? 'none' : '1px solid var(--border)',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    boxShadow: active ? '0 0 12px rgba(29,158,117,0.25)' : 'none',
+                  }}
+                >
+                  {monthLabel(m)}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
         {/* Connect CTA */}
         <button
           onClick={handleConnect}
           disabled={connecting}
-          className="w-full mt-5 rounded-2xl py-4 text-sm font-semibold transition-all active:scale-95 flex items-center justify-center gap-2.5"
+          className="w-full mt-4 rounded-2xl py-4 text-sm font-semibold transition-all active:scale-95 flex items-center justify-center gap-2.5"
           style={{
             background: '#1D9E75',
             color: '#062A1E',
@@ -285,7 +339,7 @@ export default function AccountsPage() {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 5v14M5 12h14"/>
               </svg>
-              {connections.length > 0 ? 'Ajouter une autre banque' : 'Connecter ma banque'}
+              {connections.length > 0 ? `Ajouter une autre banque · ${monthLabel(targetMonth)}` : `Connecter ma banque · ${monthLabel(targetMonth)}`}
             </>
           )}
         </button>

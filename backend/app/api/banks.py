@@ -42,12 +42,18 @@ def _check_configured():
 @router.get("/connect")
 def get_connect_url(
     authorization: Optional[str] = Header(None),
-    period_months: int = Query(6, ge=1, le=24),
+    period_months: int = Query(13, ge=1, le=24),
+    target_month: Optional[str] = Query(None, regex=r"^\d{4}-\d{2}$"),
 ):
     """
     Crée un user Powens, génère un code temporaire, retourne l'URL webview.
     Le frontend redirige l'user vers cette URL.
-    period_months : historique souhaité (1-24 mois).
+
+    period_months : profondeur d'accès demandée à Powens (max PSD2 garanti = 13).
+                    Default 13 pour donner le choix à l'user de re-syncer
+                    n'importe quel mois sans reconnecter sa banque.
+    target_month  : "YYYY-MM" — mois précis à analyser à la première sync.
+                    Si None, on utilise period_months (mode legacy).
     """
     _check_configured()
     user_id = _get_user_id(authorization)
@@ -67,6 +73,7 @@ def get_connect_url(
             "powens_user_token": user_token,
             "status": "pending",
             "period_months": period_months,
+            "target_month": target_month,
         }).execute()
 
         temp_code = get_temp_code(user_token)
@@ -131,7 +138,12 @@ def process_callback(body: CallbackRequest, authorization: Optional[str] = Heade
         # Tentative rapide de récupération des transactions (5s max)
         import time
         period_months = conn_res.data.get("period_months") or 6
-        raw_transactions = get_powens_transactions(user_token, body.connection_id, period_months=period_months)
+        target_month = conn_res.data.get("target_month")
+        raw_transactions = get_powens_transactions(
+            user_token, body.connection_id,
+            period_months=period_months,
+            target_month=target_month,
+        )
 
         if not raw_transactions:
             raise HTTPException(
@@ -256,8 +268,15 @@ def sync_connection(
     conn_id: str,
     authorization: Optional[str] = Header(None),
     period_months: int = Query(None, ge=1, le=24),
+    target_month: Optional[str] = Query(None, regex=r"^\d{4}-\d{2}$"),
 ):
-    """Resynchronise une connexion bancaire existante."""
+    """
+    Resynchronise une connexion bancaire existante.
+
+    target_month : "YYYY-MM" — synchronise UNIQUEMENT ce mois-ci. Économique
+                   sur le coût IA (moins de transactions à classer).
+    period_months : legacy — N derniers mois si target_month n'est pas fourni.
+    """
     _check_configured()
     user_id = _get_user_id(authorization)
     sb = get_supabase()
@@ -273,9 +292,14 @@ def sync_connection(
         raise HTTPException(status_code=404, detail="Connexion introuvable")
 
     conn = conn_res.data
-    # Si period_months fourni, mettre à jour en DB
+    # Persister la sélection en DB pour que le callback / future syncs s'en souviennent
+    update_payload = {}
+    if target_month is not None:
+        update_payload["target_month"] = target_month
     if period_months is not None:
-        sb.table("bank_connections").update({"period_months": period_months}).eq("id", conn_id).execute()
+        update_payload["period_months"] = period_months
+    if update_payload:
+        sb.table("bank_connections").update(update_payload).eq("id", conn_id).execute()
     body = CallbackRequest(connection_id=conn["powens_connection_id"], state=conn_id)
     return process_callback(body, authorization=authorization)
 

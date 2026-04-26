@@ -90,23 +90,44 @@ def get_powens_transactions(
     connection_id: str,
     limit: int = 1000,
     period_months: int = 6,
+    target_month: Optional[str] = None,
 ) -> list:
     """
     Récupère les transactions d'une connexion bancaire.
-    period_months : nombre de mois d'historique à récupérer.
-    Filtre les transactions à venir (coming=True).
+
+    Deux modes :
+    - target_month (format "YYYY-MM") : récupère UNIQUEMENT le mois donné.
+      Économique : moins de transactions à catégoriser, sync plus rapide.
+    - period_months : récupère les N derniers mois depuis aujourd'hui.
+      Mode legacy / fallback si target_month n'est pas fourni.
+
+    Filtre toujours les transactions à venir (coming=True).
     """
     from datetime import date, timedelta
-    min_date = (date.today() - timedelta(days=period_months * 30)).strftime("%Y-%m-%d")
+    from calendar import monthrange
+
+    params = {
+        "id_connection": connection_id,
+        "limit": limit,
+    }
+
+    if target_month:
+        # "2026-04" → min_date = 2026-04-01, max_date = 2026-04-30
+        try:
+            year, month = map(int, target_month.split("-"))
+            last_day = monthrange(year, month)[1]
+            params["min_date"] = f"{year:04d}-{month:02d}-01"
+            params["max_date"] = f"{year:04d}-{month:02d}-{last_day:02d}"
+        except (ValueError, AttributeError):
+            # Format invalide → fallback period_months
+            params["min_date"] = (date.today() - timedelta(days=period_months * 30)).strftime("%Y-%m-%d")
+    else:
+        params["min_date"] = (date.today() - timedelta(days=period_months * 30)).strftime("%Y-%m-%d")
 
     resp = httpx.get(
         f"{_base_url()}/users/me/transactions",
         headers={"Authorization": f"Bearer {user_token}"},
-        params={
-            "id_connection": connection_id,
-            "limit": limit,
-            "min_date": min_date,
-        },
+        params=params,
         timeout=10,
     )
     resp.raise_for_status()
