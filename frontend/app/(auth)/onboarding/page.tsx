@@ -28,9 +28,9 @@ function ImportIllus() {
       <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-lg font-bold text-white" style={{ background: '#00915A', boxShadow: '0 12px 32px -12px rgba(0,0,0,0.6)' }}>BNP</div>
       <div className="flex items-center gap-2">
         <span className="w-2 h-2 rounded-full" style={{ background: '#1D9E75', boxShadow: '0 0 8px #1D9E75' }}/>
-        <span className="w-8 h-0.5" style={{ background: 'linear-gradient(90deg, #1D9E75, rgba(255,255,255,0.1))' }}/>
-        <span className="text-[10px] px-2 py-1 rounded-md font-medium" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.6)' }}>powens</span>
-        <span className="w-8 h-0.5" style={{ background: 'linear-gradient(90deg, rgba(255,255,255,0.1), #1D9E75)' }}/>
+        <span className="w-8 h-0.5" style={{ background: 'linear-gradient(90deg, #1D9E75, var(--track))' }}/>
+        <span className="text-[10px] px-2 py-1 rounded-md font-medium" style={{ background: 'var(--track)', border: '1px solid var(--track)', color: 'var(--fg-2)' }}>powens</span>
+        <span className="w-8 h-0.5" style={{ background: 'linear-gradient(90deg, var(--track), #1D9E75)' }}/>
         <span className="w-2 h-2 rounded-full" style={{ background: '#1D9E75', boxShadow: '0 0 8px #1D9E75' }}/>
       </div>
       <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: '#1D9E75', boxShadow: '0 0 32px rgba(29,158,117,0.35)' }}>
@@ -47,14 +47,14 @@ function ImportIllus() {
 function GoalIllus() {
   return (
     <div className="h-44 flex flex-col justify-center px-6 gap-4">
-      <div className="text-xs font-medium uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>Voyage Japon</div>
+      <div className="text-xs font-medium uppercase tracking-widest" style={{ color: 'var(--fg-3)' }}>Voyage Japon</div>
       <div className="text-4xl font-semibold tabular" style={{ letterSpacing: '-0.02em' }}>
-        2 340 <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 18, fontWeight: 500 }}>/ 5 000 €</span>
+        2 340 <span style={{ color: 'var(--fg-3)', fontSize: 18, fontWeight: 500 }}>/ 5 000 €</span>
       </div>
-      <div className="h-2.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
+      <div className="h-2.5 rounded-full overflow-hidden" style={{ background: 'var(--track)' }}>
         <div className="h-full rounded-full" style={{ width: '47%', background: '#1D9E75', boxShadow: '0 0 24px rgba(29,158,117,0.5)' }} />
       </div>
-      <div className="text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>47% · 8 mois restants</div>
+      <div className="text-sm" style={{ color: 'var(--fg-3)' }}>47% · 8 mois restants</div>
     </div>
   )
 }
@@ -120,7 +120,7 @@ export default function OnboardingPage() {
         <div className="flex justify-center gap-2 mb-6">
           {SLIDES.map((_, i) => (
             <div key={i} className="h-1.5 rounded-full transition-all duration-200"
-              style={{ width: i === step ? 22 : 6, background: i === step ? '#1D9E75' : 'rgba(255,255,255,0.15)' }} />
+              style={{ width: i === step ? 22 : 6, background: i === step ? '#1D9E75' : 'var(--track-strong)' }} />
           ))}
         </div>
 

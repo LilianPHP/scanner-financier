@@ -89,7 +89,7 @@ export function DesktopSidebar() {
       className="hidden lg:flex flex-col fixed left-0 top-0 bottom-0 z-40"
       style={{
         width: 240,
-        background: '#0A0A0A',
+        background: 'var(--bg-page)',
         borderRight: '1px solid var(--border)',
       }}
     >

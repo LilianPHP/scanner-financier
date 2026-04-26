@@ -67,7 +67,7 @@ function AdjustRhythmSheet({ goal, onClose, onSaved }: { goal: Goal; onClose: ()
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}>
       <div className="rounded-t-3xl px-5 pt-4 pb-10 flex flex-col gap-5" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-        <div className="w-10 h-1 rounded-full mx-auto" style={{ background: 'rgba(255,255,255,0.15)' }} />
+        <div className="w-10 h-1 rounded-full mx-auto" style={{ background: 'var(--track-strong)' }} />
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold" style={{ letterSpacing: '-0.01em' }}>Ajuster le rythme</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-3)', fontFamily: 'inherit' }}>
@@ -139,7 +139,7 @@ function EditAmountSheet({ goal, onClose, onSaved }: { goal: Goal; onClose: () =
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}>
       <div className="rounded-t-3xl px-5 pt-4 pb-10 flex flex-col gap-5" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-        <div className="w-10 h-1 rounded-full mx-auto" style={{ background: 'rgba(255,255,255,0.15)' }} />
+        <div className="w-10 h-1 rounded-full mx-auto" style={{ background: 'var(--track-strong)' }} />
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold" style={{ letterSpacing: '-0.01em' }}>Modifier le montant</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-3)', fontFamily: 'inherit' }}>
@@ -215,7 +215,7 @@ export default function GoalDetailPage() {
   if (loading) {
     return (
       <div className="min-h-dvh flex items-center justify-center" style={{ background: 'var(--bg-page)' }}>
-        <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: 'rgba(255,255,255,0.15)', borderTopColor: '#1D9E75' }} />
+        <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: 'var(--track-strong)', borderTopColor: '#1D9E75' }} />
       </div>
     )
   }
@@ -285,7 +285,7 @@ export default function GoalDetailPage() {
         </div>
 
         {/* Progress bar with milestone ticks */}
-        <div className="relative h-2.5 rounded-full overflow-visible mb-3" style={{ background: 'rgba(255,255,255,0.08)' }}>
+        <div className="relative h-2.5 rounded-full overflow-visible mb-3" style={{ background: 'var(--track)' }}>
           <div
             className="h-full rounded-full transition-all duration-700"
             style={{

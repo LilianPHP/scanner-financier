@@ -158,7 +158,7 @@ function GoalHero({ goal, onTap }: { goal: Goal; onTap: () => void }) {
         </div>
       </div>
 
-      <div style={{ marginTop: 14, height: 10, background: 'rgba(255,255,255,0.08)', borderRadius: 999, overflow: 'hidden', position: 'relative' }}>
+      <div style={{ marginTop: 14, height: 10, background: 'var(--track)', borderRadius: 999, overflow: 'hidden', position: 'relative' }}>
         <div style={{
           height: '100%', width: `${width}%`,
           background: `linear-gradient(90deg, ${C.accent} 0%, #2BB88A 100%)`,
@@ -167,7 +167,7 @@ function GoalHero({ goal, onTap }: { goal: Goal; onTap: () => void }) {
           transition: 'width 0.7s cubic-bezier(0.22,1,0.36,1)',
         }} />
         {[25, 50, 75].map(m => (
-          <div key={m} style={{ position: 'absolute', top: 0, bottom: 0, left: `${m}%`, width: 1, background: 'rgba(255,255,255,0.12)' }} />
+          <div key={m} style={{ position: 'absolute', top: 0, bottom: 0, left: `${m}%`, width: 1, background: 'var(--track-strong)' }} />
         ))}
       </div>
     </div>
@@ -372,7 +372,7 @@ function Donut({ data, size = 160, picked, onPick }: {
   return (
     <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
       <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={thickness} />
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--track)" strokeWidth={thickness} />
         {arcs.map(a => (
           <circle key={a.key} cx={cx} cy={cy} r={r} fill="none"
             stroke={a.color}
@@ -425,7 +425,7 @@ function DonutCard({ segments }: { segments: DonutSegment[] }) {
                   display: 'grid', gridTemplateColumns: '8px 1fr auto auto', gap: 7,
                   alignItems: 'center', padding: '3px 5px', margin: '-3px -5px',
                   borderRadius: 6, cursor: 'pointer',
-                  background: active ? 'rgba(255,255,255,0.04)' : 'transparent',
+                  background: active ? 'var(--track)' : 'transparent',
                   border: 'none', fontFamily: 'inherit', textAlign: 'left',
                   opacity: picked && !active ? 0.35 : 1,
                   transition: 'opacity 120ms, background 120ms',
@@ -542,7 +542,7 @@ function TxCard({ transactions }: { transactions: Transaction[] }) {
               fontFamily: 'inherit', fontSize: 12, fontWeight: 500,
               padding: '6px 12px', borderRadius: 999, cursor: 'pointer',
               whiteSpace: 'nowrap', flexShrink: 0,
-              background: active ? C.accent : 'rgba(255,255,255,0.05)',
+              background: active ? C.accent : 'var(--track)',
               color: active ? '#062A1E' : C.fg2,
               border: `1px solid ${active ? 'transparent' : C.border}`,
               transition: 'all 120ms',

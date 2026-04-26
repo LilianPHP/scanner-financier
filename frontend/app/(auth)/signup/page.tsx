@@ -162,7 +162,7 @@ export default function SignupPage() {
                 <div className="flex gap-1 mb-1">
                   {[1,2,3].map(i => (
                     <div key={i} className="h-1 flex-1 rounded-full transition-all duration-300"
-                      style={{ background: i <= strength.score ? strength.color : 'rgba(255,255,255,0.08)' }} />
+                      style={{ background: i <= strength.score ? strength.color : 'var(--track)' }} />
                   ))}
                 </div>
                 <p className="text-xs" style={{ color: strength.color }}>

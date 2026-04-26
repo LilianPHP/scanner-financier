@@ -67,9 +67,9 @@ export function BottomNav() {
     <nav
       className="fixed bottom-0 left-0 right-0 z-50 safe-bottom lg:hidden"
       style={{
-        background: 'rgba(10,10,10,0.92)',
+        background: 'var(--bg-page)',
         backdropFilter: 'blur(20px)',
-        borderTop: '1px solid rgba(255,255,255,0.06)',
+        borderTop: '1px solid var(--border)',
       }}
     >
       <div className="flex items-center mx-auto px-2" style={{ maxWidth: 520 }}>
@@ -85,7 +85,7 @@ export function BottomNav() {
               {tab.icon(active)}
               <span
                 className="text-[10px] font-medium tracking-wide"
-                style={{ color: active ? '#1D9E75' : 'rgba(255,255,255,0.4)' }}
+                style={{ color: active ? '#1D9E75' : 'var(--fg-3)' }}
               >
                 {tab.label}
               </span>

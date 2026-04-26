@@ -52,7 +52,7 @@ function GoalCard({ goal, onTap }: { goal: Goal; onTap: () => void }) {
         </div>
       </div>
 
-      <div className="h-2 rounded-full overflow-hidden mb-3" style={{ background: 'rgba(255,255,255,0.08)' }}>
+      <div className="h-2 rounded-full overflow-hidden mb-3" style={{ background: 'var(--track)' }}>
         <div
           className="h-full rounded-full transition-all duration-700"
           style={{

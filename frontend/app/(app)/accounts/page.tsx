@@ -39,12 +39,12 @@ function BankCard({ conn, onSync, syncing }: { conn: BankConnection; onSync: () 
           src={conn.institution_logo}
           alt={conn.institution_name}
           className="w-10 h-10 rounded-xl object-contain flex-shrink-0"
-          style={{ background: 'rgba(255,255,255,0.06)' }}
+          style={{ background: 'var(--track)' }}
         />
       ) : (
         <div
           className="w-10 h-10 rounded-xl flex items-center justify-center text-lg flex-shrink-0"
-          style={{ background: 'rgba(255,255,255,0.06)' }}
+          style={{ background: 'var(--track)' }}
         >
           🏦
         </div>
@@ -242,7 +242,7 @@ export default function AccountsPage() {
               </button>
             ))}
           </div>
-          <p className="text-[10px] mt-2.5" style={{ color: 'var(--fg-4, rgba(255,255,255,0.2))' }}>
+          <p className="text-[10px] mt-2.5" style={{ color: 'var(--fg-4, var(--fg-4))' }}>
             PSD2 garantit 3 mois min · La plupart des banques offrent jusqu'à 13 mois
           </p>
         </div>

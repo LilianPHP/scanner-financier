@@ -136,7 +136,7 @@ export default function BudgetsPage() {
                 <span className="text-lg" style={{ color: 'var(--fg-3)' }}>/ {fmt(totalBudget)} €</span>
               </div>
               {/* Progress bar */}
-              <div className="h-2 rounded-full overflow-hidden mb-3" style={{ background: 'rgba(255,255,255,0.08)' }}>
+              <div className="h-2 rounded-full overflow-hidden mb-3" style={{ background: 'var(--track)' }}>
                 <div
                   className="h-full rounded-full transition-all duration-700"
                   style={{
@@ -207,7 +207,7 @@ export default function BudgetsPage() {
                       </div>
                     </div>
                     {/* Progress bar */}
-                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
+                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--track)' }}>
                       <div
                         className="h-full rounded-full transition-all duration-700"
                         style={{

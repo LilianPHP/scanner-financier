@@ -51,7 +51,7 @@ export function PinScreen({ title, subtitle, onComplete, onBack }: Props) {
               className="w-4 h-4 rounded-full transition-all duration-150"
               style={{
                 background: value.length > i ? '#1D9E75' : 'transparent',
-                border: `1.5px solid ${value.length > i ? '#1D9E75' : 'rgba(255,255,255,0.2)'}`,
+                border: `1.5px solid ${value.length > i ? '#1D9E75' : 'var(--fg-4)'}`,
                 boxShadow: value.length === i + 1 ? '0 0 12px rgba(29,158,117,0.5)' : 'none',
               }}
             />

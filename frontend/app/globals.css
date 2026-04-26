@@ -14,6 +14,10 @@
   --border:        rgba(255,255,255,0.07);
   --border-strong: rgba(255,255,255,0.14);
 
+  /* Track — used as background for progress bars, sliders, inactive states */
+  --track:         rgba(255,255,255,0.08);
+  --track-strong:  rgba(255,255,255,0.15);
+
   /* Foreground */
   --fg:            #F5F5F5;
   --fg-2:          rgba(255,255,255,0.60);
@@ -49,9 +53,11 @@
   --bg-page:       #F4F4F0;
   --bg-card:       #FFFFFF;
   --bg-card-hi:    #F9F9F6;
-  --bg-chip:       #EBEBЕ8;
+  --bg-chip:       #EBEBE8;
   --border:        rgba(0,0,0,0.07);
   --border-strong: rgba(0,0,0,0.14);
+  --track:         rgba(0,0,0,0.06);
+  --track-strong:  rgba(0,0,0,0.12);
   --fg:            #161616;
   --fg-2:          rgba(0,0,0,0.58);
   --fg-3:          rgba(0,0,0,0.38);
