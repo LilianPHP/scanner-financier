@@ -17,6 +17,18 @@ type Goal = {
   created_at: string
 }
 
+const KIND_LABELS: Record<string, string> = {
+  urgence: 'Épargne de sécurité',
+  voyage: 'Voyage',
+  achat: 'Achat',
+  investissement: 'Investissement',
+  autre: 'Autre',
+}
+
+function kindLabel(kind: string): string {
+  return KIND_LABELS[kind] ?? kind.charAt(0).toUpperCase() + kind.slice(1)
+}
+
 function fmt(n: number) {
   return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(n)
 }
@@ -38,7 +50,7 @@ function GoalCard({ goal, onTap }: { goal: Goal; onTap: () => void }) {
           <div>
             <p className="text-sm font-semibold" style={{ color: 'var(--fg)' }}>{goal.name}</p>
             <p className="text-xs mt-0.5" style={{ color: 'var(--fg-3)' }}>
-              {goal.kind}
+              {kindLabel(goal.kind)}
             </p>
           </div>
         </div>

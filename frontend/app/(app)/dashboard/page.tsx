@@ -742,9 +742,9 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Row 2 — Bar chart (7) + Donut (5) */}
+          {/* Row 2 — Bar chart (7) + Donut (5), each spans full width when alone */}
           {timelineData.length > 0 && (
-            <div className="col-span-7">
+            <div className={donutData.length > 0 ? 'col-span-7' : 'col-span-12'}>
               <MonthlyCard timeline={timelineData} />
             </div>
           )}

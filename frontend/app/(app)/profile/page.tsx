@@ -1,10 +1,10 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { useTheme } from '@/lib/theme'
 import { TabHeader } from '@/components/TabHeader'
+import { getBankConnections } from '@/lib/api'
 
 const BUILD_VERSION = 'v0.9.2 · Build 24.04.26'
 
@@ -107,7 +107,7 @@ export default function ProfilePage() {
   const [loggingOut, setLoggingOut] = useState(false)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       if (!data.session) { router.push('/login'); return }
       const user = data.session.user
       const em = user.email ?? ''
@@ -115,18 +115,22 @@ export default function ProfilePage() {
       setInitial(em.charAt(0).toUpperCase())
       const created = new Date(user.created_at)
       setMemberSince(created.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }))
+      // Real bank connections count
+      try {
+        const conns = await getBankConnections()
+        setBankCount(conns.length)
+      } catch { /* silent — fall back to 0 */ }
     })
-    // Try fetching bank connections count
-    try {
-      const raw = sessionStorage.getItem('analysis')
-      if (raw) setBankCount(1)
-    } catch {}
   }, [router])
 
   async function handleLogout() {
     setLoggingOut(true)
-    await supabase.auth.signOut()
-    router.push('/')
+    try {
+      await supabase.auth.signOut()
+      router.push('/')
+    } catch {
+      setLoggingOut(false)
+    }
   }
 
   return (
@@ -153,18 +157,12 @@ export default function ProfilePage() {
               Membre depuis {memberSince}
             </p>
           </div>
-          <button
-            className="rounded-xl px-3 py-1.5 text-xs font-medium"
-            style={{ background: 'var(--bg-card-hi)', color: 'var(--fg-2)', border: '1px solid var(--border)', cursor: 'pointer', fontFamily: 'inherit' }}
-          >
-            Modifier
-          </button>
+          {/* "Modifier" intentionally omitted — profile editing not yet wired */}
         </div>
 
         {/* Compte */}
         <Section title="COMPTE">
           <Row icon="✉️" label="Email" value={email} chevron={false} />
-          <Row icon="🔐" label="Sécurité & code" onPress={() => {}} />
           <LastRow
             icon="⭐"
             label="Plan"
@@ -197,7 +195,6 @@ export default function ProfilePage() {
 
         {/* Préférences */}
         <Section title="PRÉFÉRENCES">
-          <Row icon="🔔" label="Notifications" onPress={() => {}} />
           <Row icon="🌍" label="Langue" value="Français" chevron={false} />
           {/* Theme toggle row */}
           <Row
@@ -210,15 +207,8 @@ export default function ProfilePage() {
           <LastRow icon="💱" label="Devise" value="EUR · €" chevron={false} />
         </Section>
 
-        {/* Données */}
-        <Section title="DONNÉES">
-          <Row icon="📤" label="Exporter mes données" onPress={() => {}} />
-          <LastRow icon="🗑️" label="Tout effacer" onPress={() => {}} danger />
-        </Section>
-
         {/* Aide & infos */}
         <Section title="AIDE & INFOS">
-          <Row icon="💬" label="Aide & FAQ" onPress={() => {}} />
           <Row icon="📄" label="CGU" onPress={() => router.push('/mentions-legales')} />
           <LastRow icon="🔒" label="Politique de confidentialité" onPress={() => router.push('/confidentialite')} />
         </Section>

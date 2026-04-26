@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
@@ -28,6 +28,12 @@ export default function NewGoalPage() {
   const [error, setError] = useState('')
   const [nameFocus, setNameFocus] = useState(false)
   const [amtFocus, setAmtFocus] = useState(false)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (!data.session) router.push('/login')
+    })
+  }, [router])
 
   const targetNum = parseFloat(target) || 0
   const rhythmPerMonth = months > 0 && targetNum > 0 ? Math.ceil(targetNum / months) : 0

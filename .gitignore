@@ -8,6 +8,9 @@ frontend/node_modules/
 .next/
 frontend/.next/
 
+# TypeScript incremental build cache
+*.tsbuildinfo
+
 # Python
 __pycache__/
 *.pyc

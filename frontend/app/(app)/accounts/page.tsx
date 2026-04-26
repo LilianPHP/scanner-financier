@@ -24,7 +24,7 @@ function StatusDot({ status }: { status: string }) {
   )
 }
 
-function BankCard({ conn, onSync, syncing }: { conn: BankConnection; onSync: () => void; syncing: boolean }) {
+function BankCard({ conn, onSync, syncing, isLast }: { conn: BankConnection; onSync: () => void; syncing: boolean; isLast: boolean }) {
   const syncDate = conn.last_synced_at
     ? new Date(conn.last_synced_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
     : '—'
@@ -32,7 +32,7 @@ function BankCard({ conn, onSync, syncing }: { conn: BankConnection; onSync: () 
   return (
     <div
       className="flex items-center gap-3 px-4 py-3.5"
-      style={{ borderBottom: '1px solid var(--border)' }}
+      style={{ borderBottom: isLast ? 'none' : '1px solid var(--border)' }}
     >
       {conn.institution_logo ? (
         <img
@@ -191,13 +191,13 @@ export default function AccountsPage() {
               </span>
             </div>
             {connections.map((conn, i) => (
-              <div key={conn.id} style={i === connections.length - 1 ? { borderBottom: 'none' } : {}}>
-                <BankCard
-                  conn={conn}
-                  onSync={() => handleSync(conn.id)}
-                  syncing={syncing === conn.id}
-                />
-              </div>
+              <BankCard
+                key={conn.id}
+                conn={conn}
+                onSync={() => handleSync(conn.id)}
+                syncing={syncing === conn.id}
+                isLast={i === connections.length - 1}
+              />
             ))}
           </div>
         ) : (
@@ -242,7 +242,7 @@ export default function AccountsPage() {
               </button>
             ))}
           </div>
-          <p className="text-[10px] mt-2.5" style={{ color: 'var(--fg-4, var(--fg-4))' }}>
+          <p className="text-[10px] mt-2.5" style={{ color: 'var(--fg-4)' }}>
             PSD2 garantit 3 mois min · La plupart des banques offrent jusqu'à 13 mois
           </p>
         </div>

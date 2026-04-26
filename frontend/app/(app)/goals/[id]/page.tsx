@@ -21,31 +21,38 @@ function fmt(n: number) {
   return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(n)
 }
 
-function getDeadline(goal: Goal): string {
-  const now = new Date()
-  const remaining = goal.target - goal.current
-  if (remaining <= 0) return 'Objectif atteint !'
-  // Estimate based on months field or created_at
-  const monthsLeft = goal.months > 0 ? goal.months : 12
-  const deadline = new Date(now)
-  deadline.setMonth(deadline.getMonth() + monthsLeft)
-  return deadline.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })
-}
-
-function getMonthlyRhythm(goal: Goal): number {
+/** Number of full months between goal creation and now (min 1). */
+function getMonthsElapsed(goal: Goal): number {
   const now = new Date()
   const created = new Date(goal.created_at)
-  const monthsElapsed = Math.max(1,
+  return Math.max(1,
     (now.getFullYear() - created.getFullYear()) * 12 + now.getMonth() - created.getMonth()
   )
-  return Math.round(goal.current / monthsElapsed)
 }
 
-function getMonthsToReach(goal: Goal): number {
+/** Average monthly contribution since creation. 0 if nothing saved. */
+function getMonthlyRhythm(goal: Goal): number {
+  return Math.round(goal.current / getMonthsElapsed(goal))
+}
+
+/** Months left at the current rhythm. null when we can't extrapolate (no rhythm). */
+function getMonthsToReach(goal: Goal): number | null {
   const rhythm = getMonthlyRhythm(goal)
-  if (rhythm <= 0) return goal.months
   const remaining = goal.target - goal.current
-  return remaining <= 0 ? 0 : Math.ceil(remaining / rhythm)
+  if (remaining <= 0) return 0
+  if (rhythm <= 0) return null
+  return Math.ceil(remaining / rhythm)
+}
+
+/** Projected reach date based on current rhythm. null if not extrapolable. */
+function getDeadline(goal: Goal): string | null {
+  const remaining = goal.target - goal.current
+  if (remaining <= 0) return 'Objectif atteint !'
+  const monthsLeft = getMonthsToReach(goal)
+  if (monthsLeft == null) return null
+  const date = new Date()
+  date.setMonth(date.getMonth() + monthsLeft)
+  return date.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' })
 }
 
 type Sheet = 'adjust' | 'amount' | null
@@ -277,7 +284,7 @@ export default function GoalDetailPage() {
             <div className="w-2 h-2 rounded-full" style={{ background: '#1D9E75' }} />
             <span className="text-sm font-semibold" style={{ color: '#1D9E75' }}>{pct} %</span>
           </div>
-          {monthsToReach > 0 && (
+          {monthsToReach != null && monthsToReach > 0 && deadline && (
             <span className="text-xs" style={{ color: 'var(--fg-3)' }}>
               {monthsToReach} mois pour atteindre · À ce rythme · {deadline}
             </span>
@@ -294,15 +301,15 @@ export default function GoalDetailPage() {
               boxShadow: '0 0 16px rgba(29,158,117,0.5)',
             }}
           />
-          {/* Milestone ticks */}
+          {/* Milestone ticks — sit above the fill, blend into the page */}
           {tickPcts.map(tp => (
             <div
               key={tp}
-              className="absolute top-0 h-full w-0.5 rounded-full"
+              className="absolute top-0 h-full w-0.5"
               style={{
                 left: `${tp}%`,
-                background: 'rgba(0,0,0,0.4)',
-                zIndex: 1,
+                background: 'var(--bg-page)',
+                zIndex: 2,
               }}
             />
           ))}
@@ -330,7 +337,12 @@ export default function GoalDetailPage() {
               +{fmt(rhythm)} €
               <span className="text-sm font-normal ml-1" style={{ color: 'var(--fg-3)' }}>/mois</span>
             </p>
-            <p className="text-xs mt-1.5" style={{ color: 'var(--fg-3)' }}>sur 3 derniers mois</p>
+            <p className="text-xs mt-1.5" style={{ color: 'var(--fg-3)' }}>
+              {(() => {
+                const m = getMonthsElapsed(goal)
+                return m === 1 ? 'depuis 1 mois' : `depuis ${m} mois`
+              })()}
+            </p>
           </div>
           <div className="rounded-2xl p-4" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
             <p className="text-[10px] font-semibold uppercase tracking-widest mb-2" style={{ color: 'var(--fg-3)' }}>RESTE À ÉPARGNER</p>
@@ -338,7 +350,11 @@ export default function GoalDetailPage() {
               {remaining <= 0 ? '0' : fmt(remaining)} €
             </p>
             <p className="text-xs mt-1.5" style={{ color: 'var(--fg-3)' }}>
-              {remaining <= 0 ? 'Objectif atteint 🎉' : `cible ${deadline}`}
+              {remaining <= 0
+                ? 'Objectif atteint 🎉'
+                : deadline
+                  ? `Projection · ${deadline}`
+                  : 'Pas encore d’historique'}
             </p>
           </div>
         </div>

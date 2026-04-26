@@ -51,26 +51,37 @@ function fmt(n: number) {
   return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(n)
 }
 
-function getMonthLabel() {
-  return new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }).toUpperCase()
+function getPeriodLabel(transactions: Array<{ date: string }>): string {
+  // Derive the label from the most recent transaction date so we don't
+  // claim "today's month" when the analysis covers a different period.
+  if (!transactions || transactions.length === 0) return 'CE MOIS-CI'
+  const latest = transactions
+    .map(t => t.date)
+    .filter(Boolean)
+    .sort()
+    .at(-1)
+  if (!latest) return 'CE MOIS-CI'
+  const d = new Date(latest)
+  if (isNaN(d.getTime())) return 'CE MOIS-CI'
+  return d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }).toUpperCase()
 }
 
 export default function BudgetsPage() {
   const router = useRouter()
   const [budgets, setBudgets] = useState<CategoryBudget[]>([])
-  const [userInit, setUserInit] = useState('J')
+  const [periodLabel, setPeriodLabel] = useState('CE MOIS-CI')
   const [totalSpent, setTotalSpent] = useState(0)
   const [totalBudget, setTotalBudget] = useState(0)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       if (!data.session) { router.push('/login'); return }
-      setUserInit((data.session.user.email ?? 'J').charAt(0).toUpperCase())
     })
     try {
       const raw = sessionStorage.getItem('analysis')
       if (raw) {
         const parsed = JSON.parse(raw)
+        setPeriodLabel(getPeriodLabel(parsed.transactions ?? []))
         const byCategory: Array<{ category: string; total: number }> = parsed.by_category ?? []
         const expenses = byCategory.filter((c) => {
           const cat = c.category
@@ -99,7 +110,9 @@ export default function BudgetsPage() {
     } catch {}
   }, [router])
 
-  const pctTotal = totalBudget > 0 ? Math.min(100, Math.round((totalSpent / totalBudget) * 100)) : 0
+  // pctReal can exceed 100% (over-budget). pctBar is capped for the bar width only.
+  const pctReal = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0
+  const pctBar = Math.min(100, pctReal)
   const remaining = totalBudget - totalSpent
 
   return (
@@ -126,8 +139,8 @@ export default function BudgetsPage() {
               className="rounded-2xl p-5 mb-5"
               style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
             >
-              <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: 'var(--fg-3)' }}>
-                {getMonthLabel()} · {pctTotal}% UTILISÉ
+              <p className="text-[10px] font-semibold uppercase tracking-widest mb-3" style={{ color: pctReal > 100 ? '#F87171' : 'var(--fg-3)' }}>
+                {periodLabel} · {pctReal}% UTILISÉ
               </p>
               <div className="flex items-baseline gap-2 mb-3">
                 <span className="text-4xl font-semibold tabular" style={{ letterSpacing: '-0.03em' }}>
@@ -140,9 +153,9 @@ export default function BudgetsPage() {
                 <div
                   className="h-full rounded-full transition-all duration-700"
                   style={{
-                    width: `${pctTotal}%`,
-                    background: pctTotal > 100 ? '#F87171' : pctTotal > 85 ? '#F59E0B' : '#1D9E75',
-                    boxShadow: `0 0 12px ${pctTotal > 100 ? 'rgba(248,113,113,0.4)' : 'rgba(29,158,117,0.4)'}`,
+                    width: `${pctBar}%`,
+                    background: pctReal > 100 ? '#F87171' : pctReal > 85 ? '#F59E0B' : '#1D9E75',
+                    boxShadow: `0 0 12px ${pctReal > 100 ? 'rgba(248,113,113,0.4)' : 'rgba(29,158,117,0.4)'}`,
                   }}
                 />
               </div>
@@ -222,19 +235,8 @@ export default function BudgetsPage() {
               })}
             </div>
 
-            {/* CTA */}
-            <button
-              className="w-full rounded-2xl py-4 text-sm font-medium mt-4 transition-all active:scale-[0.98]"
-              style={{
-                background: 'var(--bg-card)',
-                color: 'var(--fg-2)',
-                border: '1px solid var(--border)',
-                fontFamily: 'inherit',
-                cursor: 'pointer',
-              }}
-            >
-              + Créer une enveloppe
-            </button>
+            {/* "+ Créer une enveloppe" intentionally omitted — custom envelopes
+                aren't wired yet. Budgets are auto-derived from spent × category factor. */}
           </>
         )}
       </div>

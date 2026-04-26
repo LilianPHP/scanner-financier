@@ -5,10 +5,19 @@ import { supabase } from '@/lib/supabase'
 import { TabHeader } from '@/components/TabHeader'
 
 type Transaction = {
+  id?: string
   date: string
-  description: string
+  // The Powens-side analysis stores the merchant in `label_clean` (preferred).
+  // Legacy data may have `description`. Either is shown via getLabel().
+  label_clean?: string
+  label_raw?: string
+  description?: string
   amount: number
   category: string
+}
+
+function getLabel(t: Transaction): string {
+  return t.label_clean || t.description || t.label_raw || ''
 }
 
 const CAT_COLORS: Record<string, string> = {
@@ -83,12 +92,10 @@ export default function TransactionsPage() {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('Tout')
   const [selectedMonth, setSelectedMonth] = useState<string>('')
-  const [userInit, setUserInit] = useState('J')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       if (!data.session) { router.push('/login'); return }
-      setUserInit((data.session.user.email ?? 'J').charAt(0).toUpperCase())
     })
     try {
       const raw = sessionStorage.getItem('analysis')
@@ -124,10 +131,18 @@ export default function TransactionsPage() {
     return ['Tout', ...Array.from(set)]
   }, [monthTransactions])
 
+  // Reset category filter when the selected month no longer contains it
+  useEffect(() => {
+    if (filter !== 'Tout' && !categories.includes(filter)) setFilter('Tout')
+  }, [categories, filter])
+
   const filtered = useMemo(() => {
     let list = [...monthTransactions]
     if (filter !== 'Tout') list = list.filter(t => t.category === filter)
-    if (search) list = list.filter(t => t.description.toLowerCase().includes(search.toLowerCase()))
+    if (search) {
+      const q = search.toLowerCase()
+      list = list.filter(t => getLabel(t).toLowerCase().includes(q))
+    }
     return list
   }, [monthTransactions, filter, search])
 
@@ -304,13 +319,13 @@ export default function TransactionsPage() {
         >
           {filtered.map((tx, i) => (
             <div
-              key={i}
+              key={tx.id ?? `${tx.date}-${getLabel(tx)}-${tx.amount}-${i}`}
               className="flex items-center gap-3 px-4 py-3.5"
               style={{ borderBottom: i < filtered.length - 1 ? '1px solid var(--border)' : 'none' }}
             >
               <CatIcon cat={tx.category} />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate" style={{ color: 'var(--fg)' }}>{tx.description}</p>
+                <p className="text-sm font-medium truncate" style={{ color: 'var(--fg)' }}>{getLabel(tx)}</p>
                 <p className="text-xs mt-0.5" style={{ color: 'var(--fg-3)' }}>{tx.category}</p>
               </div>
               <div className="text-right flex-shrink-0">

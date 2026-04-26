@@ -7,9 +7,9 @@ import { Avatar } from './Avatar'
  * Dashboard header — adapts to viewport.
  *
  * Mobile (<lg): green eyebrow + H1 + avatar (matches TabHeader pattern)
- * Desktop (>=lg): "Bonjour, [Name]" greeting + last-sync line + Synchroniser CTA
+ * Desktop (>=lg): "Bonjour, [Name]" greeting + Synchroniser CTA
  */
-export function DashboardHeader({ onSync, lastSyncAt }: { onSync?: () => void; lastSyncAt?: string | null }) {
+export function DashboardHeader({ onSync }: { onSync?: () => void }) {
   const [firstName, setFirstName] = useState('')
 
   useEffect(() => {
@@ -42,11 +42,6 @@ export function DashboardHeader({ onSync, lastSyncAt }: { onSync?: () => void; l
           </h1>
           <p className="text-sm mt-1.5" style={{ color: 'var(--fg-3)' }}>
             Voici un résumé de tes finances.
-            {lastSyncAt && (
-              <span className="ml-2" style={{ color: 'var(--fg-4)' }}>
-                · Dernière synchronisation {lastSyncAt}
-              </span>
-            )}
           </p>
         </div>
         <div className="flex items-center gap-2">
