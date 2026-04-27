@@ -164,31 +164,89 @@ def compute_score(transactions: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 def detect_subscriptions(transactions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
-    Détecte les abonnements récurrents (même libellé, intervalle mensuel).
+    Détecte les abonnements récurrents par CADENCE + STABILITÉ DU MONTANT,
+    indépendamment de la catégorie. Permet de repérer les abonnements
+    qui ont été mal classés (ex : Spotify catégorisé "loisirs").
+
+    Cadences détectées : weekly, biweekly, monthly, quarterly, biannual, yearly.
+    Tous les montants sont normalisés en équivalent mensuel.
     """
     from collections import Counter
-    import re
+    from datetime import datetime
+    from statistics import median, mean, pstdev
 
-    label_counts = Counter()
-    label_amounts: Dict[str, List[float]] = defaultdict(list)
+    # Cadence ranges (in days) → monthly multiplier
+    CADENCES = [
+        ("weekly",     6,   8,   30 / 7),
+        ("biweekly",   13,  16,  30 / 14),
+        ("monthly",    25,  35,  1.0),
+        ("quarterly",  85,  95,  1 / 3),
+        ("biannual",   170, 195, 1 / 6),
+        ("yearly",     350, 380, 1 / 12),
+    ]
+    AMOUNT_TOLERANCE = 0.20  # stdev/mean must be ≤ 20%
 
+    # Group outgoing transactions by normalized label
+    groups: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
     for tx in transactions:
-        if tx["amount"] < 0 and tx["category"] == "abonnements":
-            key = tx["label_clean"].lower()
-            label_counts[key] += 1
-            label_amounts[key].append(abs(tx["amount"]))
+        if tx.get("amount", 0) >= 0:
+            continue
+        label = (tx.get("label_clean") or "").strip()
+        date = tx.get("date")
+        if not label or not date:
+            continue
+        groups[label.lower()].append({
+            "date": date,
+            "amount": abs(float(tx["amount"])),
+            "category": tx.get("category") or "autres",
+            "label": label,
+        })
 
-    subscriptions = []
-    for label, count in label_counts.items():
-        if count >= 2:
-            amounts = label_amounts[label]
-            avg_amount = sum(amounts) / len(amounts)
-            subscriptions.append({
-                "label": label.title(),
-                "occurrences": count,
-                "monthly_cost": round(avg_amount, 2),
-                "annual_cost": round(avg_amount * 12, 2),
-            })
+    subscriptions: List[Dict[str, Any]] = []
+    for items in groups.values():
+        if len(items) < 2:
+            continue
+
+        items.sort(key=lambda x: x["date"])
+        try:
+            dates = [datetime.strptime(it["date"], "%Y-%m-%d") for it in items]
+        except (ValueError, TypeError):
+            continue
+
+        intervals = [(dates[i] - dates[i - 1]).days for i in range(1, len(dates))]
+        if not intervals:
+            continue
+
+        med = median(intervals)
+        cadence_match = next(
+            ((name, mult) for name, lo, hi, mult in CADENCES if lo <= med <= hi),
+            None,
+        )
+        if not cadence_match:
+            continue
+        cadence_name, multiplier = cadence_match
+
+        amounts = [it["amount"] for it in items]
+        avg = mean(amounts)
+        if avg <= 0:
+            continue
+        stdev = pstdev(amounts) if len(amounts) > 1 else 0.0
+        if stdev / avg > AMOUNT_TOLERANCE:
+            continue
+
+        cat_counter = Counter(it["category"] for it in items)
+        dominant_category = cat_counter.most_common(1)[0][0]
+        monthly = avg * multiplier
+
+        subscriptions.append({
+            "label": items[0]["label"].title(),
+            "occurrences": len(items),
+            "cadence": cadence_name,
+            "monthly_cost": round(monthly, 2),
+            "annual_cost": round(monthly * 12, 2),
+            "category": dominant_category,
+            "needs_recategorize": dominant_category != "abonnements",
+        })
 
     subscriptions.sort(key=lambda x: x["monthly_cost"], reverse=True)
     return subscriptions

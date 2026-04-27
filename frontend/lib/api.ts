@@ -56,6 +56,9 @@ export type Subscription = {
   occurrences: number
   monthly_cost: number
   annual_cost: number
+  cadence?: 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'biannual' | 'yearly'
+  category?: string
+  needs_recategorize?: boolean
 }
 
 export type ScoreResult = {

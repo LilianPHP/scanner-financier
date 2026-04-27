@@ -3,10 +3,20 @@ import { useEffect, useState, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import {
-  formatCurrency, CATEGORY_LABELS, CATEGORY_COLORS,
+  formatCurrency, CATEGORY_LABELS, CATEGORY_COLORS, updateCategory,
   type UploadResult, type Transaction, type Subscription,
 } from '@/lib/api'
+import { track } from '@/lib/analytics'
 import { DashboardHeader } from '@/components/DashboardHeader'
+
+const CADENCE_LABELS: Record<string, string> = {
+  weekly: 'hebdo',
+  biweekly: 'bi-mensuel',
+  monthly: 'mensuel',
+  quarterly: 'trimestriel',
+  biannual: 'semestriel',
+  yearly: 'annuel',
+}
 
 // ── Design tokens ────────────────────────────────────────────────────
 const C = {
@@ -444,13 +454,25 @@ function DonutCard({ segments }: { segments: DonutSegment[] }) {
 }
 
 // ── Subscriptions ─────────────────────────────────────────────────────
-function SubsCard({ subs }: { subs: Subscription[] }) {
+function SubsCard({
+  subs,
+  onReclassify,
+}: {
+  subs: Subscription[]
+  onReclassify: (label: string) => Promise<void>
+}) {
   const [expanded, setExpanded] = useState(false)
+  const [busyLabel, setBusyLabel] = useState<string | null>(null)
   const list = expanded ? subs : subs.slice(0, 4)
   const total = subs.reduce((s, x) => s + x.monthly_cost, 0)
   const totalV = useCountUp(total)
 
   if (subs.length === 0) return null
+
+  async function handleClick(label: string) {
+    setBusyLabel(label)
+    try { await onReclassify(label) } finally { setBusyLabel(null) }
+  }
 
   return (
     <Card style={{ padding: 16 }}>
@@ -484,7 +506,23 @@ function SubsCard({ subs }: { subs: Subscription[] }) {
             <div style={{ fontSize: 14, fontWeight: 500, color: C.fg, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {s.label}
             </div>
-            <div style={{ fontSize: 11, color: C.fg3 }}>{s.occurrences}× détecté</div>
+            <div style={{ fontSize: 11, color: C.fg3 }}>
+              {s.occurrences}× détecté
+              {s.cadence && s.cadence !== 'monthly' ? ` · ${CADENCE_LABELS[s.cadence] ?? s.cadence}` : ''}
+            </div>
+            {s.needs_recategorize && (
+              <button
+                onClick={() => handleClick(s.label)}
+                disabled={busyLabel === s.label}
+                style={{
+                  marginTop: 4, padding: 0, background: 'transparent', border: 0, fontFamily: 'inherit',
+                  fontSize: 11, color: C.accent, cursor: busyLabel === s.label ? 'default' : 'pointer',
+                  textAlign: 'left', opacity: busyLabel === s.label ? 0.6 : 1,
+                }}
+              >
+                {busyLabel === s.label ? 'Reclassement…' : '💡 Pas en Abonnements · reclasser'}
+              </button>
+            )}
           </div>
           <div style={{ textAlign: 'right', flexShrink: 0, paddingLeft: 8 }}>
             <div style={{ fontSize: 13, fontWeight: 500, color: C.fg, fontVariantNumeric: 'tabular-nums' }}>
@@ -631,6 +669,37 @@ export default function DashboardPage() {
     })
   }, [router])
 
+  async function handleReclassifySub(label: string) {
+    if (!data) return
+    const labelLower = label.toLowerCase()
+    const tx = data.transactions.find(t => (t.label_clean || '').toLowerCase() === labelLower)
+    if (!tx?.id) return
+    try {
+      await updateCategory(tx.id, 'abonnements', true)
+      track('Subscription Recategorized', { label })
+      setData(prev => {
+        if (!prev) return prev
+        const next: UploadResult = {
+          ...prev,
+          transactions: prev.transactions.map(t =>
+            (t.label_clean || '').toLowerCase() === labelLower
+              ? { ...t, category: 'abonnements' }
+              : t
+          ),
+          subscriptions: prev.subscriptions?.map(s =>
+            s.label.toLowerCase() === labelLower
+              ? { ...s, category: 'abonnements', needs_recategorize: false }
+              : s
+          ),
+        }
+        try { sessionStorage.setItem('analysis', JSON.stringify(next)) } catch {}
+        return next
+      })
+    } catch {
+      // silent — Sentry captures unhandled errors elsewhere
+    }
+  }
+
   // Build donut segments from by_category
   const donutData: DonutSegment[] = useMemo(() => {
     if (!data) return []
@@ -700,7 +769,7 @@ export default function DashboardPage() {
 
           {timelineData.length > 0 && <MonthlyCard timeline={timelineData} />}
           {donutData.length > 0 && <DonutCard segments={donutData} />}
-          {data.subscriptions && data.subscriptions.length > 0 && <SubsCard subs={data.subscriptions} />}
+          {data.subscriptions && data.subscriptions.length > 0 && <SubsCard subs={data.subscriptions} onReclassify={handleReclassifySub} />}
           <TxCard transactions={data.transactions} />
 
           <div style={{
@@ -760,7 +829,7 @@ export default function DashboardPage() {
           {/* Row 3 — Subs (5) + Tx (7) */}
           {data.subscriptions && data.subscriptions.length > 0 && (
             <div className="col-span-5">
-              <SubsCard subs={data.subscriptions} />
+              <SubsCard subs={data.subscriptions} onReclassify={handleReclassifySub} />
             </div>
           )}
           <div className={data.subscriptions && data.subscriptions.length > 0 ? 'col-span-7' : 'col-span-12'}>
