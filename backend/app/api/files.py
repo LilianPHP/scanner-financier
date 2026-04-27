@@ -68,7 +68,7 @@ from app.parsers.xlsx_parser import parse_xlsx
 from app.parsers.pdf_parser import parse_pdf
 from app.services.normalization import normalize_transactions
 from app.services.categorization import categorize_batch, categorize_subcategory
-from app.services.analytics import compute_summary, compute_by_category, compute_monthly_timeline, detect_subscriptions
+from app.services.analytics import compute_summary, compute_by_category, compute_monthly_timeline, detect_subscriptions, compute_insights
 from app.db.client import get_supabase
 from app.auth import get_user_id as _get_user_id
 from app.services.currency import assert_supported_currency
@@ -153,6 +153,7 @@ async def upload_file(
         by_category = compute_by_category(transactions)
         timeline = compute_monthly_timeline(transactions)
         subscriptions = detect_subscriptions(transactions)
+        insights = compute_insights(transactions, timeline)
         file_id = str(uuid.uuid4())
 
         # Enregistrer le fichier
@@ -207,5 +208,6 @@ async def upload_file(
         "summary": summary,
         "by_category": by_category,
         "subscriptions": subscriptions,
+        "insights": insights,
         "timeline": timeline,
     }

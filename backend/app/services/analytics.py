@@ -250,3 +250,127 @@ def detect_subscriptions(transactions: List[Dict[str, Any]]) -> List[Dict[str, A
 
     subscriptions.sort(key=lambda x: x["monthly_cost"], reverse=True)
     return subscriptions
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Insights — narratifs pour le dashboard
+# ─────────────────────────────────────────────────────────────────────────
+
+_MONTH_FR = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc']
+
+
+def _month_label(key: str) -> str:
+    """YYYY-MM → 'mars' style label (lowercase, sans année)."""
+    if not key or len(key) < 7:
+        return ""
+    try:
+        idx = int(key.split("-")[1]) - 1
+        return _MONTH_FR[idx].lower()
+    except (ValueError, IndexError):
+        return ""
+
+
+def compute_insights(
+    transactions: List[Dict[str, Any]],
+    timeline: List[Dict[str, Any]] | None = None,
+) -> List[Dict[str, Any]]:
+    """
+    Génère 3-5 insights narratifs. Le frontend formate la copy.
+
+    Format de retour :
+        [{ "id": str, "data": dict }, ...]
+
+    Ids possibles :
+        - top_category    (toujours, si dépenses > 0)
+        - vs_previous     (≥ 2 mois de timeline, écart ≥ 5%)
+        - savings_pace    (cashflow positif, ≥ 50€/mois)
+        - lifestyle       (loisirs + voyage > 5% des dépenses)
+    """
+    insights: List[Dict[str, Any]] = []
+
+    expenses = [tx for tx in transactions if tx.get("amount", 0) < 0]
+    incomes = [tx for tx in transactions if tx.get("amount", 0) > 0]
+
+    total_expense = sum(abs(tx["amount"]) for tx in expenses)
+    total_income = sum(tx["amount"] for tx in incomes)
+
+    # By category (dépenses réelles, hors épargne/investissement)
+    by_cat: Dict[str, float] = defaultdict(float)
+    for tx in expenses:
+        cat = tx.get("category") or "autres"
+        if cat in SAVINGS_CATEGORIES:
+            continue
+        by_cat[cat] += abs(tx["amount"])
+
+    real_expense = sum(by_cat.values())
+
+    # ── 1. Top expense category ────────────────────────────────────────
+    if by_cat and real_expense > 0:
+        top_cat, top_amount = max(by_cat.items(), key=lambda x: x[1])
+        pct = top_amount / real_expense * 100
+        insights.append({
+            "id": "top_category",
+            "data": {
+                "category": top_cat,
+                "amount": round(top_amount, 0),
+                "pct": round(pct),
+            },
+        })
+
+    # ── 2. Vs mois précédent (≥ 2 mois timeline + écart ≥ 5%) ──────────
+    if timeline and len(timeline) >= 2:
+        sorted_tl = sorted(timeline, key=lambda t: t.get("month") or "")
+        cur = sorted_tl[-1]
+        prev = sorted_tl[-2]
+        cur_exp = float(cur.get("expense", 0))
+        prev_exp = float(prev.get("expense", 0))
+        if prev_exp > 0:
+            delta_pct = (cur_exp - prev_exp) / prev_exp * 100
+            if abs(delta_pct) >= 5:
+                insights.append({
+                    "id": "vs_previous",
+                    "data": {
+                        "delta_pct": round(delta_pct),
+                        "current": round(cur_exp, 0),
+                        "previous": round(prev_exp, 0),
+                        "previous_month_label": _month_label(prev.get("month", "")),
+                    },
+                })
+
+    # ── 3. Rythme d'épargne (cashflow positif) ─────────────────────────
+    cashflow = total_income - total_expense
+    if total_income > 0 and cashflow > 0:
+        n_months = max(len(timeline) if timeline else 1, 1)
+        per_month = cashflow / n_months
+        if per_month >= 50:
+            insights.append({
+                "id": "savings_pace",
+                "data": {
+                    "monthly_avg": round(per_month, 0),
+                    "n_months": n_months,
+                },
+            })
+
+    # ── 4. Lifestyle (loisirs + voyage) ────────────────────────────────
+    loisirs = by_cat.get("loisirs", 0)
+    voyage = by_cat.get("voyage", 0)
+    lifestyle_total = loisirs + voyage
+    if lifestyle_total > 0 and real_expense > 0:
+        pct = lifestyle_total / real_expense * 100
+        if pct >= 5:
+            if loisirs > 0 and voyage > 0:
+                kind = "loisirs_voyage"
+            elif voyage > 0:
+                kind = "voyage"
+            else:
+                kind = "loisirs"
+            insights.append({
+                "id": "lifestyle",
+                "data": {
+                    "kind": kind,
+                    "amount": round(lifestyle_total, 0),
+                    "pct": round(pct),
+                },
+            })
+
+    return insights

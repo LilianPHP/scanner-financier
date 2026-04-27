@@ -20,7 +20,7 @@ from app.services.powens import (
 from app.services.categorization import categorize_batch, categorize_subcategory
 from app.services.analytics import (
     compute_summary, compute_by_category,
-    compute_monthly_timeline, detect_subscriptions,
+    compute_monthly_timeline, detect_subscriptions, compute_insights,
 )
 
 FRONTEND_URL = __import__("app.config", fromlist=["FRONTEND_URL"]).FRONTEND_URL
@@ -176,6 +176,7 @@ def process_callback(body: CallbackRequest, authorization: Optional[str] = Heade
         by_category = compute_by_category(transactions)
         timeline = compute_monthly_timeline(transactions)
         subscriptions = detect_subscriptions(transactions)
+        insights = compute_insights(transactions, timeline)
         file_id = str(uuid.uuid4())
 
         # Enregistrer comme un "fichier" virtuel
@@ -241,6 +242,7 @@ def process_callback(body: CallbackRequest, authorization: Optional[str] = Heade
         "summary": summary,
         "by_category": by_category,
         "subscriptions": subscriptions,
+        "insights": insights,
         "timeline": timeline,
     }
 

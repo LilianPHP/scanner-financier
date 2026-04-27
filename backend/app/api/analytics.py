@@ -15,6 +15,7 @@ from app.services.analytics import (
     compute_monthly_timeline,
     detect_subscriptions,
     compute_score,
+    compute_insights,
 )
 
 router = APIRouter()
@@ -60,6 +61,7 @@ def get_categories(
     return {
         "by_category": compute_by_category(transactions),
         "subscriptions": detect_subscriptions(transactions),
+        "insights": compute_insights(transactions, compute_monthly_timeline(transactions)),
     }
 
 
