@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { SenzioMark } from '@/components/SenzioMark'
-import { PinScreen } from '@/components/PinScreen'
 
 function translateAuthError(msg: string): string {
   if (msg.includes('Invalid login credentials')) return 'Email ou mot de passe incorrect.'
@@ -64,7 +63,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [showPin, setShowPin] = useState(false)
   const [resetSent, setResetSent] = useState(false)
 
   const valid = email.includes('@') && password.length >= 6
@@ -77,10 +75,9 @@ export default function LoginPage() {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) throw error
-      setShowPin(true)
+      router.push('/dashboard')
     } catch (err: any) {
       setError(translateAuthError(err.message || ''))
-    } finally {
       setLoading(false)
     }
   }
@@ -96,17 +93,6 @@ export default function LoginPage() {
     if (!email) { setError('Entre ton email pour réinitialiser.'); return }
     await supabase.auth.resetPasswordForEmail(email, { redirectTo: `${window.location.origin}/login` })
     setResetSent(true)
-  }
-
-  if (showPin) {
-    return (
-      <PinScreen
-        title="Re-bonjour."
-        subtitle="Tape ton code pour déverrouiller."
-        onBack={() => setShowPin(false)}
-        onComplete={() => router.push('/dashboard')}
-      />
-    )
   }
 
   const formNode = (

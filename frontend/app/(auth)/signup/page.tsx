@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { SenzioMark } from '@/components/SenzioMark'
-import { PinScreen } from '@/components/PinScreen'
 import { track } from '@/lib/analytics'
 
 function getStrength(pwd: string): { score: 0|1|2|3; label: string; color: string } {
@@ -71,7 +70,7 @@ export default function SignupPage() {
   const [showPwd, setShowPwd] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [phase, setPhase] = useState<'form' | 'pin' | 'done'>('form')
+  const [phase, setPhase] = useState<'form' | 'done'>('form')
 
   const strength = getStrength(password)
   const valid = email.includes('@') && password.length >= 6
@@ -86,10 +85,10 @@ export default function SignupPage() {
       if (error) throw error
       track('Signup', { method: 'email', confirmed: !!data.session })
       if (data.session) {
-        setPhase('pin')
-      } else {
-        setPhase('done')
+        router.push('/onboarding')
+        return
       }
+      setPhase('done')
     } catch (err: any) {
       setError(err.message || 'Erreur lors de la création du compte')
     } finally {
@@ -102,17 +101,6 @@ export default function SignupPage() {
       provider: 'google',
       options: { redirectTo: `${window.location.origin}/onboarding` },
     })
-  }
-
-  if (phase === 'pin') {
-    return (
-      <PinScreen
-        title="Crée un code à 4 chiffres"
-        subtitle="Il déverrouillera l'app à chaque ouverture."
-        onBack={() => setPhase('form')}
-        onComplete={() => router.push('/onboarding')}
-      />
-    )
   }
 
   if (phase === 'done') {
