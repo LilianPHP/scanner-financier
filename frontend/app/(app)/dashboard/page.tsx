@@ -4,11 +4,13 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import {
   formatCurrency, CATEGORY_LABELS, updateCategory,
+  getUploadHistory, loadAnalysis,
   type UploadResult, type Transaction, type Subscription,
 } from '@/lib/api'
 import { useCategoryColors } from '@/lib/theme'
 import { track } from '@/lib/analytics'
 import { DashboardHeader } from '@/components/DashboardHeader'
+import { SenzioMark } from '@/components/SenzioMark'
 
 const CADENCE_LABELS: Record<string, string> = {
   weekly: 'hebdo',
@@ -646,20 +648,23 @@ function TxCard({ transactions }: { transactions: Transaction[] }) {
 }
 
 // ── Main page ─────────────────────────────────────────────────────────
+type LoadState = 'loading' | 'ready' | 'empty' | 'error'
+
 export default function DashboardPage() {
   const router = useRouter()
   const [data, setData] = useState<UploadResult | null>(null)
+  const [loadState, setLoadState] = useState<LoadState>('loading')
   const [goal, setGoal] = useState<Goal | null>(null)
   const [email, setEmail] = useState('')
   const categoryColors = useCategoryColors()
 
   useEffect(() => {
-    const raw = sessionStorage.getItem('analysis')
-    if (!raw) { router.push('/accounts'); return }
-    setData(JSON.parse(raw))
+    let cancelled = false
 
+    // Auth + email + active goal — runs regardless of analysis state
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) return
+      if (cancelled) return
+      if (!session) { router.push('/login'); return }
       setEmail(session.user.email ?? '')
       const { data: goals } = await supabase
         .from('goals')
@@ -668,8 +673,47 @@ export default function DashboardPage() {
         .eq('status', 'active')
         .order('created_at', { ascending: false })
         .limit(1)
+      if (cancelled) return
       if (goals && goals.length > 0) setGoal(goals[0] as Goal)
     })
+
+    // Analysis load: sessionStorage cache → backend history fallback → empty
+    async function loadAnalysisFlow() {
+      try {
+        const raw = sessionStorage.getItem('analysis')
+        if (raw) {
+          const parsed = JSON.parse(raw)
+          if (parsed?.transactions) {
+            setData(parsed)
+            setLoadState('ready')
+            return
+          }
+        }
+      } catch {
+        // ignore parse errors, fall through to backend
+      }
+
+      try {
+        const files = await getUploadHistory()
+        if (cancelled) return
+        if (!files || files.length === 0) {
+          setLoadState('empty')
+          return
+        }
+        const latest = files[0]
+        const result = await loadAnalysis(latest.id, latest.filename)
+        if (cancelled) return
+        try { sessionStorage.setItem('analysis', JSON.stringify(result)) } catch {}
+        setData(result)
+        setLoadState('ready')
+      } catch {
+        if (cancelled) return
+        setLoadState('error')
+      }
+    }
+
+    loadAnalysisFlow()
+    return () => { cancelled = true }
   }, [router])
 
   async function handleReclassifySub(label: string) {
@@ -730,9 +774,77 @@ export default function DashboardPage() {
 
   const initial = email ? email[0].toUpperCase() : '?'
 
-  if (!data) return (
+  if (loadState === 'loading') return (
     <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.bg }}>
       <div style={{ width: 32, height: 32, borderRadius: '50%', border: `2px solid ${C.accent}`, borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }} />
+    </div>
+  )
+
+  if (loadState === 'empty') return (
+    <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.bg, padding: '0 24px' }}>
+      <div style={{ maxWidth: 360, width: '100%', textAlign: 'center' }}>
+        <div style={{ display: 'inline-flex', marginBottom: 20 }}>
+          <SenzioMark size={48} />
+        </div>
+        <h1 style={{ fontSize: 22, fontWeight: 600, letterSpacing: '-0.02em', color: C.fg, marginBottom: 8 }}>
+          Bienvenue chez Senzio
+        </h1>
+        <p style={{ fontSize: 14, lineHeight: 1.5, color: C.fg2, marginBottom: 24 }}>
+          Connecte ta première banque pour voir un dashboard de tes finances. Lecture seule, agréé ACPR via Powens.
+        </p>
+        <button
+          onClick={() => router.push('/accounts')}
+          style={{
+            width: '100%',
+            padding: '14px 18px',
+            borderRadius: 14,
+            background: C.accent,
+            color: '#062A1E',
+            fontSize: 14,
+            fontWeight: 600,
+            border: 'none',
+            cursor: 'pointer',
+            fontFamily: 'inherit',
+            boxShadow: `0 0 28px ${C.accentGlow}`,
+          }}
+        >
+          Connecter ma banque
+        </button>
+      </div>
+    </div>
+  )
+
+  if (loadState === 'error' || !data) return (
+    <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.bg, padding: '0 24px' }}>
+      <div style={{ maxWidth: 360, width: '100%', textAlign: 'center' }}>
+        <div style={{
+          width: 56, height: 56, borderRadius: 16, margin: '0 auto 16px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.25)',
+        }}>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#F87171" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+        </div>
+        <h1 style={{ fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em', color: C.fg, marginBottom: 8 }}>
+          Impossible de charger ton analyse
+        </h1>
+        <p style={{ fontSize: 13, lineHeight: 1.5, color: C.fg3, marginBottom: 20 }}>
+          Le serveur peut être en train de se réveiller. Réessaie dans un instant.
+        </p>
+        <button
+          onClick={() => window.location.reload()}
+          style={{
+            padding: '12px 20px', borderRadius: 12, background: C.cardHi, color: C.fg,
+            fontSize: 13, fontWeight: 500, border: `1px solid ${C.border}`,
+            cursor: 'pointer', fontFamily: 'inherit',
+          }}
+        >
+          Réessayer
+        </button>
+      </div>
     </div>
   )
 
