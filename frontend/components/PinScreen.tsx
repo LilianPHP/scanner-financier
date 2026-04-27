@@ -68,6 +68,7 @@ export function PinScreen({ title, subtitle, onComplete, onBack }: Props) {
             <button
               key={k}
               onClick={isErase ? erase : () => tap(k)}
+              aria-label={isErase ? 'Effacer' : `Chiffre ${k}`}
               className="flex items-center justify-center text-xl font-medium rounded-2xl transition-all active:scale-95"
               style={{
                 height: 64,
