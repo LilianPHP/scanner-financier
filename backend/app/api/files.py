@@ -5,6 +5,7 @@ POST /files/upload  → upload, parse, catégorise, sauvegarde
 import uuid
 import io
 import time
+from datetime import datetime, timedelta, timezone
 from collections import defaultdict
 from fastapi import APIRouter, UploadFile, File, Header, HTTPException, Depends, Request
 from typing import Optional
@@ -17,7 +18,7 @@ _upload_timestamps: dict = defaultdict(list)
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 
 
-def _check_rate_limit(user_id: str) -> None:
+def _check_rate_limit_memory(user_id: str) -> None:
     now = time.time()
     timestamps = _upload_timestamps[user_id]
     # Supprimer les entrées hors fenêtre
@@ -29,6 +30,39 @@ def _check_rate_limit(user_id: str) -> None:
         )
     _upload_timestamps[user_id].append(now)
 
+
+def _check_rate_limit(user_id: str, sb) -> None:
+    """Rate limit persistant, partagé entre instances. Fallback mémoire si table absente."""
+    since = datetime.now(timezone.utc) - timedelta(seconds=_RATE_LIMIT_WINDOW)
+    try:
+        sb.table("rate_limit_events").delete() \
+            .eq("user_id", user_id) \
+            .eq("action", "upload") \
+            .lt("created_at", since.isoformat()) \
+            .execute()
+
+        existing = sb.table("rate_limit_events") \
+            .select("id") \
+            .eq("user_id", user_id) \
+            .eq("action", "upload") \
+            .gte("created_at", since.isoformat()) \
+            .execute()
+
+        if len(existing.data or []) >= _RATE_LIMIT_MAX:
+            raise HTTPException(
+                status_code=429,
+                detail=f"Trop d'uploads — limite de {_RATE_LIMIT_MAX} fichiers par heure atteinte."
+            )
+
+        sb.table("rate_limit_events").insert({
+            "user_id": user_id,
+            "action": "upload",
+        }).execute()
+    except HTTPException:
+        raise
+    except Exception:
+        _check_rate_limit_memory(user_id)
+
 from app.parsers.csv_parser import parse_csv
 from app.parsers.xlsx_parser import parse_xlsx
 from app.parsers.pdf_parser import parse_pdf
@@ -37,7 +71,7 @@ from app.services.categorization import categorize_batch, categorize_subcategory
 from app.services.analytics import compute_summary, compute_by_category, compute_monthly_timeline, detect_subscriptions
 from app.db.client import get_supabase
 from app.auth import get_user_id as _get_user_id
-from app.services.currency import to_eur, get_eur_rate
+from app.services.currency import assert_supported_currency
 
 router = APIRouter()
 
@@ -53,9 +87,10 @@ async def upload_file(
     """
     # Auth
     user_id = _get_user_id(authorization)
+    sb = get_supabase()
 
     # Rate limiting
-    _check_rate_limit(user_id)
+    _check_rate_limit(user_id, sb)
 
     # Lire le fichier
     content = await file.read()
@@ -88,23 +123,12 @@ async def upload_file(
         # Normaliser
         transactions = normalize_transactions(raw_rows)
 
-        # Détecter la devise du fichier (première transaction ou EUR par défaut)
+        # Senzio cible la France : les imports non-EUR sont rejetés explicitement.
         file_currency = raw_rows[0].get("currency", "EUR") if raw_rows else "EUR"
-
-        # Convertir les montants vers EUR si nécessaire
-        if file_currency != "EUR":
-            rate = get_eur_rate(file_currency)
-            for tx in transactions:
-                tx["amount_original"] = tx["amount"]
-                tx["currency"] = file_currency
-                tx["amount"] = round(tx["amount"] * rate, 2)
-        else:
-            for tx in transactions:
-                tx["amount_original"] = tx["amount"]
-                tx["currency"] = "EUR"
-
-        # Connexion Supabase
-        sb = get_supabase()
+        assert_supported_currency(file_currency)
+        for tx in transactions:
+            tx["amount_original"] = tx["amount"]
+            tx["currency"] = "EUR"
 
         # Charger les règles perso de l'utilisateur
         rules_res = sb.table("user_category_rules") \
