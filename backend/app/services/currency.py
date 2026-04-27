@@ -4,6 +4,7 @@ Utilise l'API Frankfurter (gratuite, sans clé, mise à jour quotidienne).
 """
 import logging
 import httpx
+from fastapi import HTTPException
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +74,8 @@ def get_eur_rate(currency: str) -> float:
     """
     Retourne le taux de conversion currency → EUR.
     1.0 pour EUR, taux réel via Frankfurter sinon.
-    Fallback silencieux à 1.0 si l'API est indisponible.
+    Lève une erreur si le taux est indisponible. Une conversion financière
+    silencieuse à 1.0 serait trompeuse.
     """
     if currency == "EUR":
         return 1.0
@@ -93,8 +95,20 @@ def get_eur_rate(currency: str) -> float:
         logger.info(f"Taux {currency}→EUR : {rate}")
         return rate
     except Exception as e:
-        logger.warning(f"Impossible de récupérer le taux {currency}→EUR : {e} — fallback 1.0")
-        return 1.0
+        logger.warning(f"Impossible de récupérer le taux {currency}→EUR : {e}")
+        raise RuntimeError(f"Taux de conversion indisponible pour {currency}") from e
+
+
+def assert_supported_currency(currency: str) -> None:
+    """Senzio France accepte uniquement les relevés en euros."""
+    if (currency or "EUR").upper() != "EUR":
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Devise non supportée : {currency}. "
+                "Senzio accepte uniquement les relevés bancaires français en EUR."
+            ),
+        )
 
 
 def to_eur(amount: float, currency: str) -> float:
