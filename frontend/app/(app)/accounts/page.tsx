@@ -167,7 +167,8 @@ export default function AccountsPage() {
     setConnecting(true)
     setError('')
     try {
-      const { webview_url } = await getBankConnectUrl(targetMonth)
+      const { webview_url, state } = await getBankConnectUrl(targetMonth)
+      sessionStorage.setItem('bank_connect_state', state)
       window.location.href = webview_url
     } catch (e: any) {
       setError(e.message || 'Erreur lors de la connexion')

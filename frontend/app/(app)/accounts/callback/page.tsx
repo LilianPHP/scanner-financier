@@ -13,8 +13,11 @@ function BankCallbackContent() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    const connection_id = params.get('connection_id')
-    const state = params.get('state')
+    const connection_id =
+      params.get('connection_id') ||
+      params.get('id_connection') ||
+      params.get('connection_ids')?.split(',').map(id => id.trim()).filter(Boolean)[0]
+    const state = params.get('state') || sessionStorage.getItem('bank_connect_state')
     const errorParam = params.get('error')
 
     if (errorParam) {
@@ -39,6 +42,7 @@ function BankCallbackContent() {
         track('Bank Connected', { transactions: result.transactions.length })
         setMessage(`${result.transactions.length} transactions importées ✓`)
         await new Promise(r => setTimeout(r, 800))
+        sessionStorage.removeItem('bank_connect_state')
         sessionStorage.setItem('analysis', JSON.stringify(result))
         router.push('/dashboard')
       } catch (e: any) {
