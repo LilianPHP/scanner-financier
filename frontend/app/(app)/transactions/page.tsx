@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { TabHeader } from '@/components/TabHeader'
 import { CATEGORY_LABELS, CATEGORY_COLORS, updateCategory } from '@/lib/api'
+import { track } from '@/lib/analytics'
 
 type Transaction = {
   id?: string
@@ -142,14 +143,18 @@ export default function TransactionsPage() {
     setUpdating(true)
     try {
       const res = await updateCategory(tx.id, newCategory, propagate)
-      const txLabel = (tx.label_clean || tx.label_raw || '').toLowerCase()
-      const labelKey = txLabel.split(/\s+/).find(w => w.length >= 4) ?? ''
+      track('Transaction Reclassified', {
+        from: tx.category,
+        to: newCategory,
+        propagated: propagate,
+        affected: res.total_updated ?? 1,
+      })
+      // Mirror backend's strict equality on label_clean (api/transactions.py)
       setTransactions(prev => {
         const next = prev.map(t => {
           if (t.id === tx.id) return { ...t, category: newCategory }
-          if (propagate && labelKey) {
-            const otherLabel = (t.label_clean || t.label_raw || '').toLowerCase()
-            if (otherLabel.includes(labelKey)) return { ...t, category: newCategory }
+          if (propagate && tx.label_clean && t.label_clean === tx.label_clean) {
+            return { ...t, category: newCategory }
           }
           return t
         })
@@ -290,7 +295,7 @@ export default function TransactionsPage() {
             style={{ color: 'var(--fg)', fontFamily: 'inherit' }}
           />
           {search && (
-            <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-3)', padding: 0 }}>
+            <button onClick={() => setSearch('')} aria-label="Effacer la recherche" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--fg-3)', padding: 0 }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </button>
           )}

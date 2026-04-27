@@ -3,11 +3,13 @@ import { useTheme } from '@/lib/theme'
 
 export function ThemeToggle({ className = '' }: { className?: string }) {
   const { theme, toggle } = useTheme()
+  const label = theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'
   return (
     <button
       onClick={toggle}
       className={`text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors ${className}`}
-      title={theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'}
+      title={label}
+      aria-label={label}
     >
       {theme === 'dark' ? (
         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

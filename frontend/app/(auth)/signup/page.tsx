@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { SenzioMark } from '@/components/SenzioMark'
 import { PinScreen } from '@/components/PinScreen'
+import { track } from '@/lib/analytics'
 
 function getStrength(pwd: string): { score: 0|1|2|3; label: string; color: string } {
   if (!pwd) return { score: 0, label: '', color: '' }
@@ -83,6 +84,7 @@ export default function SignupPage() {
     try {
       const { data, error } = await supabase.auth.signUp({ email, password })
       if (error) throw error
+      track('Signup', { method: 'email', confirmed: !!data.session })
       if (data.session) {
         setPhase('pin')
       } else {

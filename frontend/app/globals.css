@@ -18,11 +18,12 @@
   --track:         rgba(255,255,255,0.08);
   --track-strong:  rgba(255,255,255,0.15);
 
-  /* Foreground */
+  /* Foreground — contrast bumped for WCAG AA on dark bg
+     fg-2 ~7.4:1 · fg-3 ~5.0:1 · fg-4 ~3.5:1 (large text / decorative) */
   --fg:            #F5F5F5;
-  --fg-2:          rgba(255,255,255,0.60);
-  --fg-3:          rgba(255,255,255,0.38);
-  --fg-4:          rgba(255,255,255,0.22);
+  --fg-2:          rgba(255,255,255,0.65);
+  --fg-3:          rgba(255,255,255,0.55);
+  --fg-4:          rgba(255,255,255,0.42);
 
   /* Accent (green) */
   --accent:        #1D9E75;
@@ -59,9 +60,9 @@
   --track:         rgba(0,0,0,0.06);
   --track-strong:  rgba(0,0,0,0.12);
   --fg:            #161616;
-  --fg-2:          rgba(0,0,0,0.58);
-  --fg-3:          rgba(0,0,0,0.38);
-  --fg-4:          rgba(0,0,0,0.22);
+  --fg-2:          rgba(0,0,0,0.65);
+  --fg-3:          rgba(0,0,0,0.55);
+  --fg-4:          rgba(0,0,0,0.42);
 }
 
 html, body {
@@ -78,3 +79,21 @@ html, body {
 
 /* Safe area bottom padding (notch phones) */
 .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+/* Keyboard navigation focus ring — only for keyboard users (not mouse clicks) */
+:focus-visible {
+  outline: 2px solid #1D9E75;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+/* Remove default browser focus on mouse clicks; :focus-visible handles a11y */
+:focus:not(:focus-visible) { outline: none; }
+
+/* Respect reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
