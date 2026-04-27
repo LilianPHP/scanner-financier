@@ -556,6 +556,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   autres: 'Autres',
 }
 
+// Dark-mode optimized — use these on dark backgrounds (≥ 4.5:1 vs #0A0A0A)
 export const CATEGORY_COLORS: Record<string, string> = {
   // Clés anglaises (legacy upload)
   alimentation: '#1D9E75',
@@ -589,4 +590,39 @@ export const CATEGORY_COLORS: Record<string, string> = {
   Éducation: '#0EA5E9',
   Voyage: '#F97316',
   Autre: '#6B7280',
+}
+
+// Light-mode optimized — Tailwind 700-shades, ≥ 4.5:1 vs #F4F4F0 (WCAG AA)
+export const CATEGORY_COLORS_LIGHT: Record<string, string> = {
+  alimentation: '#0F6E50',
+  logement: '#1D4ED8',
+  transport: '#B45309',
+  loisirs: '#BE185D',
+  abonnements: '#0E7490',
+  salaire: '#15803D',
+  'frais bancaires': '#4B5563',
+  sante: '#B91C1C',
+  investissement: '#4338CA',
+  epargne: '#0F6E50',
+  impots: '#57534E',
+  education: '#0369A1',
+  voyage: '#C2410C',
+  vetements: '#7E22CE',
+  autres: '#4B5563',
+  // Clés françaises (bank API)
+  Logement: '#1D4ED8',
+  Courses: '#0F6E50',
+  Abonnements: '#0E7490',
+  Transport: '#B45309',
+  Shopping: '#6D28D9',
+  Sorties: '#BE185D',
+  Santé: '#B91C1C',
+  Revenus: '#15803D',
+  Salaire: '#15803D',
+  Investissement: '#4338CA',
+  Épargne: '#0F6E50',
+  Impôts: '#57534E',
+  Éducation: '#0369A1',
+  Voyage: '#C2410C',
+  Autre: '#4B5563',
 }

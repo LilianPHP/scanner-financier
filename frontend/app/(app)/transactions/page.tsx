@@ -3,7 +3,8 @@ import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { TabHeader } from '@/components/TabHeader'
-import { CATEGORY_LABELS, CATEGORY_COLORS, updateCategory } from '@/lib/api'
+import { CATEGORY_LABELS, updateCategory } from '@/lib/api'
+import { useCategoryColors } from '@/lib/theme'
 import { track } from '@/lib/analytics'
 
 type Transaction = {
@@ -53,7 +54,8 @@ function monthLabel(key: string): string {
 }
 
 function CatIcon({ cat }: { cat: string }) {
-  const color = CATEGORY_COLORS[cat] ?? '#6B7280'
+  const colors = useCategoryColors()
+  const color = colors[cat] ?? '#6B7280'
   const icon = CAT_ICONS[cat] ?? '📦'
   return (
     <div
@@ -79,6 +81,7 @@ export default function TransactionsPage() {
   const [propagate, setPropagate] = useState(true)
   const [toast, setToast] = useState('')
   const [updating, setUpdating] = useState(false)
+  const categoryColors = useCategoryColors()
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -449,7 +452,7 @@ export default function TransactionsPage() {
             <div className="grid grid-cols-2 gap-2 mt-4 mb-4">
               {Object.entries(CATEGORY_LABELS).map(([key, label]) => {
                 const isCurrent = key === pickerTx.category
-                const color = CATEGORY_COLORS[key] ?? '#6B7280'
+                const color = categoryColors[key] ?? '#6B7280'
                 const icon = CAT_ICONS[key] ?? '📦'
                 return (
                   <button

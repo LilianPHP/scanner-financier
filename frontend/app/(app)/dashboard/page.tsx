@@ -3,9 +3,10 @@ import { useEffect, useState, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import {
-  formatCurrency, CATEGORY_LABELS, CATEGORY_COLORS, updateCategory,
+  formatCurrency, CATEGORY_LABELS, updateCategory,
   type UploadResult, type Transaction, type Subscription,
 } from '@/lib/api'
+import { useCategoryColors } from '@/lib/theme'
 import { track } from '@/lib/analytics'
 import { DashboardHeader } from '@/components/DashboardHeader'
 
@@ -559,6 +560,7 @@ const CHIPS = [
 function TxCard({ transactions }: { transactions: Transaction[] }) {
   const [filter, setFilter] = useState<string | null>(null)
   const [showAll, setShowAll] = useState(false)
+  const categoryColors = useCategoryColors()
 
   const filtered = filter ? transactions.filter(t => t.category === filter) : transactions
   const shown = showAll ? filtered : filtered.slice(0, 12)
@@ -596,7 +598,7 @@ function TxCard({ transactions }: { transactions: Transaction[] }) {
       )}
 
       {shown.map((tx, i) => {
-        const color = CATEGORY_COLORS[tx.category] ?? '#94A3B8'
+        const color = categoryColors[tx.category] ?? '#94A3B8'
         const icon = CAT_ICONS[tx.category] ?? '•'
         const negative = tx.amount < 0
         return (
@@ -649,6 +651,7 @@ export default function DashboardPage() {
   const [data, setData] = useState<UploadResult | null>(null)
   const [goal, setGoal] = useState<Goal | null>(null)
   const [email, setEmail] = useState('')
+  const categoryColors = useCategoryColors()
 
   useEffect(() => {
     const raw = sessionStorage.getItem('analysis')
@@ -711,9 +714,9 @@ export default function DashboardPage() {
         key: c.category,
         label: CATEGORY_LABELS[c.category] ?? c.category,
         value: c.total,
-        color: CATEGORY_COLORS[c.category] ?? '#94A3B8',
+        color: categoryColors[c.category] ?? '#94A3B8',
       }))
-  }, [data])
+  }, [data, categoryColors])
 
   // Build timeline for bar chart
   const timelineData: MonthData[] = useMemo(() => {

@@ -1,5 +1,6 @@
 'use client'
 import { createContext, useContext, useEffect, useState } from 'react'
+import { CATEGORY_COLORS, CATEGORY_COLORS_LIGHT } from './api'
 
 type Theme = 'light' | 'dark'
 
@@ -36,4 +37,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
 export function useTheme() {
   return useContext(ThemeContext)
+}
+
+/**
+ * Returns the category color map for the current theme.
+ * Use this instead of importing CATEGORY_COLORS directly when the
+ * color is rendered as text/border/badge (needs WCAG AA contrast).
+ */
+export function useCategoryColors(): Record<string, string> {
+  const { theme } = useTheme()
+  return theme === 'light' ? CATEGORY_COLORS_LIGHT : CATEGORY_COLORS
 }
