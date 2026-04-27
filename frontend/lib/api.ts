@@ -61,6 +61,12 @@ export type Subscription = {
   needs_recategorize?: boolean
 }
 
+export type Insight =
+  | { id: 'top_category'; data: { category: string; amount: number; pct: number } }
+  | { id: 'vs_previous'; data: { delta_pct: number; current: number; previous: number; previous_month_label: string } }
+  | { id: 'savings_pace'; data: { monthly_avg: number; n_months: number } }
+  | { id: 'lifestyle'; data: { kind: 'loisirs' | 'voyage' | 'loisirs_voyage'; amount: number; pct: number } }
+
 export type ScoreResult = {
   score: number
   label: string
@@ -81,6 +87,7 @@ export type UploadResult = {
   by_category: CategoryData[]
   timeline: MonthlyData[]
   subscriptions?: Subscription[]
+  insights?: Insight[]
   score?: ScoreResult
 }
 
@@ -393,6 +400,7 @@ export async function loadAnalysis(fileId: string, filename = ''): Promise<Uploa
     summary,
     by_category: categoriesData.by_category,
     subscriptions: categoriesData.subscriptions,
+    insights: categoriesData.insights,
     timeline: timelineData.timeline,
     score,
   }

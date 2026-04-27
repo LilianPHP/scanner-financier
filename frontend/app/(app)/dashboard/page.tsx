@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import {
   formatCurrency, CATEGORY_LABELS, updateCategory,
   getUploadHistory, loadAnalysis,
-  type UploadResult, type Transaction, type Subscription,
+  type UploadResult, type Transaction, type Subscription, type Insight,
 } from '@/lib/api'
 import { useCategoryColors } from '@/lib/theme'
 import { track } from '@/lib/analytics'
@@ -456,6 +456,114 @@ function DonutCard({ segments }: { segments: DonutSegment[] }) {
   )
 }
 
+// ── Insights ──────────────────────────────────────────────────────────
+function InsightsCard({ insights }: { insights: Insight[] }) {
+  const colors = useCategoryColors()
+  if (!insights || insights.length === 0) return null
+  return (
+    <Card style={{ padding: 16 }}>
+      <SectionHeading title="Cette période en bref" />
+      <div>
+        {insights.map((insight, i) => (
+          <InsightRow key={`${insight.id}-${i}`} insight={insight} colors={colors} isFirst={i === 0} />
+        ))}
+      </div>
+    </Card>
+  )
+}
+
+function InsightRow({ insight, colors, isFirst }: {
+  insight: Insight
+  colors: Record<string, string>
+  isFirst: boolean
+}) {
+  const view = renderInsight(insight, colors)
+  if (!view) return null
+  return (
+    <div style={{
+      display: 'grid', gridTemplateColumns: '32px 1fr', gap: 12,
+      alignItems: 'flex-start', padding: '12px 0',
+      borderTop: isFirst ? 'none' : `1px solid ${C.border}`,
+    }}>
+      <div style={{
+        width: 32, height: 32, borderRadius: 10,
+        background: view.accent + '20', border: `1px solid ${view.accent}30`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 2,
+      }}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={view.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          {view.iconPath}
+        </svg>
+      </div>
+      <div style={{ minWidth: 0, fontSize: 13, lineHeight: 1.45, color: C.fg }}>
+        {view.title}
+        <div style={{ fontSize: 11, color: C.fg3, marginTop: 2 }}>{view.sub}</div>
+      </div>
+    </div>
+  )
+}
+
+function renderInsight(insight: Insight, colors: Record<string, string>):
+  | { accent: string; iconPath: React.ReactNode; title: React.ReactNode; sub: string }
+  | null
+{
+  switch (insight.id) {
+    case 'top_category': {
+      const { category, amount, pct } = insight.data
+      const label = CATEGORY_LABELS[category] ?? category
+      const accent = colors[category] ?? '#94A3B8'
+      return {
+        accent,
+        iconPath: <><path d="M3 6h18M6 12h12M9 18h6"/></>,
+        title: <span>Ta <strong>dépense principale</strong> : <strong style={{ color: accent }}>{label}</strong></span>,
+        sub: `${nf0.format(amount)} € · ${pct} % de tes dépenses`,
+      }
+    }
+    case 'vs_previous': {
+      const { delta_pct, current, previous, previous_month_label } = insight.data
+      const isLower = delta_pct < 0
+      const accent = isLower ? '#1D9E75' : '#F87171'
+      const month = previous_month_label || 'le mois dernier'
+      return {
+        accent,
+        iconPath: isLower
+          ? <><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></>
+          : <><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></>,
+        title: (
+          <span>
+            Tu as dépensé <strong>{Math.abs(delta_pct)} % {isLower ? 'de moins' : 'de plus'}</strong> qu'en {month}
+          </span>
+        ),
+        sub: `${nf0.format(current)} € contre ${nf0.format(previous)} €`,
+      }
+    }
+    case 'savings_pace': {
+      const { monthly_avg } = insight.data
+      return {
+        accent: '#1D9E75',
+        iconPath: <><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></>,
+        title: <span>Tu <strong>mets de côté</strong> <strong>{nf0.format(monthly_avg)} €/mois</strong> en moyenne</span>,
+        sub: 'sur la période sélectionnée',
+      }
+    }
+    case 'lifestyle': {
+      const { kind, amount, pct } = insight.data
+      const labels: Record<string, string> = {
+        loisirs: 'loisirs',
+        voyage: 'voyages',
+        loisirs_voyage: 'loisirs & voyages',
+      }
+      const accent = colors['loisirs'] ?? '#EC4899'
+      return {
+        accent,
+        iconPath: <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/>,
+        title: <span>Tu dépenses <strong>{pct} %</strong> en {labels[kind] ?? kind}</span>,
+        sub: `${nf0.format(amount)} € sur la période`,
+      }
+    }
+  }
+  return null
+}
+
 // ── Subscriptions ─────────────────────────────────────────────────────
 function SubsCard({
   subs,
@@ -882,6 +990,7 @@ export default function DashboardPage() {
             />
           </div>
 
+          {data.insights && data.insights.length > 0 && <InsightsCard insights={data.insights} />}
           {timelineData.length > 0 && <MonthlyCard timeline={timelineData} />}
           {donutData.length > 0 && <DonutCard segments={donutData} />}
           {data.subscriptions && data.subscriptions.length > 0 && <SubsCard subs={data.subscriptions} onReclassify={handleReclassifySub} />}
@@ -929,7 +1038,14 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Row 2 — Bar chart (7) + Donut (5), each spans full width when alone */}
+          {/* Row 2 — Insights narratifs (full width) */}
+          {data.insights && data.insights.length > 0 && (
+            <div className="col-span-12">
+              <InsightsCard insights={data.insights} />
+            </div>
+          )}
+
+          {/* Row 3 — Bar chart (7) + Donut (5), each spans full width when alone */}
           {timelineData.length > 0 && (
             <div className={donutData.length > 0 ? 'col-span-7' : 'col-span-12'}>
               <MonthlyCard timeline={timelineData} />
