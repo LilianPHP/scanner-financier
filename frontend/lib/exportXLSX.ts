@@ -137,7 +137,6 @@ const S = {
 }
 
 /* ─── Cell factory ─────────────────────────────────────── */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function cl(v: string | number, s: Record<string, unknown> = {}, t?: string): Record<string, unknown> {
   return { v, t: t ?? (typeof v === 'number' ? 'n' : 's'), s }
 }
@@ -212,8 +211,7 @@ export interface ExportData {
 /* ─── Main export function ──────────────────────────────── */
 export async function exportXLSX(d: ExportData) {
   // Dynamic import — client only, avoids SSR issues
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const XLSX = (await import('xlsx-js-style')) as any
+  const XLSX = (await import('xlsx-js-style')) as unknown as Record<string, any>
 
   const dates = d.transactions.map(tx => tx.date).sort()
   const period = dates.length ? `${dates[0]} → ${dates[dates.length - 1]}` : ''

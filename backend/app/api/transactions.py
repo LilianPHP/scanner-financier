@@ -75,18 +75,16 @@ def update_transaction(
     updated_count = 1
 
     if body.propagate:
-        similar = (
+        # Single batched UPDATE instead of one call per similar tx (N+1 fix)
+        similar_result = (
             sb.table("transactions")
-            .select("id")
+            .update(update_payload)
             .eq("user_id", user_id)
             .eq("label_clean", tx["label_clean"])
             .neq("id", tx_id)
             .execute()
         )
-
-        for similar_tx in similar.data:
-            sb.table("transactions").update(update_payload).eq("id", similar_tx["id"]).execute()
-            updated_count += 1
+        updated_count += len(similar_result.data or [])
 
     return {
         "updated": True,
