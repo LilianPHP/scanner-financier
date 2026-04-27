@@ -15,7 +15,7 @@ const TABS = [
   },
   {
     href: '/transactions',
-    label: 'Tx',
+    label: 'Transactions',
     icon: (active: boolean) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? '#1D9E75' : 'currentColor'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <line x1="8" y1="6" x2="21" y2="6"/>
@@ -28,12 +28,11 @@ const TABS = [
     ),
   },
   {
-    href: '/budgets',
-    label: 'Budgets',
+    href: '/accounts',
+    label: 'Comptes',
     icon: (active: boolean) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? '#1D9E75' : 'currentColor'} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10"/>
-        <polyline points="12 6 12 12 16 14"/>
+        <path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3"/>
       </svg>
     ),
   },
@@ -79,6 +78,7 @@ export function BottomNav() {
             <Link
               key={tab.href}
               href={tab.href}
+              aria-current={active ? 'page' : undefined}
               className="flex flex-col items-center gap-1 flex-1 py-3 transition-opacity"
               style={{ opacity: active ? 1 : 0.5 }}
             >
