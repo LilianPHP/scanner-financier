@@ -27,7 +27,7 @@ _CACHE_PRELOADED = False
 VALID_CATEGORIES = {
     "alimentation", "logement", "transport", "loisirs", "abonnements",
     "salaire", "frais bancaires", "sante", "investissement", "epargne",
-    "impots", "autres",
+    "impots", "education", "voyage", "vetements", "autres",
 }
 
 # Modèle utilisé pour le fallback. Haiku 4.5 est ~3× moins cher que Sonnet 4.5
@@ -52,6 +52,9 @@ Catégories disponibles — utilise EXACTEMENT ces noms :
 - investissement: crypto (Bitstack, Coinbase, Binance...), bourse, ETF, PEA, trading
 - epargne       : virement vers livret A, LDDS, PEL, CEL, virement épargne perso
 - impots        : impôts sur le revenu, taxes foncières, URSSAF, cotisations sociales, France Travail (débit)
+- education     : université, école, formation en ligne (Udemy, Coursera), Duolingo, librairie scolaire, papeterie, frais de scolarité
+- voyage        : hôtel, Airbnb, Booking.com, agence de voyage, séjour (uniquement vacances/loisir, pas le transport quotidien)
+- vetements     : vêtements (Zara, H&M, Sezane, Asos), chaussures, mode (Lacoste, Nike, Adidas en mode loisir-style)
 - autres        : virement personnel ambigu, remboursement entre particuliers, vraiment indéterminable
 
 RÈGLES MÉTIER :

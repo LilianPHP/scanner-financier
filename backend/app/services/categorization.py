@@ -400,35 +400,43 @@ SUBCATEGORY_RULES: Dict[str, Dict[str, List[str]]] = {
             "go card", "myki ", "opal ", "translink", "ptv ", "transperth",
             "bus ", "tram ", "ferry ", "train ",
         ],
+        "location_vehicule": ["europcar", "hertz ", "avis ", "sixt ", "enterprise rent", "getaround", "drivy ", "ouicar"],
     },
     "logement": {
         "loyer": ["loyer", "charges locatives", "rent ", "real estate", "strata "],
         "energie": ["edf ", "engie ", "gdf ", "origin energy", "agl ", "energex", "ausgrid", "synergy "],
         "eau": ["eau ", "veolia ", "suez ", "saur "],
         "assurance_hab": ["assurance habitation", "assurance logement", "maaf ", "macif ", "axa ", "allianz ", "generali ", "matmut "],
-        "electromenager": ["darty ", "boulanger ", "ikea ", "but ", "conforama", "bunnings", "mitre 10", "total tools", "diy ", "copropriete", "syndic "],
+        "electromenager": ["darty ", "boulanger ", "ikea ", "but ", "conforama"],
+        "travaux_bricolage": ["leroy merlin", "castorama", "brico depot", "mr bricolage", "bunnings", "mitre 10", "total tools"],
+        "charges_syndic": ["copropriete", "syndic ", "foncia", "nexity", "citya", "gardien", "charges copropriete"],
     },
     "sante": {
         "pharmacie": ["pharmacie", "pharmacy", "drug store", "drugstore", "chemist warehouse", "priceline", "terry white", "blooms the chemist"],
-        "dentiste_opticien": ["dentiste", "dentist", "opticien"],
+        "dentiste_opticien": ["dentiste", "dentist", "opticien", "optic 2000", "krys ", "atol ", "afflelou", "grandvision"],
         "mutuelle": ["mutuelle", "prevoyance", "medibank", "bupa ", "hcf ", "nib health", "australian unity"],
-        "medecin": ["medecin", "docteur", "kinesitherapeute", "osteopathe", "hopital", "clinique", "doctolib", "ameli", "cpam ", "medical centre", "bulk bill"],
+        "hopital_clinique": ["hopital", "clinique", "centre medical", "maison medicale", "ramsay sante"],
+        "medecin": ["medecin", "docteur", "kinesitherapeute", "osteopathe", "doctolib", "ameli", "cpam ", "medical centre", "bulk bill", "psychologue", "psychiatre", "dermato", "ophtalmo"],
     },
     "loisirs": {
-        "jeux_video": ["playstation", "xbox ", "steam ", "nintendo"],
+        "jeux_video": ["playstation", "xbox ", "steam ", "nintendo", "epic games", "blizzard", "ubisoft", "riot games"],
         "cinema_spectacle": [
-            "cinema", "ugc ", "pathe ", "gaumont ", "mk2 ", "theatre", "opera", "concert", "spectacle", "musee",
+            "cinema", "ugc ", "pathe ", "gaumont ", "mk2 ", "theatre", "opera", "concert", "spectacle", "musee", "exposition",
             "event cinema", "hoyts", "village cinema", "sea world", "dreamworld", "luna park",
         ],
         "sport_fitness": ["gym ", "salle de sport", "fitness", "basic fit", "neoness", "orange bleue", "rebel sport", "bcf ", "kathmandu", "macpac"],
+        "livres_culture": ["fnac ", "cultura ", "virgin", "gibert ", "decitre", "librairie", "amazon kindle", "audible", "scribd ", "storytel"],
         "shopping": [
-            "fnac ", "cultura ", "amazon ", "cdiscount ", "ebay ", "vinted ",
+            "amazon ", "cdiscount ", "ebay ", "vinted ", "leboncoin", "rakuten", "back market", "boulanger.com",
             "kmart", "k mart", "k-mart", "target ", "big w", "myer ", "david jones", "jb hi-fi", "jb hifi", "harvey norman",
         ],
+        "sorties": ["bar ", "boite de nuit", "discotheque", "pub "],
     },
     "voyage": {
-        "hebergement": ["hotel", "airbnb", "abritel", "hostelworld", "booking.com", "hotels.com", "stayz ", "wotif "],
+        "hebergement": ["hotel", "airbnb", "abritel", "hostelworld", "booking.com", "hotels.com", "stayz ", "wotif ", "ibis ", "novotel", "mercure ", "accor", "hilton", "marriott"],
         "sejour_circuit": ["voyage", "sejour", "vacances", "circuit ", "croisiere", "club med", "agence de voyage", "expedia", "lastminute"],
+        "activites_visites": ["getyourguide", "civitatis", "viator", "klook ", "tripadvisor"],
+        "location_voiture_voyage": ["europcar voyage", "hertz voyage"],  # rare — most rentals stay in transport
     },
     "education": {
         "scolarite": ["universite", "fac ", "ecole ", "scolarite", "frais de scolarite", "crous ", "campus", "tafe ", "university", "hecs "],
@@ -439,16 +447,73 @@ SUBCATEGORY_RULES: Dict[str, Dict[str, List[str]]] = {
     "vetements": {
         "vetements_mode": ["zara", "h&m", "hm ", "uniqlo", "primark", "mango ", "kiabi", "promod", "sezane", "asos ", "zalando", "shein ", "la redoute", "cotton on", "country road", "witchery", "the iconic", "glassons"],
         "sport_chaussures": ["nike ", "adidas ", "puma ", "new balance", "reebok", "decathlon", "foot locker", "hype dc"],
+        "seconde_main": ["vinted", "ebay vetement", "le closet"],
     },
     "abonnements": {
         "telephone_internet": ["free ", "orange ", "sfr ", "bouygues", "telstra", "optus ", "vodafone", "tpg ", "aussie broadband"],
         "streaming_musique": ["spotify", "apple music", "youtube premium", "google play"],
-        "logiciel_cloud": ["adobe", "microsoft 365", "dropbox", "google one", "apple icloud"],
+        "logiciel_cloud": ["adobe", "microsoft 365", "dropbox", "google one", "apple icloud", "notion ", "linear ", "figma ", "github", "openai", "chatgpt"],
         "streaming": [
             "netflix", "disney+", "disney plus", "canal+", "apple tv", "hulu", "dazn",
             "bee tv", "molotov", "salto", "amazon prime", "prime video",
             "stan ", "binge ", "kayo ", "foxtel", "paramount+",
         ],
+        "presse": ["le monde ", "le figaro", "liberation", "mediapart", "lemonde", "lefigaro", "presse "],
+    },
+    "salaire": {
+        "salaire_principal": ["salaire", " paie ", "remuneration", "virement employeur", "vir employeur", "vir sepa salaire"],
+        "prime": ["prime ", "13e mois", "interessement", "participation", "gratification stage"],
+        "aides_allocations": [
+            "france travail revenu", "are ", "indemnite chomage", "allocations familiales",
+            "caf ", "caf-", "caisse allocations", "alloca", "chomage",
+        ],
+        "remboursements_employeur": ["remb employeur", "remboursement employeur"],
+        "retraite": ["retraite", "pension retraite", "carsat ", "agirc-arrco"],
+        "bourse_etudiante": ["bourse crous", "bourse etudiante", "bourse etude"],
+    },
+    "frais bancaires": {
+        "tenue_compte": ["frais de tenue", "frais bancaires", "cotisation compte", "cotisation offre", "offre premium"],
+        "carte_bancaire": ["cotisation carte", "cotisation visa", "cotisation mastercard", "cotisation amex"],
+        "agios": ["agios", "interet debiteur", "interets debiteurs", "decouvert non autorise", "frais decouvert"],
+        "frais_etranger": [
+            "frais paiement etranger", "frais commerce etranger", "frais change",
+            "atm fee", "international fee", "foreign transaction",
+        ],
+        "incident": ["frais incident", "rejet prelevement"],
+        "virement_p2p": ["lydia ", "lydia*", "lydia-", "paylib", "pumpkin", "wise ", "transferwise", "western union", "worldremit", "remitly"],
+    },
+    "impots": {
+        "impot_revenu": ["impot", "dgfip", "tipi ", "tresor public"],
+        "taxes_locales": [
+            "taxe fonciere", "taxe habitation", "taxe d'habitation",
+            "redevance audiovisuelle", "contribution audiovisuelle",
+        ],
+        "amendes": ["amende", "fps ", "antai ", "infraction"],
+        "urssaf_cotisations": ["urssaf", "cotisation sociale", "cotisations sociales", "rsi ", "cipav", "sip "],
+        "documents_officiels": ["carte grise", "ants ", "permis de conduire", "service nsw", "service vic", "service qld", "vicroads"],
+    },
+    "epargne": {
+        "livret": [
+            "livret a", "ldds", "ldd ", "pel ", "cel ", "livret jeune",
+            "livret epargne", "livret bleu", "livret developpement", "savings account",
+        ],
+        "virement_epargne": [
+            "emis web", "virement a moi", "virement perso",
+            "alimentation epargne", "transfert epargne", "epargne",
+        ],
+    },
+    "investissement": {
+        "crypto": [
+            "bitstack", "crypto", "bitcoin", "ethereum", "coinbase", "binance",
+            "kraken", "bitvavo", "bitpanda", "crypto.com", "swissborg", "bitfinex", "gemini",
+        ],
+        "bourse": [
+            "bourse", "trading", "degiro", "trade republic", "boursorama courtage",
+            "bforbank invest", "fortuneo bourse", "saxo bank", "interactive brokers",
+            "etoro", "freetrade", "vanguard ", "blackrock",
+        ],
+        "pea_cto": [" pea ", "cto ", "compte titres"],
+        "robo_advisor": ["yomoni", "nalo ", "linxea", "spirica", "ramify", "goodvest"],
     },
 }
 
