@@ -137,6 +137,7 @@ export default function AccountsPage() {
   const [connecting, setConnecting] = useState(false)
   const [syncing, setSyncing] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; name: string } | null>(null)
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
   const [targetMonth, setTargetMonth] = useState(currentMonthKey())
@@ -192,16 +193,22 @@ export default function AccountsPage() {
     }
   }
 
-  async function handleDelete(connId: string, name: string) {
-    if (!confirm(`Déconnecter ${name} de Senzio ?\n\nLa connexion sera révoquée côté fournisseur bancaire et supprimée de Senzio. Tes analyses déjà créées restent disponibles dans ton historique.`)) return
-    setDeleting(connId)
+  function handleDelete(connId: string, name: string) {
+    setPendingDelete({ id: connId, name })
+  }
+
+  async function confirmDelete() {
+    if (!pendingDelete) return
+    const { id, name } = pendingDelete
+    setDeleting(id)
     setError('')
     try {
-      await deleteBankConnection(connId)
-      setConnections(prev => prev.filter(c => c.id !== connId))
-      showToast(`${name} révoquée ✓`)
+      await deleteBankConnection(id)
+      setConnections(prev => prev.filter(c => c.id !== id))
+      showToast(`${name} — accès révoqué ✓`)
+      setPendingDelete(null)
     } catch (e: any) {
-      setError(e.message || 'Erreur lors de la suppression')
+      setError(e.message || 'Erreur lors de la révocation')
     } finally {
       setDeleting(null)
     }
@@ -355,6 +362,109 @@ export default function AccountsPage() {
         </div>
 
       </div>
+
+      {/* Revocation modal — bottom sheet (mobile) / centered (desktop) */}
+      {pendingDelete && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="revoke-title"
+          className="fixed inset-0 z-50 flex items-end lg:items-center justify-center"
+          style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}
+          onClick={() => deleting !== pendingDelete.id && setPendingDelete(null)}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            className="w-full lg:max-w-md lg:m-4 rounded-t-3xl lg:rounded-3xl p-5"
+            style={{
+              background: 'var(--bg-page)',
+              border: '1px solid var(--border)',
+              maxHeight: '85vh',
+              overflowY: 'auto',
+              paddingBottom: 'calc(env(safe-area-inset-bottom, 0) + 20px)',
+            }}
+          >
+            <div className="flex items-start gap-3 mb-4">
+              <div
+                className="flex-shrink-0 flex items-center justify-center rounded-2xl"
+                style={{ width: 44, height: 44, background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.25)' }}
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F87171" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/>
+                  <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-semibold uppercase tracking-widest mb-1" style={{ color: 'var(--fg-3)' }}>Action irréversible</p>
+                <h3 id="revoke-title" className="text-base font-semibold truncate" style={{ letterSpacing: '-0.01em' }}>
+                  Révoquer {pendingDelete.name} ?
+                </h3>
+              </div>
+            </div>
+
+            <ul className="flex flex-col gap-2.5 mb-5 text-sm" style={{ color: 'var(--fg-2)' }}>
+              <li className="flex items-start gap-2">
+                <svg className="flex-shrink-0 mt-0.5" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                <span>L'accès bancaire sera <strong style={{ color: 'var(--fg)' }}>révoqué chez Powens</strong> immédiatement.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <svg className="flex-shrink-0 mt-0.5" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                <span>Tes <strong style={{ color: 'var(--fg)' }}>analyses déjà générées restent</strong> dans ton historique Senzio.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <svg className="flex-shrink-0 mt-0.5" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--fg-3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 12a9 9 0 1018 0 9 9 0 00-18 0zM12 8v4M12 16h.01"/>
+                </svg>
+                <span style={{ color: 'var(--fg-3)' }}>Pour revenir, il faudra reconnecter la banque depuis cette page.</span>
+              </li>
+            </ul>
+
+            {error && (
+              <p className="text-sm rounded-xl px-4 py-3 mb-3" style={{ color: '#F87171', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)' }}>
+                {error}
+              </p>
+            )}
+
+            <div className="flex flex-col gap-2.5">
+              <button
+                onClick={confirmDelete}
+                disabled={deleting === pendingDelete.id}
+                className="rounded-xl py-3.5 text-sm font-semibold transition-all active:scale-95"
+                style={{
+                  background: '#F87171',
+                  color: '#3A0E0E',
+                  border: 'none',
+                  cursor: deleting === pendingDelete.id ? 'default' : 'pointer',
+                  fontFamily: 'inherit',
+                  opacity: deleting === pendingDelete.id ? 0.7 : 1,
+                  boxShadow: '0 0 24px rgba(248,113,113,0.25)',
+                }}
+              >
+                {deleting === pendingDelete.id ? 'Révocation…' : 'Révoquer l\'accès'}
+              </button>
+              <button
+                onClick={() => setPendingDelete(null)}
+                disabled={deleting === pendingDelete.id}
+                className="rounded-xl py-3 text-sm font-medium transition-all"
+                style={{
+                  background: 'transparent',
+                  color: 'var(--fg-2)',
+                  border: '1px solid var(--border)',
+                  cursor: deleting === pendingDelete.id ? 'default' : 'pointer',
+                  fontFamily: 'inherit',
+                }}
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
