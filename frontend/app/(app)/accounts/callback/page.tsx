@@ -3,6 +3,7 @@ import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { processBankCallback, BankSyncingError } from '@/lib/api'
 import { SenzioMark } from '@/components/SenzioMark'
+import { track } from '@/lib/analytics'
 
 function BankCallbackContent() {
   const router = useRouter()
@@ -35,16 +36,19 @@ function BankCallbackContent() {
         setMessage('Récupération des transactions…')
 
         const result = await processBankCallback(connection_id!, state!)
+        track('Bank Connected', { transactions: result.transactions.length })
         setMessage(`${result.transactions.length} transactions importées ✓`)
         await new Promise(r => setTimeout(r, 800))
         sessionStorage.setItem('analysis', JSON.stringify(result))
         router.push('/dashboard')
       } catch (e: any) {
         if (e instanceof BankSyncingError) {
+          track('Bank Connected', { transactions: 0, syncing: true })
           setStatus('syncing')
           setError(e.message)
           setTimeout(() => router.push('/accounts'), 3000)
         } else {
+          track('Bank Connect Failed', { reason: (e?.message || 'unknown').slice(0, 60) })
           setStatus('error')
           setError(e.message || "Une erreur est survenue lors de l'import.")
         }
