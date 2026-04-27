@@ -15,7 +15,7 @@ from app.auth import get_user_id as _get_user_id
 from app.services.powens import (
     create_powens_user, get_temp_code, build_webview_url,
     get_powens_transactions, get_connection_info,
-    normalize_powens_transactions, is_configured,
+    normalize_powens_transactions, is_configured, delete_powens_connection,
 )
 from app.services.categorization import categorize_batch, categorize_subcategory
 from app.services.analytics import (
@@ -313,16 +313,15 @@ def delete_connection(
 ):
     """
     Supprime une connexion bancaire de Senzio.
-    On supprime uniquement l'entrée locale dans bank_connections — Powens
-    garde la connexion side de leur API tant que l'user ne révoque pas
-    explicitement (ce qui se fait depuis leur webview, pas exposé ici).
+    Révoque d'abord la connexion côté Powens, puis supprime l'entrée locale.
     """
+    _check_configured()
     user_id = _get_user_id(authorization)
     sb = get_supabase()
 
     # Vérifie que la connexion appartient bien à l'user
     res = sb.table("bank_connections") \
-        .select("id") \
+        .select("id,powens_connection_id,powens_user_token,status") \
         .eq("id", conn_id) \
         .eq("user_id", user_id) \
         .single() \
@@ -330,5 +329,18 @@ def delete_connection(
     if not res.data:
         raise HTTPException(status_code=404, detail="Connexion introuvable")
 
+    conn = res.data
+    powens_connection_id = conn.get("powens_connection_id")
+    user_token = conn.get("powens_user_token")
+
+    if powens_connection_id and powens_connection_id != "pending" and user_token:
+        try:
+            delete_powens_connection(user_token, powens_connection_id)
+        except Exception as e:
+            raise HTTPException(
+                status_code=502,
+                detail=f"Révocation bancaire impossible pour le moment : {e}",
+            )
+
     sb.table("bank_connections").delete().eq("id", conn_id).execute()
-    return {"ok": True}
+    return {"ok": True, "revoked": bool(powens_connection_id and powens_connection_id != "pending")}

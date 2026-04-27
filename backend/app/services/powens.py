@@ -85,6 +85,21 @@ def get_connection_info(user_token: str, connection_id: str) -> dict:
     return resp.json()
 
 
+def delete_powens_connection(user_token: str, connection_id: str) -> None:
+    """
+    Supprime définitivement la connexion bancaire côté Powens.
+
+    L'endpoint Powens effectue un hard delete de la connexion et des données
+    associées, ce qui correspond à l'attente RGPD pour la suppression.
+    """
+    resp = httpx.delete(
+        f"{_base_url()}/users/me/connections/{connection_id}",
+        headers={"Authorization": f"Bearer {user_token}"},
+        timeout=15,
+    )
+    resp.raise_for_status()
+
+
 def get_powens_transactions(
     user_token: str,
     connection_id: str,

@@ -193,13 +193,13 @@ export default function AccountsPage() {
   }
 
   async function handleDelete(connId: string, name: string) {
-    if (!confirm(`Déconnecter ${name} de Senzio ?\n\nTes transactions déjà synchronisées resteront analysées tant que tu ne fais pas de nouvelle synchro. Tu peux te reconnecter à tout moment.`)) return
+    if (!confirm(`Déconnecter ${name} de Senzio ?\n\nLa connexion sera révoquée côté fournisseur bancaire et supprimée de Senzio. Tes analyses déjà créées restent disponibles dans ton historique.`)) return
     setDeleting(connId)
     setError('')
     try {
       await deleteBankConnection(connId)
       setConnections(prev => prev.filter(c => c.id !== connId))
-      showToast(`${name} déconnectée ✓`)
+      showToast(`${name} révoquée ✓`)
     } catch (e: any) {
       setError(e.message || 'Erreur lors de la suppression')
     } finally {
