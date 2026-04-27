@@ -465,6 +465,7 @@ export const SUBCATEGORY_OPTIONS: Record<string, Array<{ value: string; label: s
     { value: 'carburant', label: 'Carburant' },
     { value: 'parking_peage', label: 'Parking / Péage' },
     { value: 'velo_trottinette', label: 'Vélo / Trottinette' },
+    { value: 'location_vehicule', label: 'Location véhicule' },
   ],
   logement: [
     { value: 'loyer', label: 'Loyer' },
@@ -472,22 +473,28 @@ export const SUBCATEGORY_OPTIONS: Record<string, Array<{ value: string; label: s
     { value: 'eau', label: 'Eau' },
     { value: 'assurance_hab', label: 'Assurance hab.' },
     { value: 'electromenager', label: 'Équipement maison' },
+    { value: 'travaux_bricolage', label: 'Travaux & bricolage' },
+    { value: 'charges_syndic', label: 'Charges & syndic' },
   ],
   sante: [
     { value: 'pharmacie', label: 'Pharmacie' },
     { value: 'medecin', label: 'Médecin' },
     { value: 'dentiste_opticien', label: 'Dentiste / Opticien' },
+    { value: 'hopital_clinique', label: 'Hôpital / Clinique' },
     { value: 'mutuelle', label: 'Mutuelle' },
   ],
   loisirs: [
     { value: 'cinema_spectacle', label: 'Cinéma / Spectacle' },
     { value: 'sport_fitness', label: 'Sport / Fitness' },
+    { value: 'sorties', label: 'Bars & sorties' },
+    { value: 'livres_culture', label: 'Livres & culture' },
     { value: 'shopping', label: 'Shopping' },
     { value: 'jeux_video', label: 'Jeux vidéo' },
   ],
   voyage: [
     { value: 'hebergement', label: 'Hébergement' },
     { value: 'sejour_circuit', label: 'Séjour / Circuit' },
+    { value: 'activites_visites', label: 'Activités / Visites' },
   ],
   education: [
     { value: 'scolarite', label: 'Scolarité' },
@@ -498,12 +505,47 @@ export const SUBCATEGORY_OPTIONS: Record<string, Array<{ value: string; label: s
   vetements: [
     { value: 'vetements_mode', label: 'Mode' },
     { value: 'sport_chaussures', label: 'Sport / Chaussures' },
+    { value: 'seconde_main', label: 'Seconde main' },
   ],
   abonnements: [
     { value: 'streaming', label: 'Streaming vidéo' },
     { value: 'streaming_musique', label: 'Streaming musique' },
     { value: 'telephone_internet', label: 'Téléphone / Internet' },
     { value: 'logiciel_cloud', label: 'Logiciels / Cloud' },
+    { value: 'presse', label: 'Presse / Médias' },
+  ],
+  salaire: [
+    { value: 'salaire_principal', label: 'Salaire' },
+    { value: 'prime', label: 'Prime / Intéressement' },
+    { value: 'aides_allocations', label: 'Aides & allocations' },
+    { value: 'remboursements_employeur', label: 'Remb. employeur' },
+    { value: 'retraite', label: 'Retraite' },
+    { value: 'bourse_etudiante', label: 'Bourse étudiante' },
+  ],
+  'frais bancaires': [
+    { value: 'tenue_compte', label: 'Tenue de compte' },
+    { value: 'carte_bancaire', label: 'Cotisation carte' },
+    { value: 'agios', label: 'Agios / Découvert' },
+    { value: 'frais_etranger', label: "Frais à l'étranger" },
+    { value: 'incident', label: 'Incident bancaire' },
+    { value: 'virement_p2p', label: 'Virement (Lydia, Wise…)' },
+  ],
+  impots: [
+    { value: 'impot_revenu', label: 'Impôt sur le revenu' },
+    { value: 'taxes_locales', label: 'Taxes locales' },
+    { value: 'amendes', label: 'Amendes' },
+    { value: 'urssaf_cotisations', label: 'URSSAF / Cotisations' },
+    { value: 'documents_officiels', label: 'Documents officiels' },
+  ],
+  epargne: [
+    { value: 'livret', label: 'Livret' },
+    { value: 'virement_epargne', label: 'Virement épargne' },
+  ],
+  investissement: [
+    { value: 'crypto', label: 'Crypto' },
+    { value: 'bourse', label: 'Bourse / Courtier' },
+    { value: 'pea_cto', label: 'PEA / CTO' },
+    { value: 'robo_advisor', label: 'Robo-advisor' },
   ],
 }
 
@@ -521,28 +563,77 @@ export const SUBCATEGORY_LABELS: Record<string, string> = {
   carburant: 'Carburant',
   parking_peage: 'Parking / Péage',
   velo_trottinette: 'Vélo / Trottinette',
+  location_vehicule: 'Location véhicule',
   // Logement
   loyer: 'Loyer',
   energie: 'Énergie',
   eau: 'Eau',
   assurance_hab: 'Assurance hab.',
   electromenager: 'Équipement maison',
+  travaux_bricolage: 'Travaux & bricolage',
+  charges_syndic: 'Charges & syndic',
   // Santé
   pharmacie: 'Pharmacie',
   medecin: 'Médecin',
   dentiste_opticien: 'Dentiste / Opticien',
+  hopital_clinique: 'Hôpital / Clinique',
   mutuelle: 'Mutuelle',
   // Loisirs
   cinema_spectacle: 'Cinéma / Spectacle',
   sport_fitness: 'Sport / Fitness',
+  sorties: 'Bars & sorties',
+  livres_culture: 'Livres & culture',
   voyage_hotel: 'Voyage / Hôtel',
   shopping: 'Shopping',
   jeux_video: 'Jeux vidéo',
+  // Voyage
+  hebergement: 'Hébergement',
+  sejour_circuit: 'Séjour / Circuit',
+  activites_visites: 'Activités / Visites',
+  location_voiture_voyage: 'Location voiture (voyage)',
+  // Education
+  scolarite: 'Scolarité',
+  formation_en_ligne: 'Formation en ligne',
+  langues_certif: 'Langues / Certif.',
+  livres_papeterie: 'Livres / Papeterie',
+  // Vêtements
+  vetements_mode: 'Mode',
+  sport_chaussures: 'Sport / Chaussures',
+  seconde_main: 'Seconde main',
   // Abonnements
   streaming: 'Streaming vidéo',
   streaming_musique: 'Streaming musique',
   telephone_internet: 'Téléphone / Internet',
   logiciel_cloud: 'Logiciels / Cloud',
+  presse: 'Presse / Médias',
+  // Salaire
+  salaire_principal: 'Salaire',
+  prime: 'Prime / Intéressement',
+  aides_allocations: 'Aides & allocations',
+  remboursements_employeur: 'Remb. employeur',
+  retraite: 'Retraite',
+  bourse_etudiante: 'Bourse étudiante',
+  // Frais bancaires
+  tenue_compte: 'Tenue de compte',
+  carte_bancaire: 'Cotisation carte',
+  agios: 'Agios / Découvert',
+  frais_etranger: "Frais à l'étranger",
+  incident: 'Incident bancaire',
+  virement_p2p: 'Virement (Lydia, Wise…)',
+  // Impôts
+  impot_revenu: 'Impôt sur le revenu',
+  taxes_locales: 'Taxes locales',
+  amendes: 'Amendes',
+  urssaf_cotisations: 'URSSAF / Cotisations',
+  documents_officiels: 'Documents officiels',
+  // Epargne
+  livret: 'Livret',
+  virement_epargne: 'Virement épargne',
+  // Investissement
+  crypto: 'Crypto',
+  bourse: 'Bourse / Courtier',
+  pea_cto: 'PEA / CTO',
+  robo_advisor: 'Robo-advisor',
 }
 
 // Labels français des catégories

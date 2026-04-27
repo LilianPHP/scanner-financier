@@ -3,7 +3,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { TabHeader } from '@/components/TabHeader'
-import { CATEGORY_LABELS, updateCategory } from '@/lib/api'
+import { CATEGORY_LABELS, SUBCATEGORY_OPTIONS, SUBCATEGORY_LABELS, updateCategory } from '@/lib/api'
 import { useCategoryColors } from '@/lib/theme'
 import { track } from '@/lib/analytics'
 
@@ -17,6 +17,7 @@ type Transaction = {
   description?: string
   amount: number
   category: string
+  subcategory?: string | null
 }
 
 function getLabel(t: Transaction): string {
@@ -78,10 +79,29 @@ export default function TransactionsPage() {
   const [filter, setFilter] = useState('Tout')
   const [selectedMonth, setSelectedMonth] = useState<string>('')
   const [pickerTx, setPickerTx] = useState<Transaction | null>(null)
+  const [pickerStage, setPickerStage] = useState<'category' | 'subcategory'>('category')
+  const [pickerCategory, setPickerCategory] = useState<string | null>(null)
   const [propagate, setPropagate] = useState(true)
   const [toast, setToast] = useState('')
   const [updating, setUpdating] = useState(false)
   const categoryColors = useCategoryColors()
+
+  function closePicker() {
+    setPickerTx(null)
+    setPickerStage('category')
+    setPickerCategory(null)
+  }
+
+  function selectCategory(tx: Transaction, category: string) {
+    // If category has subcategories, go to step 2 instead of saving immediately
+    const subs = SUBCATEGORY_OPTIONS[category]
+    if (subs && subs.length > 0) {
+      setPickerCategory(category)
+      setPickerStage('subcategory')
+      return
+    }
+    handleCategoryChange(tx, category, null)
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -141,23 +161,27 @@ export default function TransactionsPage() {
   const prevMonth = monthIdx >= 0 && monthIdx < months.length - 1 ? months[monthIdx + 1] : null
   const nextMonth = monthIdx > 0 ? months[monthIdx - 1] : null
 
-  async function handleCategoryChange(tx: Transaction, newCategory: string) {
-    if (!tx.id || newCategory === tx.category) { setPickerTx(null); return }
+  async function handleCategoryChange(tx: Transaction, newCategory: string, newSubcategory: string | null) {
+    if (!tx.id) { closePicker(); return }
+    if (newCategory === tx.category && (newSubcategory ?? null) === (tx.subcategory ?? null)) {
+      closePicker(); return
+    }
     setUpdating(true)
     try {
-      const res = await updateCategory(tx.id, newCategory, propagate)
+      const res = await updateCategory(tx.id, newCategory, propagate, newSubcategory)
       track('Transaction Reclassified', {
         from: tx.category,
         to: newCategory,
+        sub: newSubcategory ?? '',
         propagated: propagate,
         affected: res.total_updated ?? 1,
       })
       // Mirror backend's strict equality on label_clean (api/transactions.py)
       setTransactions(prev => {
         const next = prev.map(t => {
-          if (t.id === tx.id) return { ...t, category: newCategory }
+          if (t.id === tx.id) return { ...t, category: newCategory, subcategory: newSubcategory }
           if (propagate && tx.label_clean && t.label_clean === tx.label_clean) {
-            return { ...t, category: newCategory }
+            return { ...t, category: newCategory, subcategory: newSubcategory }
           }
           return t
         })
@@ -179,7 +203,7 @@ export default function TransactionsPage() {
       setTimeout(() => setToast(''), 2500)
     } finally {
       setUpdating(false)
-      setPickerTx(null)
+      closePicker()
     }
   }
 
@@ -366,7 +390,12 @@ export default function TransactionsPage() {
               <CatIcon cat={tx.category} />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate" style={{ color: 'var(--fg)' }}>{getLabel(tx)}</p>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--fg-3)' }}>{CATEGORY_LABELS[tx.category] ?? tx.category}</p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--fg-3)' }}>
+                  {CATEGORY_LABELS[tx.category] ?? tx.category}
+                  {tx.subcategory && SUBCATEGORY_LABELS[tx.subcategory]
+                    ? ` · ${SUBCATEGORY_LABELS[tx.subcategory]}`
+                    : ''}
+                </p>
               </div>
               <div className="text-right flex-shrink-0">
                 <p
@@ -415,7 +444,7 @@ export default function TransactionsPage() {
         <div
           className="fixed inset-0 z-50 flex items-end lg:items-center justify-center"
           style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}
-          onClick={() => !updating && setPickerTx(null)}
+          onClick={() => !updating && closePicker()}
         >
           <div
             onClick={e => e.stopPropagation()}
@@ -429,17 +458,39 @@ export default function TransactionsPage() {
             }}
           >
             <div className="flex items-start justify-between mb-1 gap-3">
-              <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--fg-3)' }}>Reclasser</p>
-                <h3 className="text-base font-semibold mt-1 truncate" style={{ letterSpacing: '-0.01em' }}>
-                  {getLabel(pickerTx)}
-                </h3>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--fg-3)' }}>
-                  Actuellement : {CATEGORY_LABELS[pickerTx.category] ?? pickerTx.category}
-                </p>
+              <div className="flex items-start gap-2 min-w-0 flex-1">
+                {pickerStage === 'subcategory' && (
+                  <button
+                    onClick={() => { setPickerStage('category'); setPickerCategory(null) }}
+                    disabled={updating}
+                    className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center mt-0.5"
+                    style={{ color: 'var(--fg-2)', background: 'var(--bg-card)', border: '1px solid var(--border)', cursor: updating ? 'default' : 'pointer' }}
+                    aria-label="Retour"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M15 18l-6-6 6-6"/>
+                    </svg>
+                  </button>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: 'var(--fg-3)' }}>
+                    {pickerStage === 'category' ? 'Reclasser' : `Sous-catégorie · ${CATEGORY_LABELS[pickerCategory ?? ''] ?? pickerCategory}`}
+                  </p>
+                  <h3 className="text-base font-semibold mt-1 truncate" style={{ letterSpacing: '-0.01em' }}>
+                    {getLabel(pickerTx)}
+                  </h3>
+                  {pickerStage === 'category' && (
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--fg-3)' }}>
+                      Actuellement : {CATEGORY_LABELS[pickerTx.category] ?? pickerTx.category}
+                      {pickerTx.subcategory && SUBCATEGORY_LABELS[pickerTx.subcategory]
+                        ? ` · ${SUBCATEGORY_LABELS[pickerTx.subcategory]}`
+                        : ''}
+                    </p>
+                  )}
+                </div>
               </div>
               <button
-                onClick={() => setPickerTx(null)}
+                onClick={() => closePicker()}
                 disabled={updating}
                 className="px-2 py-1 rounded-lg"
                 style={{ color: 'var(--fg-3)', background: 'none', border: 'none', cursor: updating ? 'default' : 'pointer' }}
@@ -449,37 +500,93 @@ export default function TransactionsPage() {
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 mt-4 mb-4">
-              {Object.entries(CATEGORY_LABELS).map(([key, label]) => {
-                const isCurrent = key === pickerTx.category
-                const color = categoryColors[key] ?? '#6B7280'
-                const icon = CAT_ICONS[key] ?? '📦'
-                return (
-                  <button
-                    key={key}
-                    onClick={() => handleCategoryChange(pickerTx, key)}
-                    disabled={updating}
-                    className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition-all active:scale-95"
-                    style={{
-                      background: isCurrent ? color + '20' : 'var(--bg-card)',
-                      border: `1px solid ${isCurrent ? color + '60' : 'var(--border)'}`,
-                      cursor: updating ? 'default' : 'pointer',
-                      fontFamily: 'inherit',
-                      color: 'var(--fg)',
-                      opacity: updating ? 0.6 : 1,
-                    }}
-                  >
-                    <span style={{ fontSize: 18 }}>{icon}</span>
-                    <span className="text-sm font-medium truncate flex-1">{label}</span>
-                    {isCurrent && (
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                        <polyline points="20 6 9 17 4 12"/>
-                      </svg>
-                    )}
-                  </button>
-                )
-              })}
-            </div>
+            {pickerStage === 'category' ? (
+              <div className="grid grid-cols-2 gap-2 mt-4 mb-4">
+                {Object.entries(CATEGORY_LABELS).map(([key, label]) => {
+                  const isCurrent = key === pickerTx.category
+                  const color = categoryColors[key] ?? '#6B7280'
+                  const icon = CAT_ICONS[key] ?? '📦'
+                  const hasSubs = !!SUBCATEGORY_OPTIONS[key]?.length
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => selectCategory(pickerTx, key)}
+                      disabled={updating}
+                      className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition-all active:scale-95"
+                      style={{
+                        background: isCurrent ? color + '20' : 'var(--bg-card)',
+                        border: `1px solid ${isCurrent ? color + '60' : 'var(--border)'}`,
+                        cursor: updating ? 'default' : 'pointer',
+                        fontFamily: 'inherit',
+                        color: 'var(--fg)',
+                        opacity: updating ? 0.6 : 1,
+                      }}
+                    >
+                      <span style={{ fontSize: 18 }}>{icon}</span>
+                      <span className="text-sm font-medium truncate flex-1">{label}</span>
+                      {isCurrent ? (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                      ) : hasSubs ? (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--fg-3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                          <path d="M9 18l6-6-6-6"/>
+                        </svg>
+                      ) : null}
+                    </button>
+                  )
+                })}
+              </div>
+            ) : (
+              // Subcategory stage
+              <div className="flex flex-col gap-2 mt-4 mb-4">
+                {/* "Sans sous-catégorie" first option */}
+                <button
+                  onClick={() => pickerCategory && handleCategoryChange(pickerTx, pickerCategory, null)}
+                  disabled={updating}
+                  className="flex items-center gap-2.5 rounded-xl px-3 py-3 text-left transition-all active:scale-95"
+                  style={{
+                    background: 'var(--bg-card)',
+                    border: '1px solid var(--border)',
+                    cursor: updating ? 'default' : 'pointer',
+                    fontFamily: 'inherit',
+                    color: 'var(--fg-2)',
+                    opacity: updating ? 0.6 : 1,
+                  }}
+                >
+                  <span className="text-sm flex-1">Sans sous-catégorie</span>
+                  {!pickerTx.subcategory && pickerCategory === pickerTx.category && (
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1D9E75" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  )}
+                </button>
+
+                {pickerCategory && SUBCATEGORY_OPTIONS[pickerCategory]?.map(opt => {
+                  const isCurrentSub = opt.value === pickerTx.subcategory && pickerCategory === pickerTx.category
+                  const color = categoryColors[pickerCategory] ?? '#6B7280'
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() => handleCategoryChange(pickerTx, pickerCategory, opt.value)}
+                      disabled={updating}
+                      className="flex items-center gap-2.5 rounded-xl px-3 py-3 text-left transition-all active:scale-95"
+                      style={{
+                        background: isCurrentSub ? color + '20' : 'var(--bg-card)',
+                        border: `1px solid ${isCurrentSub ? color + '60' : 'var(--border)'}`,
+                        cursor: updating ? 'default' : 'pointer',
+                        fontFamily: 'inherit',
+                        color: 'var(--fg)',
+                        opacity: updating ? 0.6 : 1,
+                      }}
+                    >
+                      <span className="text-sm font-medium flex-1">{opt.label}</span>
+                      {isCurrentSub && (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
 
             <label
               className="flex items-center justify-between gap-3 rounded-xl px-3 py-3"
