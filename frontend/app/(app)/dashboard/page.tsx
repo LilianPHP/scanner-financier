@@ -128,90 +128,6 @@ function TopBar({ initial, onProfile }: { initial: string; onProfile: () => void
   )
 }
 
-// ── Goal Hero ─────────────────────────────────────────────────────────
-type Goal = { id: string; name: string; kind: string; target: number; current: number; months: number; icon: string }
-
-function GoalHero({ goal, onTap }: { goal: Goal; onTap: () => void }) {
-  const pct = Math.min(100, (goal.current / goal.target) * 100)
-  const current = useCountUp(goal.current)
-  const pctVal = useCountUp(pct)
-
-  return (
-    <div onClick={onTap} style={{ padding: '36px 24px 40px', cursor: 'pointer' }}>
-      <div style={{ fontSize: 10, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.fg3 }}>
-        Objectif en cours · {goal.kind}
-      </div>
-      <div style={{ marginTop: 10, fontSize: 20, fontWeight: 600, letterSpacing: '-0.01em', color: C.fg }}>
-        {goal.icon} {goal.name}
-      </div>
-
-      <div style={{ marginTop: 24, display: 'flex', alignItems: 'baseline', gap: 10, fontVariantNumeric: 'tabular-nums' }}>
-        <span style={{ fontSize: 'clamp(44px, 12vw, 64px)', fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1, color: C.fg }}>
-          {nf0.format(Math.round(current))}
-        </span>
-        <span style={{ fontSize: 18, color: C.fg3, fontWeight: 500 }}>
-          / {nf0.format(goal.target)} €
-        </span>
-      </div>
-
-      <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
-        <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: 8,
-          padding: '5px 10px 5px 8px', borderRadius: 999,
-          background: C.accentGhost, border: '1px solid rgba(29,158,117,0.25)',
-        }}>
-          <span style={{ width: 6, height: 6, borderRadius: 999, background: C.accent, boxShadow: `0 0 8px ${C.accent}`, display: 'inline-block' }} />
-          <span style={{ fontSize: 13, fontWeight: 600, color: C.accent, fontVariantNumeric: 'tabular-nums' }}>
-            {Math.round(pctVal)} %
-          </span>
-        </div>
-        <div style={{ fontSize: 12, color: C.fg2 }}>
-          {goal.months} mois restants
-        </div>
-      </div>
-
-      <div style={{ marginTop: 14, height: 10, background: 'var(--track)', borderRadius: 999, overflow: 'hidden', position: 'relative' }}>
-        <div style={{
-          height: '100%', width: `${pctVal}%`,
-          background: `linear-gradient(90deg, ${C.accent} 0%, #2BB88A 100%)`,
-          borderRadius: 999,
-          boxShadow: `0 0 24px ${C.accentGlow}`,
-          transition: 'width 0.7s cubic-bezier(0.22,1,0.36,1)',
-        }} />
-        {[25, 50, 75].map(m => (
-          <div key={m} style={{ position: 'absolute', top: 0, bottom: 0, left: `${m}%`, width: 1, background: 'var(--track-strong)' }} />
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function GoalHeroEmpty({ onCTA }: { onCTA: () => void }) {
-  return (
-    <div style={{ padding: '40px 24px 44px' }}>
-      <div style={{ fontSize: 10, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', color: C.fg3 }}>Objectifs</div>
-      <div style={{ marginTop: 24, fontSize: 'clamp(28px, 7vw, 38px)', fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1.1, color: C.fg }}>
-        Définis ton premier<br />objectif.
-      </div>
-      <p style={{ marginTop: 12, fontSize: 14, color: C.fg2, lineHeight: 1.5, maxWidth: 320 }}>
-        Voyage, épargne de sécurité, investir… Une barre qui avance, un rythme, des jalons.
-      </p>
-      <button onClick={onCTA} style={{
-        marginTop: 18, display: 'inline-flex', alignItems: 'center', gap: 8,
-        fontFamily: 'inherit', fontSize: 14, fontWeight: 500,
-        padding: '12px 18px', borderRadius: 12,
-        background: C.accent, color: '#062A1E', border: 0, cursor: 'pointer',
-        boxShadow: `0 0 24px ${C.accentGlow}`,
-      }}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-          <path d="M12 5v14M5 12h14"/>
-        </svg>
-        Créer un objectif
-      </button>
-    </div>
-  )
-}
-
 // ── KPI Stat (desktop, vertical layout inside Santé du mois card) ─────
 function KPIStat({ label, value, color, sub }: { label: string; value: number; color?: string; sub?: string }) {
   return (
@@ -761,27 +677,17 @@ export default function DashboardPage() {
   const router = useRouter()
   const [data, setData] = useState<UploadResult | null>(null)
   const [loadState, setLoadState] = useState<LoadState>('loading')
-  const [goal, setGoal] = useState<Goal | null>(null)
   const [email, setEmail] = useState('')
   const categoryColors = useCategoryColors()
 
   useEffect(() => {
     let cancelled = false
 
-    // Auth + email + active goal — runs regardless of analysis state
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
+    // Auth + email
+    supabase.auth.getSession().then(({ data: { session } }) => {
       if (cancelled) return
       if (!session) { router.push('/login'); return }
       setEmail(session.user.email ?? '')
-      const { data: goals } = await supabase
-        .from('goals')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .eq('status', 'active')
-        .order('created_at', { ascending: false })
-        .limit(1)
-      if (cancelled) return
-      if (goals && goals.length > 0) setGoal(goals[0] as Goal)
     })
 
     // Analysis load: sessionStorage cache → backend history fallback → empty
@@ -963,14 +869,6 @@ export default function DashboardPage() {
 
         <DashboardHeader onSync={() => router.push('/accounts')} />
 
-        {/* Hero goal — full width on mobile, 2/3 on desktop (handled by grid below) */}
-        <div className="lg:hidden">
-          {goal
-            ? <GoalHero goal={goal} onTap={() => router.push('/goals')} />
-            : <GoalHeroEmpty onCTA={() => router.push('/goals')} />
-          }
-        </div>
-
         {/* MOBILE flow: stacked cards, original behaviour.
             NOTE: do NOT use inline display:flex here — it would beat
             Tailwind's `lg:hidden` (display:none) and make this block
@@ -1009,13 +907,7 @@ export default function DashboardPage() {
 
         {/* DESKTOP cockpit: 12-col grid */}
         <div className="hidden lg:grid grid-cols-12 gap-5 px-8 pb-10">
-          {/* Row 1 — Goal hero (8 cols) + KPI stack (4 cols) */}
-          <div className="col-span-8">
-            {goal
-              ? <GoalHero goal={goal} onTap={() => router.push('/goals')} />
-              : <GoalHeroEmpty onCTA={() => router.push('/goals')} />
-            }
-          </div>
+          {/* Row 1 — KPI stack (full width) */}
           <div className="col-span-4 flex flex-col gap-3">
             <div
               className="rounded-2xl px-5 py-5"

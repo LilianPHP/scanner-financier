@@ -3,7 +3,7 @@ import { useRouter } from 'next/navigation'
 import { Avatar } from './Avatar'
 
 /**
- * Header for sub-pages (accounts, goals/[id], goals/new).
+ * Header for sub-pages (accounts, detail screens).
  *
  * Mobile: ← back / centered title / avatar
  * Desktop: large title left-aligned (back is in the sidebar)
