@@ -182,8 +182,13 @@ export default function AccountsPage() {
     try {
       const result = await syncBankConnection(connId, { targetMonth })
       sessionStorage.setItem('analysis', JSON.stringify(result))
-      showToast(`${result.transactions.length} transactions · ${monthLabel(targetMonth)} ✓`)
-      router.push('/dashboard')
+      const n = result.transactions.length
+      if (n === 0) {
+        showToast(`Aucune transaction trouvée · ${monthLabel(targetMonth)}`)
+      } else {
+        showToast(`${n} transaction${n > 1 ? 's' : ''} · ${monthLabel(targetMonth)} ✓`)
+        router.push('/dashboard')
+      }
     } catch (e: any) {
       if (e instanceof BankSyncingError) {
         showToast('Synchronisation en cours — réessaie dans quelques minutes')

@@ -10,41 +10,51 @@ type CategoryBudget = {
   budget: number
 }
 
+// Keys match backend VALID_CATEGORIES (lowercase)
 const CAT_COLORS: Record<string, string> = {
-  Logement: '#3B82F6',
-  Courses: '#1D9E75',
-  Abonnements: '#06B6D4',
-  Transport: '#F59E0B',
-  Shopping: '#8B5CF6',
-  Sorties: '#EC4899',
-  Santé: '#F87171',
-  Revenus: '#22C55E',
-  Salaire: '#22C55E',
-  Autre: '#6B7280',
+  logement: '#3B82F6',
+  alimentation: '#1D9E75',
+  abonnements: '#06B6D4',
+  transport: '#F59E0B',
+  vetements: '#8B5CF6',
+  loisirs: '#EC4899',
+  sante: '#F87171',
+  voyage: '#F97316',
+  education: '#A78BFA',
+  investissement: '#22C55E',
+  epargne: '#10B981',
+  'frais bancaires': '#94A3B8',
+  impots: '#EF4444',
+  autres: '#6B7280',
 }
 
 const CAT_ICONS: Record<string, string> = {
-  Logement: '🏠',
-  Courses: '🛒',
-  Abonnements: '📱',
-  Transport: '🚊',
-  Shopping: '🛍️',
-  Sorties: '🍷',
-  Santé: '❤️',
-  Revenus: '💰',
-  Salaire: '💰',
-  Autre: '📦',
+  logement: '🏠',
+  alimentation: '🛒',
+  abonnements: '📱',
+  transport: '🚊',
+  vetements: '🛍️',
+  loisirs: '🍷',
+  sante: '❤️',
+  voyage: '✈️',
+  education: '📚',
+  investissement: '📈',
+  epargne: '🏦',
+  'frais bancaires': '💳',
+  impots: '🏛️',
+  autres: '📦',
 }
 
 // Suggested multipliers per category (budget = spent * multiplier)
 const CAT_BUDGET_FACTOR: Record<string, number> = {
-  Logement: 1.0,
-  Courses: 1.1,
-  Abonnements: 1.1,
-  Transport: 1.0,
-  Shopping: 0.9,
-  Sorties: 0.95,
-  Santé: 4.0,
+  logement: 1.0,
+  alimentation: 1.1,
+  abonnements: 1.05,
+  transport: 1.1,
+  vetements: 0.9,
+  loisirs: 0.95,
+  sante: 1.5,
+  voyage: 0.8,
 }
 
 function fmt(n: number) {
@@ -83,10 +93,8 @@ export default function BudgetsPage() {
         const parsed = JSON.parse(raw)
         setPeriodLabel(getPeriodLabel(parsed.transactions ?? []))
         const byCategory: Array<{ category: string; total: number }> = parsed.by_category ?? []
-        const expenses = byCategory.filter((c) => {
-          const cat = c.category
-          return cat !== 'Revenus' && cat !== 'Salaire' && c.total > 0
-        })
+        const INCOME_CATS = new Set(['salaire', 'epargne', 'investissement'])
+        const expenses = byCategory.filter((c) => !INCOME_CATS.has(c.category) && c.total > 0)
         const items: CategoryBudget[] = expenses.map(c => {
           const factor = CAT_BUDGET_FACTOR[c.category] ?? 1.15
           return {

@@ -74,8 +74,8 @@ def update_transaction(
 
     updated_count = 1
 
-    if body.propagate:
-        # Single batched UPDATE instead of one call per similar tx (N+1 fix)
+    if body.propagate and tx.get("label_clean"):
+        # Guard: skip propagate if label_clean is null — would match all unlabelled rows
         similar_result = (
             sb.table("transactions")
             .update(update_payload)

@@ -18,7 +18,10 @@ export function SubHeader({
   showAvatar?: boolean
 }) {
   const router = useRouter()
-  const handleBack = onBack ?? (() => router.back())
+  const handleBack = onBack ?? (() => {
+    if (window.history.length > 1) router.back()
+    else router.push('/dashboard')
+  })
   return (
     <>
       {/* Mobile */}
