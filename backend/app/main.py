@@ -3,7 +3,7 @@ import sentry_sdk
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import FRONTEND_URL
-from app.api import files, transactions, analytics, rules, banks
+from app.api import transactions, analytics, rules, banks
 
 _SENTRY_DSN = os.environ.get("SENTRY_DSN")
 if _SENTRY_DSN:
@@ -39,7 +39,6 @@ app.add_middleware(
 )
 
 # Routers
-app.include_router(files.router, prefix="/files", tags=["Fichiers"])
 app.include_router(transactions.router, prefix="/transactions", tags=["Transactions"])
 app.include_router(analytics.router, prefix="/analytics", tags=["Analytics"])
 app.include_router(rules.router, prefix="/rules", tags=["Règles"])

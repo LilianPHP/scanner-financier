@@ -135,7 +135,6 @@ function GoalHero({ goal, onTap }: { goal: Goal; onTap: () => void }) {
   const pct = Math.min(100, (goal.current / goal.target) * 100)
   const current = useCountUp(goal.current)
   const pctVal = useCountUp(pct)
-  const width = useCountUp(pct)
 
   return (
     <div onClick={onTap} style={{ padding: '36px 24px 40px', cursor: 'pointer' }}>
@@ -173,7 +172,7 @@ function GoalHero({ goal, onTap }: { goal: Goal; onTap: () => void }) {
 
       <div style={{ marginTop: 14, height: 10, background: 'var(--track)', borderRadius: 999, overflow: 'hidden', position: 'relative' }}>
         <div style={{
-          height: '100%', width: `${width}%`,
+          height: '100%', width: `${pctVal}%`,
           background: `linear-gradient(90deg, ${C.accent} 0%, #2BB88A 100%)`,
           borderRadius: 999,
           boxShadow: `0 0 24px ${C.accentGlow}`,

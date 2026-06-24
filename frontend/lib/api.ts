@@ -91,46 +91,6 @@ export type UploadResult = {
   score?: ScoreResult
 }
 
-// Upload d'un fichier
-export async function uploadFile(file: File): Promise<UploadResult> {
-  const headers = await getAuthHeader()
-  const formData = new FormData()
-  formData.append('file', file)
-
-  const response = await apiFetch(`${BACKEND_URL}/files/upload`, {
-    method: 'POST',
-    headers,
-    body: formData,
-  })
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}))
-    throw new Error(error.detail || `Erreur serveur (${response.status})`)
-  }
-
-  const result: UploadResult = await response.json()
-
-  // Fetch score in parallel after upload (non-blocking on failure)
-  try {
-    const scoreRes = await apiFetch(`${BACKEND_URL}/analytics/${result.file_id}/score`, { headers })
-    if (scoreRes.ok) result.score = await scoreRes.json()
-  } catch { /* score is optional */ }
-
-  return result
-}
-
-// Récupérer les transactions d'un fichier
-export async function getTransactions(fileId: string): Promise<Transaction[]> {
-  const headers = await getAuthHeader()
-
-  const response = await apiFetch(`${BACKEND_URL}/transactions/${fileId}`, { headers })
-
-  if (!response.ok) throw new Error('Erreur lors de la récupération des transactions')
-
-  const data = await response.json()
-  return data.transactions
-}
-
 // Mettre à jour la catégorie (et sous-catégorie) d'une transaction
 export async function updateCategory(
   txId: string,
@@ -156,19 +116,6 @@ export async function updateCategory(
   return response.json()
 }
 
-// Récupérer l'analytics d'un fichier
-export async function getAnalytics(fileId: string) {
-  const headers = await getAuthHeader()
-
-  const [summary, categories, timeline] = await Promise.all([
-    apiFetch(`${BACKEND_URL}/analytics/${fileId}/summary`, { headers }).then(r => r.json()),
-    apiFetch(`${BACKEND_URL}/analytics/${fileId}/categories`, { headers }).then(r => r.json()),
-    apiFetch(`${BACKEND_URL}/analytics/${fileId}/timeline`, { headers }).then(r => r.json()),
-  ])
-
-  return { summary, categories, timeline }
-}
-
 // Profil utilisateur
 export type UserProfile = {
   is_student: boolean
@@ -176,17 +123,6 @@ export type UserProfile = {
   has_children: boolean
   has_pet: boolean
   onboarding_done: boolean
-}
-
-export async function getProfile(): Promise<UserProfile | null> {
-  const { data: session } = await supabase.auth.getSession()
-  if (!session.session) return null
-  const { data } = await supabase
-    .from('user_profiles')
-    .select('*')
-    .eq('user_id', session.session.user.id)
-    .single()
-  return data as UserProfile | null
 }
 
 export async function saveProfile(profile: Omit<UserProfile, 'onboarding_done'> & { onboarding_done?: boolean }): Promise<void> {
@@ -197,18 +133,6 @@ export async function saveProfile(profile: Omit<UserProfile, 'onboarding_done'> 
     ...profile,
     onboarding_done: true,
   })
-}
-
-export function getActiveCategories(profile: UserProfile | null): Record<string, string> {
-  const base: Record<string, string> = {
-    alimentation: 'Alimentation', logement: 'Logement', transport: 'Transport',
-    loisirs: 'Loisirs', abonnements: 'Abonnements', salaire: 'Salaire / Revenus',
-    'frais bancaires': 'Frais bancaires', sante: 'Santé', investissement: 'Investissement',
-    epargne: 'Épargne', impots: 'Impôts / Taxes', vetements: 'Vêtements', autres: 'Autres',
-  }
-  if (!profile || profile.is_student) base.education = 'Éducation'
-  if (!profile || profile.travels_often) base.voyage = 'Voyage'
-  return base
 }
 
 // Type pour l'historique des fichiers
@@ -406,17 +330,6 @@ export async function loadAnalysis(fileId: string, filename = ''): Promise<Uploa
   }
 }
 
-// Sauvegarder une règle de catégorisation personnalisée
-export async function saveRule(labelClean: string, category: string): Promise<void> {
-  const headers = await getAuthHeader()
-  const response = await apiFetch(`${BACKEND_URL}/rules`, {
-    method: 'POST',
-    headers: { ...headers, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ label_pattern: labelClean.toLowerCase(), category }),
-  })
-  if (!response.ok) throw new Error('Erreur lors de la sauvegarde de la règle')
-}
-
 export type CategoryRule = {
   label_pattern: string
   category: string
@@ -549,92 +462,9 @@ export const SUBCATEGORY_OPTIONS: Record<string, Array<{ value: string; label: s
   ],
 }
 
-export const SUBCATEGORY_LABELS: Record<string, string> = {
-  // Alimentation
-  courses: 'Courses',
-  restaurant: 'Restaurant',
-  fast_food: 'Fast food',
-  livraison: 'Livraison',
-  boulangerie: 'Boulangerie',
-  // Transport
-  transports_commun: 'Transports en commun',
-  train_avion: 'Train / Avion',
-  taxi_vtc: 'Taxi / VTC',
-  carburant: 'Carburant',
-  parking_peage: 'Parking / Péage',
-  velo_trottinette: 'Vélo / Trottinette',
-  location_vehicule: 'Location véhicule',
-  // Logement
-  loyer: 'Loyer',
-  energie: 'Énergie',
-  eau: 'Eau',
-  assurance_hab: 'Assurance hab.',
-  electromenager: 'Équipement maison',
-  travaux_bricolage: 'Travaux & bricolage',
-  charges_syndic: 'Charges & syndic',
-  // Santé
-  pharmacie: 'Pharmacie',
-  medecin: 'Médecin',
-  dentiste_opticien: 'Dentiste / Opticien',
-  hopital_clinique: 'Hôpital / Clinique',
-  mutuelle: 'Mutuelle',
-  // Loisirs
-  cinema_spectacle: 'Cinéma / Spectacle',
-  sport_fitness: 'Sport / Fitness',
-  sorties: 'Bars & sorties',
-  livres_culture: 'Livres & culture',
-  voyage_hotel: 'Voyage / Hôtel',
-  shopping: 'Shopping',
-  jeux_video: 'Jeux vidéo',
-  // Voyage
-  hebergement: 'Hébergement',
-  sejour_circuit: 'Séjour / Circuit',
-  activites_visites: 'Activités / Visites',
-  location_voiture_voyage: 'Location voiture (voyage)',
-  // Education
-  scolarite: 'Scolarité',
-  formation_en_ligne: 'Formation en ligne',
-  langues_certif: 'Langues / Certif.',
-  livres_papeterie: 'Livres / Papeterie',
-  // Vêtements
-  vetements_mode: 'Mode',
-  sport_chaussures: 'Sport / Chaussures',
-  seconde_main: 'Seconde main',
-  // Abonnements
-  streaming: 'Streaming vidéo',
-  streaming_musique: 'Streaming musique',
-  telephone_internet: 'Téléphone / Internet',
-  logiciel_cloud: 'Logiciels / Cloud',
-  presse: 'Presse / Médias',
-  // Salaire
-  salaire_principal: 'Salaire',
-  prime: 'Prime / Intéressement',
-  aides_allocations: 'Aides & allocations',
-  remboursements_employeur: 'Remb. employeur',
-  retraite: 'Retraite',
-  bourse_etudiante: 'Bourse étudiante',
-  // Frais bancaires
-  tenue_compte: 'Tenue de compte',
-  carte_bancaire: 'Cotisation carte',
-  agios: 'Agios / Découvert',
-  frais_etranger: "Frais à l'étranger",
-  incident: 'Incident bancaire',
-  virement_p2p: 'Virement (Lydia, Wise…)',
-  // Impôts
-  impot_revenu: 'Impôt sur le revenu',
-  taxes_locales: 'Taxes locales',
-  amendes: 'Amendes',
-  urssaf_cotisations: 'URSSAF / Cotisations',
-  documents_officiels: 'Documents officiels',
-  // Epargne
-  livret: 'Livret',
-  virement_epargne: 'Virement épargne',
-  // Investissement
-  crypto: 'Crypto',
-  bourse: 'Bourse / Courtier',
-  pea_cto: 'PEA / CTO',
-  robo_advisor: 'Robo-advisor',
-}
+export const SUBCATEGORY_LABELS: Record<string, string> = Object.fromEntries(
+  Object.values(SUBCATEGORY_OPTIONS).flat().map(o => [o.value, o.label])
+)
 
 // Labels français des catégories
 export const CATEGORY_LABELS: Record<string, string> = {

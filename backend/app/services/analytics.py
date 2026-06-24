@@ -115,14 +115,9 @@ def compute_score(transactions: List[Dict[str, Any]]) -> Dict[str, Any]:
     savings_rate_score = min(abs(savings_rate) / 20 * 35, 35) if income > 0 else 0
 
     # 3. Épargne / Investissement (0-20 pts)
-    has_epargne = any(
-        tx["amount"] < 0 and tx.get("category") == "epargne"
-        for tx in transactions
-    )
-    has_invest = any(
-        tx["amount"] < 0 and tx.get("category") == "investissement"
-        for tx in transactions
-    )
+    neg_cats = {tx.get("category") for tx in transactions if tx["amount"] < 0}
+    has_epargne = "epargne" in neg_cats
+    has_invest = "investissement" in neg_cats
     invest_score = (10 if has_epargne else 0) + (10 if has_invest else 0)
 
     # 4. Diversification (0-10 pts) : aucune catégorie > 60% des dépenses réelles
