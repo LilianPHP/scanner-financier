@@ -680,6 +680,20 @@ export default function DashboardPage() {
   const [email, setEmail] = useState('')
   const categoryColors = useCategoryColors()
 
+  async function reloadAnalysis() {
+    try {
+      const files = await getUploadHistory()
+      if (!files || files.length === 0) { setLoadState('empty'); return }
+      const latest = files[0]
+      const result = await loadAnalysis(latest.id, latest.filename)
+      try { sessionStorage.setItem('analysis', JSON.stringify(result)) } catch {}
+      setData(result)
+      setLoadState('ready')
+    } catch {
+      setLoadState('error')
+    }
+  }
+
   useEffect(() => {
     let cancelled = false
 
@@ -706,27 +720,13 @@ export default function DashboardPage() {
         // ignore parse errors, fall through to backend
       }
 
-      try {
-        const files = await getUploadHistory()
-        if (cancelled) return
-        if (!files || files.length === 0) {
-          setLoadState('empty')
-          return
-        }
-        const latest = files[0]
-        const result = await loadAnalysis(latest.id, latest.filename)
-        if (cancelled) return
-        try { sessionStorage.setItem('analysis', JSON.stringify(result)) } catch {}
-        setData(result)
-        setLoadState('ready')
-      } catch {
-        if (cancelled) return
-        setLoadState('error')
-      }
+      if (cancelled) return
+      await reloadAnalysis()
     }
 
     loadAnalysisFlow()
     return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router])
 
   async function handleReclassifySub(label: string) {
@@ -752,9 +752,11 @@ export default function DashboardPage() {
               : s
           ),
         }
-        try { sessionStorage.setItem('analysis', JSON.stringify(next)) } catch {}
+        try { sessionStorage.removeItem('analysis') } catch {}
         return next
       })
+      // Reload full analytics from backend so summary/by_category/insights reflect the change
+      await reloadAnalysis()
     } catch {
       // silent — Sentry captures unhandled errors elsewhere
     }

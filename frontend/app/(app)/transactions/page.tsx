@@ -185,14 +185,9 @@ export default function TransactionsPage() {
           }
           return t
         })
-        try {
-          const raw = sessionStorage.getItem('analysis')
-          if (raw) {
-            const parsed = JSON.parse(raw)
-            parsed.transactions = next
-            sessionStorage.setItem('analysis', JSON.stringify(parsed))
-          }
-        } catch {}
+        // Invalidate analytics cache — summary/by_category/insights are now stale.
+        // Dashboard will re-fetch from backend on next visit.
+        try { sessionStorage.removeItem('analysis') } catch {}
         return next
       })
       const n = res.total_updated ?? 1
