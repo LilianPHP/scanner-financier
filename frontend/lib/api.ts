@@ -155,7 +155,7 @@ export type BankConnection = {
   id: string
   institution_name: string
   institution_logo: string
-  status: 'active' | 'error' | 'pending'
+  status: 'active' | 'syncing' | 'error' | 'pending'
   last_synced_at: string
   file_id: string | null
   created_at: string

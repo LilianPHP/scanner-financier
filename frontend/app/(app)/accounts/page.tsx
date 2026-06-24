@@ -149,6 +149,26 @@ export default function AccountsPage() {
     })
   }, [router])
 
+  // Auto-retry when a connection is stuck in "syncing": poll every 30s until active
+  useEffect(() => {
+    const hasSyncing = connections.some(c => c.status === 'syncing')
+    if (!hasSyncing) return
+    const timer = setInterval(async () => {
+      try {
+        const conns = await getBankConnections()
+        const wasActive = conns.filter(c => {
+          const prev = connections.find(p => p.id === c.id)
+          return prev?.status === 'syncing' && c.status === 'active'
+        })
+        setConnections(conns)
+        if (wasActive.length > 0) {
+          showToast(`${wasActive[0].institution_name} synchronisée ✓`)
+        }
+      } catch { /* ignore */ }
+    }, 30_000)
+    return () => clearInterval(timer)
+  }, [connections])
+
   async function loadConnections() {
     setLoading(true)
     try {

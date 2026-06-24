@@ -60,6 +60,15 @@ def get_connect_url(
     sb = get_supabase()
 
     try:
+        # Cleanup: remove stale pending rows older than 30 min (user closed webview without completing auth)
+        from datetime import datetime, timedelta, timezone
+        cutoff = (datetime.now(timezone.utc) - timedelta(minutes=30)).isoformat()
+        sb.table("bank_connections").delete() \
+            .eq("user_id", user_id) \
+            .eq("status", "pending") \
+            .lt("created_at", cutoff) \
+            .execute()
+
         # Créer un user Powens anonyme
         powens_user = create_powens_user()
         user_token = powens_user["auth_token"]
